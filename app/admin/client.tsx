@@ -3038,25 +3038,25 @@ export default function AdminDashboardClient({
           {/* The dialog for adding/editing trainers is already present in the original code, no changes needed here */}
 
           {activeTab === "students" && (
-        <div className="space-y-6">
-          {/* Header with Add Student button */}
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Students</h2>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchStudents}
-                className="border-neutral-700 bg-transparent"
-                disabled={studentsLoading}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${studentsLoading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-              <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
-                    <Plus className="w-4 h-4 mr-2" /> Add Student
+          <div className="space-y-6">
+            {/* Header with Add Student button */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Students</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchStudents}
+                  className="border-neutral-700 bg-transparent"
+                  disabled={studentsLoading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${studentsLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+                <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+                      <Plus className="w-4 h-4 mr-2" /> Add Student
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
@@ -3418,12 +3418,12 @@ export default function AdminDashboardClient({
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
-        </div>
-      )}
+            </Dialog>
+          </div>
+        )}
 
           {activeTab === "settings" && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {/* Gym Information */}
             <Card className="bg-neutral-900/50 border-neutral-800">
               <CardHeader>
