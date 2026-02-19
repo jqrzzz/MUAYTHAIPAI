@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import StudentsTab from "@/components/admin/students-tab"
 import {
   Calendar,
   Users,
@@ -42,8 +43,6 @@ import {
   Save,
   Mail,
   GraduationCap,
-  Minus,
-  History,
   Send,
   User,
   Camera,
@@ -392,31 +391,7 @@ export default function AdminDashboardClient({
   // Student state
   const [students, setStudents] = useState<Student[]>([])
   const [studentsLoading, setStudentsLoading] = useState(false)
-  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
-  const [isAddCreditsOpen, setIsAddCreditsOpen] = useState(false)
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
-  const [studentError, setStudentError] = useState("")
-  const [isSavingStudent, setIsSavingStudent] = useState(false)
-  const [studentTransactions, setStudentTransactions] = useState<CreditTransaction[]>([]) // Keep this for now, might be refactored later
-
-  const [newStudentForm, setNewStudentForm] = useState({
-    email: "",
-    name: "",
-    phone: "", // Added phone to newStudentForm
-    creditType: "private_session",
-    credits: 1,
-    notes: "",
-    paymentMethod: "cash",
-    paymentAmount: 0,
-  })
-
-  const [addCreditsForm, setAddCreditsForm] = useState({
-    creditType: "private_session",
-    credits: 1,
-    notes: "",
-    paymentMethod: "cash",
-    paymentAmount: 0,
-  })
+  const [studentTransactions, setStudentTransactions] = useState<CreditTransaction[]>([])
 
   // OckOck chat state
   const [ockockMessages, setOckockMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([])
@@ -646,158 +621,6 @@ export default function AdminDashboardClient({
       console.error("Failed to fetch students:", error)
     }
     setStudentsLoading(false)
-  }
-
-  const handleAddStudent = async () => {
-    setStudentError("")
-
-    if (!newStudentForm.name.trim() || !newStudentForm.email.trim()) {
-      setStudentError("Name and email are required")
-      return
-    }
-
-    setIsSavingStudent(true)
-    try {
-      const res = await fetch("/api/admin/students/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          org_id: membership.org_id, // Use orgId from props
-          name: newStudentForm.name,
-          email: newStudentForm.email,
-          phone: newStudentForm.phone,
-          creditType: newStudentForm.creditType,
-          credits: Number.parseInt(newStudentForm.credits.toString()) || 0,
-          paymentMethod: newStudentForm.paymentMethod,
-          paymentAmount: Number.parseInt(newStudentForm.paymentAmount.toString()) || 0,
-          notes: newStudentForm.notes,
-        }),
-      })
-
-      if (res.ok) {
-        setIsAddStudentOpen(false)
-        setNewStudentForm({
-          email: "",
-          name: "",
-          phone: "", // Reset phone
-          creditType: "private_session",
-          credits: 1,
-          notes: "",
-          paymentMethod: "cash",
-          paymentAmount: 0,
-        })
-        fetchStudents()
-      } else {
-        const data = await res.json()
-        setStudentError(data.error || "Failed to add student")
-      }
-    } catch (error) {
-      setStudentError("Failed to add student")
-    }
-    setIsSavingStudent(false)
-  }
-
-  const handleAddCredits = async () => {
-    if (!selectedStudent) return
-    setStudentError("")
-
-    if (!addCreditsForm.credits || Number.parseInt(addCreditsForm.credits.toString()) <= 0) {
-      setStudentError("Enter a valid number of credits")
-      return
-    }
-
-    setIsSavingStudent(true)
-    try {
-      const res = await fetch(`/api/admin/students/${selectedStudent.id}/credits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          org_id: membership.org_id, // Use orgId from props
-          creditType: addCreditsForm.creditType,
-          credits: Number.parseInt(addCreditsForm.credits.toString()),
-          paymentMethod: addCreditsForm.paymentMethod,
-          paymentAmount: Number.parseInt(addCreditsForm.paymentAmount.toString()) || 0,
-          notes: addCreditsForm.notes,
-        }),
-      })
-
-      if (res.ok) {
-        setIsAddCreditsOpen(false)
-        setSelectedStudent(null)
-        setAddCreditsForm({
-          creditType: "private_session",
-          credits: 1,
-          notes: "",
-          paymentMethod: "cash",
-          paymentAmount: 0,
-        })
-        fetchStudents()
-      } else {
-        const data = await res.json()
-        setStudentError(data.error || "Failed to add credits")
-      }
-    } catch (error) {
-      setStudentError("Failed to add credits")
-    }
-    setIsSavingStudent(false)
-  }
-
-  const handleUseCredit = async (studentId: string, creditId: string) => {
-    try {
-      const response = await fetch(`/api/admin/students/${studentId}/credits`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          credit_id: creditId,
-          amount: -1,
-          description: "Session used",
-          org_id: membership.org_id,
-        }),
-      })
-      if (response.ok) {
-        fetchStudents()
-      }
-    } catch (error) {
-      console.error("Failed to use credit:", error)
-    }
-  }
-
-  const handleDeductSession = async (student: Student) => {
-    if (!student.credits || student.credits.length === 0) return
-
-    // Find the first available credit type (e.g., sessions, private_session)
-    let creditToUse = student.credits.find((c) => c.credit_type === "sessions" || c.credit_type === "private_session")
-    if (!creditToUse && student.credits.length > 0) {
-      creditToUse = student.credits[0] // Fallback to the first credit type if none match
-    }
-
-    if (!creditToUse || creditToUse.credits_remaining <= 0) {
-      alert("No available credits to deduct.")
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/admin/students/${student.id}/credits`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          org_id: membership.org_id, // Use orgId from props
-          credit_id: creditToUse.id,
-          amount: -1,
-          description: "Session attended",
-        }),
-      })
-
-      if (response.ok) {
-        fetchStudents()
-      } else {
-        const data = await response.json()
-        alert(data.error || "Failed to deduct session.")
-      }
-    } catch (error) {
-      console.error("Failed to deduct session:", error)
-      alert("Failed to deduct session. Please try again.")
-    }
   }
 
   const handleSignOut = async () => {
@@ -3038,392 +2861,85 @@ export default function AdminDashboardClient({
           {/* The dialog for adding/editing trainers is already present in the original code, no changes needed here */}
 
           {activeTab === "students" && (
-        <div className="space-y-6">
-          {/* Header with Add Student button */}
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Students</h2>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchStudents}
-                className="border-neutral-700 bg-transparent"
-                disabled={studentsLoading}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${studentsLoading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-              <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
-                    <Plus className="w-4 h-4 mr-2" /> Add Student
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Add New Student</DialogTitle>
-                    <DialogDescription className="text-neutral-400">
-                      Add a student and optionally record their initial payment
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 mt-4">
-                    <div>
-                      <Label>Name *</Label>
-                      <Input
-                        value={newStudentForm.name}
-                        onChange={(e) => setNewStudentForm({ ...newStudentForm, name: e.target.value })}
-                        className="bg-neutral-800 border-neutral-700"
-                        placeholder="John Smith"
-                      />
-                    </div>
-                    <div>
-                      <Label>Email *</Label>
-                      <Input
-                        type="email"
-                        value={newStudentForm.email}
-                        onChange={(e) => setNewStudentForm({ ...newStudentForm, email: e.target.value })}
-                        className="bg-neutral-800 border-neutral-700"
-                        placeholder="john@example.com"
-                      />
-                    </div>
-                    <div>
-                      <Label>Phone</Label>
-                      <Input
-                        value={newStudentForm.phone}
-                        onChange={(e) => setNewStudentForm({ ...newStudentForm, phone: e.target.value })}
-                        className="bg-neutral-800 border-neutral-700"
-                        placeholder="+66..."
-                      />
-                    </div>
-                    <hr className="border-neutral-700" />
-                    <p className="text-sm text-neutral-400">Initial Package (optional)</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Type</Label>
-                        <Select
-                          value={newStudentForm.creditType}
-                          onValueChange={(v) => setNewStudentForm({ ...newStudentForm, creditType: v })}
-                        >
-                          <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-neutral-800 border-neutral-700">
-                            <SelectItem value="sessions">Sessions</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                            <SelectItem value="private">Private Sessions</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Credits</Label>
-                        <Input
-                          type="number"
-                          value={newStudentForm.credits}
-                          onChange={(e) =>
-                            setNewStudentForm({ ...newStudentForm, credits: Number.parseInt(e.target.value) || 0 })
-                          }
-                          className="bg-neutral-800 border-neutral-700"
-                          placeholder="10"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Payment Method</Label>
-                        <Select
-                          value={newStudentForm.paymentMethod}
-                          onValueChange={(v) => setNewStudentForm({ ...newStudentForm, paymentMethod: v })}
-                        >
-                          <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-neutral-800 border-neutral-700">
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="card">Card</SelectItem>
-                            <SelectItem value="transfer">Transfer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Amount (฿)</Label>
-                        <Input
-                          type="number"
-                          value={newStudentForm.paymentAmount}
-                          onChange={(e) =>
-                            setNewStudentForm({
-                              ...newStudentForm,
-                              paymentAmount: Number.parseInt(e.target.value) || 0,
-                            })
-                          }
-                          className="bg-neutral-800 border-neutral-700"
-                          placeholder="5000"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Notes</Label>
-                      <Textarea
-                        value={newStudentForm.notes}
-                        onChange={(e) => setNewStudentForm({ ...newStudentForm, notes: e.target.value })}
-                        className="bg-neutral-800 border-neutral-700"
-                        placeholder="Any notes about this student..."
-                        rows={2}
-                      />
-                    </div>
-                    {studentError && <p className="text-red-400 text-sm">{studentError}</p>}
-                    <Button
-                      onClick={handleAddStudent}
-                      disabled={isSavingStudent}
-                      className="w-full bg-orange-600 hover:bg-orange-700"
-                    >
-                      {isSavingStudent ? "Saving..." : "Add Student"}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
+          <StudentsTab
+            students={students}
+            studentsLoading={studentsLoading}
+            studentTransactions={studentTransactions}
+            onFetchStudents={fetchStudents}
+            onAddStudent={async (form) => {
+              try {
+                const res = await fetch("/api/admin/students/add", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    org_id: membership.org_id,
+                    name: form.name,
+                    email: form.email,
+                    phone: form.phone,
+                    creditType: form.creditType,
+                    credits: form.credits,
+                    paymentMethod: form.paymentMethod,
+                    paymentAmount: form.paymentAmount,
+                    notes: form.notes,
+                  }),
+                })
+                const data = await res.json()
+                if (res.ok) {
+                  fetchStudents()
+                  return { success: true }
+                }
+                return { success: false, error: data.error || "Failed to add student" }
+              } catch {
+                return { success: false, error: "Failed to add student" }
+              }
+            }}
+            onAddCredits={async (studentId, form) => {
+              try {
+                const res = await fetch(`/api/admin/students/${studentId}/credits`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    org_id: membership.org_id,
+                    credit_type: form.creditType,
+                    credits: form.credits,
+                    notes: form.notes,
+                    payment_method: form.paymentMethod,
+                    payment_amount_thb: form.paymentAmount,
+                  }),
+                })
+                const data = await res.json()
+                if (res.ok) {
+                  fetchStudents()
+                  return { success: true }
+                }
+                return { success: false, error: data.error || "Failed to add credits" }
+              } catch {
+                return { success: false, error: "Failed to add credits" }
+              }
+            }}
+            onUseCredit={async (studentId, creditId) => {
+              try {
+                await fetch(`/api/admin/students/${studentId}/credits`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    org_id: membership.org_id,
+                    credit_id: creditId,
+                    amount: -1,
+                    description: "Session used",
+                  }),
+                })
+                fetchStudents()
+              } catch (error) {
+                console.error("Failed to use credit:", error)
+              }
+            }}
+          />
+        )}
 
-          {/* Students List */}
-          {studentsLoading ? (
-            <div className="text-center py-12 text-neutral-400">Loading students...</div>
-          ) : students.length === 0 ? (
-            <Card className="bg-neutral-900 border-neutral-800">
-              <CardContent className="py-12 text-center">
-                <GraduationCap className="w-12 h-12 mx-auto mb-4 text-neutral-600" />
-                <p className="text-neutral-400 mb-2">No students yet</p>
-                <p className="text-neutral-500 text-sm">Add your first student to start tracking their sessions</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {students.map((student) => (
-                <Card key={student.id} className="bg-neutral-900 border-neutral-800">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold text-white">
-                          {student.full_name || student.display_name || "Unknown"}
-                        </h3>
-                        <p className="text-sm text-neutral-400">{student.email}</p>
-                        {student.phone && <p className="text-xs text-neutral-500">{student.phone}</p>}
-                      </div>
-                      {student.credits && student.credits.length > 0 && (
-                        <Badge
-                          className={
-                            student.credits.some((c) => c.credits_remaining > 3)
-                              ? "bg-green-600"
-                              : student.credits.some((c) => c.credits_remaining > 0)
-                                ? "bg-yellow-600"
-                                : "bg-red-600"
-                          }
-                        >
-                          {student.credits.reduce((sum, c) => sum + c.credits_remaining, 0)} Credits
-                        </Badge>
-                      )}
-                    </div>
-
-                    {student.credits && student.credits.length > 0 && (
-                      <>
-                        {student.credits.map((credit) => (
-                          <div key={credit.id} className="text-xs text-neutral-500 mb-1">
-                            {credit.credit_type}: {credit.credits_remaining} remaining
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    <div className="flex gap-2">
-                      {student.credits && student.credits.some((c) => c.credits_remaining > 0) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            // Try to find a credit type to deduct from, e.g., 'sessions' or 'private_session'
-                            const creditToDeduct = student.credits?.find(
-                              (c) => c.credit_type === "sessions" || c.credit_type === "private_session",
-                            )
-                            if (creditToDeduct) {
-                              handleUseCredit(student.id, creditToDeduct.id)
-                            } else if (student.credits && student.credits.length > 0) {
-                              // Fallback to the first credit type if specific ones aren't found
-                              handleUseCredit(student.id, student.credits[0].id)
-                            } else {
-                              alert("No credits available to use.")
-                            }
-                          }}
-                          className="border-neutral-700 flex-1"
-                        >
-                          <Minus className="w-3 h-3 mr-1" /> Use 1 Credit
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedStudent(student)
-                          setAddCreditsForm({
-                            creditType: student.credits?.[0]?.credit_type || "private_session",
-                            credits: 1,
-                            notes: "",
-                            paymentMethod: "cash",
-                            paymentAmount: 0,
-                          })
-                          setStudentError("")
-                          setIsAddCreditsOpen(true)
-                        }}
-                        className="border-neutral-700 flex-1"
-                      >
-                        <Plus className="w-3 h-3 mr-1" /> Add Credits
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Recent Transactions */}
-          {studentTransactions.length > 0 && (
-            <Card className="bg-neutral-900 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <History className="w-5 h-5" /> Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {studentTransactions.slice(0, 10).map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex justify-between items-center py-2 border-b border-neutral-800 last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm">
-                          <span className="text-white">
-                            {tx.users?.full_name || tx.users?.display_name || "Unknown"}
-                          </span>
-                          <span className="text-neutral-400"> - {tx.description}</span>
-                        </p>
-                        <p className="text-xs text-neutral-500">
-                          {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant="outline"
-                          className={tx.amount > 0 ? "border-green-600 text-green-400" : "border-red-600 text-red-400"}
-                        >
-                          {tx.amount > 0 ? "+" : ""}
-                          {tx.amount}
-                        </Badge>
-                        {tx.payment_amount_thb && (
-                          <p className="text-xs text-neutral-500">฿{tx.payment_amount_thb.toLocaleString()}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Add Credits Dialog */}
-          <Dialog open={isAddCreditsOpen} onOpenChange={setIsAddCreditsOpen}>
-            <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add Credits</DialogTitle>
-                <DialogDescription className="text-neutral-400">
-                  Add credits for {selectedStudent?.full_name || selectedStudent?.email}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Type</Label>
-                    <Select
-                      value={addCreditsForm.creditType}
-                      onValueChange={(v) => setAddCreditsForm({ ...addCreditsForm, creditType: v })}
-                    >
-                      <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-neutral-800 border-neutral-700">
-                        <SelectItem value="sessions">Sessions</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="private">Private Sessions</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Credits to Add</Label>
-                    <Input
-                      type="number"
-                      value={addCreditsForm.credits}
-                      onChange={(e) =>
-                        setAddCreditsForm({ ...addCreditsForm, credits: Number.parseInt(e.target.value) || 0 })
-                      }
-                      className="bg-neutral-800 border-neutral-700"
-                      placeholder="10"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Payment Method</Label>
-                    <Select
-                      value={addCreditsForm.paymentMethod}
-                      onValueChange={(v) => setAddCreditsForm({ ...addCreditsForm, paymentMethod: v })}
-                    >
-                      <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-neutral-800 border-neutral-700">
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
-                        <SelectItem value="transfer">Transfer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Amount Paid (฿)</Label>
-                    <Input
-                      type="number"
-                      value={addCreditsForm.paymentAmount}
-                      onChange={(e) =>
-                        setAddCreditsForm({ ...addCreditsForm, paymentAmount: Number.parseInt(e.target.value) || 0 })
-                      }
-                      className="bg-neutral-800 border-neutral-700"
-                      placeholder="5000"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={addCreditsForm.notes}
-                    onChange={(e) => setAddCreditsForm({ ...addCreditsForm, notes: e.target.value })}
-                    className="bg-neutral-800 border-neutral-700"
-                    placeholder="Any notes..."
-                    rows={2}
-                  />
-                </div>
-                {studentError && <p className="text-red-400 text-sm">{studentError}</p>}
-                <Button
-                  onClick={handleAddCredits}
-                  disabled={isSavingStudent}
-                  className="w-full bg-orange-600 hover:bg-orange-700"
-                >
-                  {isSavingStudent ? "Saving..." : "Add Credits"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
 
           {activeTab === "settings" && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {/* Gym Information */}
             <Card className="bg-neutral-900/50 border-neutral-800">
               <CardHeader>
