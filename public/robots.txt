@@ -1,0 +1,29 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://muaythaipai.com/sitemap.xml
+
+# Block admin areas (if you add them later)
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /private/
+
+# Allow important pages
+Allow: /
+Allow: /classes
+Allow: /fighters
+Allow: /gym
+Allow: /contact
+Allow: /certificate-programs
+Allow: /apprenticeship
+Allow: /train-and-stay
+Allow: /pai-thailand
+Allow: /education-visas
+Allow: /careers
+Allow: /faq
+Allow: /blog
+
+# Crawl delay (optional - helps with server load)
+Crawl-delay: 1

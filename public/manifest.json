@@ -1,0 +1,27 @@
+{
+  "name": "Muay Thai Pai - Wisarut Family Gym",
+  "short_name": "Muay Thai Pai",
+  "description": "Authentic Muay Thai training in Pai, Thailand with the legendary Wisarut Family",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f97316",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["sports", "fitness", "martial-arts"],
+  "lang": "en",
+  "dir": "ltr"
+}
