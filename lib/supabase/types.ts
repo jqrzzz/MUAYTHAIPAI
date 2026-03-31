@@ -1,7 +1,7 @@
 // Database types for Supabase
 // These match the schema defined in the SQL migrations
 
-export type UserRole = "owner" | "admin" | "trainer" | "student"
+export type UserRole = "owner" | "admin" | "trainer" | "student" | "promoter"
 export type OrgStatus = "active" | "suspended" | "pending"
 export type MemberStatus = "active" | "suspended" | "pending"
 export type ServiceCategory = "training" | "certificate" | "membership" | "accommodation"
@@ -9,6 +9,13 @@ export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled" 
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed"
 export type PaymentMethod = "stripe" | "cash" | "transfer"
 export type CertificateStatus = "active" | "revoked"
+export type FightEventStatus = "draft" | "published" | "cancelled" | "completed"
+export type BoutStatus = "scheduled" | "confirmed" | "cancelled" | "completed"
+export type BoutResult =
+  | "red_win_ko" | "red_win_tko" | "red_win_decision"
+  | "blue_win_ko" | "blue_win_tko" | "blue_win_decision"
+  | "draw" | "no_contest"
+export type TicketOrderStatus = "confirmed" | "cancelled" | "refunded"
 
 export interface Organization {
   id: string
@@ -125,6 +132,11 @@ export interface TrainerProfile {
   ock_ock_id: string | null
   open_to_fights: boolean
   open_to_events: boolean
+  weight_kg: number | null
+  height_cm: number | null
+  reach_cm: number | null
+  weight_class: string | null
+  fighter_country: string | null
   created_at: string
   updated_at: string
 }
@@ -214,6 +226,84 @@ export interface ActivityLog {
   details: Record<string, unknown>
   ip_address: string | null
   user_agent: string | null
+  created_at: string
+}
+
+// ============================================
+// Fight Events & Ticket System
+// ============================================
+
+export interface FightEvent {
+  id: string
+  org_id: string
+  name: string
+  description: string | null
+  event_date: string
+  event_time: string | null
+  cover_image_url: string | null
+  venue_name: string | null
+  venue_address: string | null
+  venue_city: string | null
+  venue_province: string | null
+  venue_country: string
+  venue_latitude: number | null
+  venue_longitude: number | null
+  max_capacity: number | null
+  status: FightEventStatus
+  ticket_sales_open: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface EventBout {
+  id: string
+  event_id: string
+  fighter_red_id: string | null
+  fighter_blue_id: string | null
+  bout_order: number
+  weight_class: string | null
+  scheduled_rounds: number
+  is_main_event: boolean
+  status: BoutStatus
+  result: BoutResult | null
+  winner_id: string | null
+  result_round: number | null
+  result_notes: string | null
+  created_at: string
+}
+
+export interface EventTicket {
+  id: string
+  event_id: string
+  tier_name: string
+  description: string | null
+  price_thb: number
+  price_usd: number | null
+  quantity_total: number
+  quantity_sold: number
+  is_active: boolean
+  sale_starts_at: string | null
+  sale_ends_at: string | null
+  created_at: string
+}
+
+export interface TicketOrder {
+  id: string
+  event_id: string
+  ticket_id: string
+  user_id: string | null
+  guest_name: string | null
+  guest_email: string | null
+  guest_phone: string | null
+  quantity: number
+  total_price_thb: number
+  total_price_usd: number | null
+  payment_status: PaymentStatus
+  payment_method: PaymentMethod | null
+  stripe_payment_intent_id: string | null
+  status: TicketOrderStatus
+  order_reference: string | null
   created_at: string
 }
 
