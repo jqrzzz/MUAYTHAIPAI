@@ -32,7 +32,7 @@ export interface SettingsOrgSettings {
 }
 
 interface SettingsTabProps {
-  organization: { name: string }
+  organization: { name: string; slug?: string }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   orgSettings: any
   orgId: string
@@ -148,8 +148,44 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
     }
   }
 
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : ""
+  const gymSlug = organization.slug
+
   return (
     <div className="space-y-6">
+      {/* Public Links */}
+      {gymSlug && (
+        <Card className="bg-emerald-500/5 border-emerald-500/20">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium text-emerald-400 mb-2">Your Public Links</p>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-neutral-400">Profile:</span>
+                <a
+                  href={`/gyms/${gymSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white hover:text-emerald-400 transition-colors font-mono text-xs truncate"
+                >
+                  {siteUrl}/gyms/{gymSlug}
+                </a>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-neutral-400">Booking:</span>
+                <a
+                  href={`/book?gym=${gymSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white hover:text-emerald-400 transition-colors font-mono text-xs truncate"
+                >
+                  {siteUrl}/book?gym={gymSlug}
+                </a>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Gym Information */}
       <Card className="bg-neutral-900/50 border-neutral-800">
         <CardHeader>
