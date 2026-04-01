@@ -27,6 +27,7 @@ import { useTheme } from "next-themes"
 import Link from "next/link"
 import { MoreMenu } from "@/components/more-menu"
 import { BookingSection } from "@/components/booking-section"
+import { PlatformCtaSection } from "@/components/platform-cta-section"
 import { SOCIAL_LINKS } from "@/lib/socials"
 
 const StudentHighlights = dynamic(
@@ -1160,6 +1161,9 @@ export function ClientPage(): ReactElement {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Platform Network CTA */}
+      <PlatformCtaSection />
 
       {/* Bottom Navigation - Responsive */}
       <motion.div
