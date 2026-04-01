@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Swords, Users, Home } from "lucide-react"
+import { Swords, Users, Home, LayoutDashboard } from "lucide-react"
 
 const navItems = [
   { href: "/ock", label: "Home", icon: Home },
   { href: "/ock/fights", label: "Fights", icon: Swords },
   { href: "/ock/fighters", label: "Fighters", icon: Users },
+  { href: "/ock/promoter", label: "Promoter", icon: LayoutDashboard },
 ]
 
 export function OckHeader() {
