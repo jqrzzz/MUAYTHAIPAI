@@ -58,6 +58,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
   const [mounted, setMounted] = useState(false)
 
   const [services, setServices] = useState<Service[]>([])
+  const [gymInfo, setGymInfo] = useState<{ id: string; name: string; timezone: string } | null>(null)
   const [timeSlots, setTimeSlots] = useState<TimeSlots>({ byService: {}, default: [] })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -85,6 +86,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
 
         const data: ServicesData = await response.json()
 
+        setGymInfo(data.gym || null)
         setServices(data.services || [])
         setTimeSlots(data.timeSlots || { byService: {}, default: [] })
 
@@ -503,6 +505,8 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
           servicePrice={displayPrice}
           serviceDuration={displayDuration}
           serviceDescription={displayDescription}
+          orgId={gymInfo?.id}
+          orgName={gymInfo?.name}
           onClose={() => setShowPaymentFlow(false)}
         />
       )}

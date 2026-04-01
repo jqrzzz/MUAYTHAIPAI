@@ -36,8 +36,6 @@ export async function POST(request: NextRequest) {
         enabled: true,
       },
       metadata: {
-        business: "Muay Thai Pai",
-        location: "Pai, Thailand",
         thb_amount: thbAmount.toString(),
         display_currency: "THB",
         ...metadata,

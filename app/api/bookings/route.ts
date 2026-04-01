@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { WISARUT_GYM_ID } from "@/lib/supabase/types"
 
 // Use service role for API routes (bypasses RLS)
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -21,28 +20,36 @@ export async function POST(request: Request) {
       paymentStatus = "pending",
       status = "confirmed",
       userId,
+      orgId,
     } = body
+
+    // Resolve org_id: use provided value, or look up from the service
+    let resolvedOrgId = orgId
+
+    if (!resolvedOrgId && serviceName) {
+      const { data: serviceMatch } = await supabase
+        .from("services")
+        .select("org_id")
+        .ilike("name", `%${serviceName}%`)
+        .limit(1)
+        .single()
+      resolvedOrgId = serviceMatch?.org_id
+    }
+
+    if (!resolvedOrgId) {
+      return NextResponse.json({ error: "org_id is required" }, { status: 400 })
+    }
 
     // Find the service by name to get service_id
     const { data: service, error: serviceError } = await supabase
       .from("services")
       .select("id")
-      .eq("org_id", WISARUT_GYM_ID)
+      .eq("org_id", resolvedOrgId)
       .ilike("name", `%${serviceName}%`)
       .single()
 
     if (serviceError || !service) {
       console.error("Service not found:", serviceName, serviceError)
-      const { data: defaultService } = await supabase
-        .from("services")
-        .select("id")
-        .eq("org_id", WISARUT_GYM_ID)
-        .limit(1)
-        .single()
-
-      if (!defaultService) {
-        return NextResponse.json({ error: "No services found" }, { status: 400 })
-      }
     }
 
     const serviceId = service?.id || null
@@ -56,11 +63,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Insert booking with user_id if available
+    // Insert booking
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
-        org_id: WISARUT_GYM_ID,
+        org_id: resolvedOrgId,
         service_id: serviceId,
         user_id: finalUserId,
         guest_name: guestName,

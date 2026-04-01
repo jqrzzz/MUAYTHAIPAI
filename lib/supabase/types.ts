@@ -306,6 +306,3 @@ export interface TicketOrder {
   order_reference: string | null
   created_at: string
 }
-
-// Wisarut Family Gym ID (hardcoded for now, will be dynamic later)
-export const WISARUT_GYM_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
