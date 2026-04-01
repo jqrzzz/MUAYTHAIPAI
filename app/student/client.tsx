@@ -28,6 +28,7 @@ import {
   FileText,
   Send,
   Loader2,
+  BookOpen,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -455,6 +456,14 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                   <p className="text-white font-medium text-sm">Find Gyms</p>
                   <p className="text-neutral-500 text-xs">Browse network</p>
                 </button>
+                <Link
+                  href="/courses"
+                  className="bg-gradient-to-br from-purple-900/30 to-indigo-800/20 border border-purple-500/30 rounded-xl p-4 text-left hover:border-purple-500/50 transition-colors block"
+                >
+                  <BookOpen className="w-5 h-5 text-purple-400 mb-2" />
+                  <p className="text-white font-medium text-sm">Learn Online</p>
+                  <p className="text-purple-400/70 text-xs">Video courses</p>
+                </Link>
                 <button
                   onClick={() => setActiveView("bookings")}
                   className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-left hover:bg-neutral-800/50 transition-colors"

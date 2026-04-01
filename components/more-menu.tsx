@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, Shield, Globe, Building2 } from "lucide-react"
+import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, Shield, Globe, Building2, GraduationCap } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 
@@ -30,6 +30,12 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
       label: "Certificate Programs",
       href: "/certificate-programs",
       description: "Professional Muay Thai certifications",
+    },
+    {
+      icon: GraduationCap,
+      label: "Online Courses",
+      href: "/courses",
+      description: "Learn Muay Thai with video lessons",
     },
     {
       icon: Users,
