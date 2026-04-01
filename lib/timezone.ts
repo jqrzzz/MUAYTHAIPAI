@@ -1,16 +1,34 @@
-// Pai, Thailand timezone utilities
-// All bookings are in Asia/Bangkok (UTC+7) regardless of user's location
+// Timezone utilities for gym bookings
+// Each gym has its own timezone stored in organizations.timezone
+// Default to Asia/Bangkok for backwards compatibility
 
-export const PAI_TIMEZONE = "Asia/Bangkok"
+export const DEFAULT_TIMEZONE = "Asia/Bangkok"
+
+/**
+ * Get a display label for a timezone
+ */
+export function getTimezoneLabel(timezone: string = DEFAULT_TIMEZONE): string {
+  try {
+    const now = new Date()
+    const formatted = now.toLocaleString("en-US", { timeZone: timezone, timeZoneName: "shortOffset" })
+    const offset = formatted.split(" ").pop() || ""
+    return `${timezone.split("/").pop()?.replace("_", " ")} Time (${offset})`
+  } catch {
+    return `${timezone} Time`
+  }
+}
+
+// Keep these for backwards compatibility with existing imports
+export const PAI_TIMEZONE = DEFAULT_TIMEZONE
 export const PAI_TIMEZONE_LABEL = "Pai Time (UTC+7)"
 
 /**
- * Format a date string to Pai local time for display
+ * Format a date string to local time for display
  */
-export function formatDateInPaiTime(dateString: string): string {
+export function formatDateInPaiTime(dateString: string, timezone: string = DEFAULT_TIMEZONE): string {
   const date = new Date(dateString)
   return date.toLocaleDateString("en-US", {
-    timeZone: PAI_TIMEZONE,
+    timeZone: timezone,
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -19,39 +37,38 @@ export function formatDateInPaiTime(dateString: string): string {
 }
 
 /**
- * Format a time string with Pai timezone label
+ * Format a time string with timezone label
  */
-export function formatTimeInPaiTime(timeString: string): string {
-  return `${timeString} (${PAI_TIMEZONE_LABEL})`
+export function formatTimeInPaiTime(timeString: string, timezone: string = DEFAULT_TIMEZONE): string {
+  return `${timeString} (${getTimezoneLabel(timezone)})`
 }
 
 /**
  * Format date and time together for booking confirmations
  */
-export function formatBookingDateTime(dateString: string, timeString?: string): string {
-  const formattedDate = formatDateInPaiTime(dateString)
+export function formatBookingDateTime(dateString: string, timeString?: string, timezone: string = DEFAULT_TIMEZONE): string {
+  const formattedDate = formatDateInPaiTime(dateString, timezone)
   if (timeString) {
-    return `${formattedDate} at ${timeString} (${PAI_TIMEZONE_LABEL})`
+    return `${formattedDate} at ${timeString} (${getTimezoneLabel(timezone)})`
   }
-  return `${formattedDate} (${PAI_TIMEZONE_LABEL})`
+  return `${formattedDate} (${getTimezoneLabel(timezone)})`
 }
 
 /**
- * Get tomorrow's date in Pai timezone (for calendar min date)
+ * Get tomorrow's date in a given timezone (for calendar min date)
  */
-export function getTomorrowInPaiTimezone(): string {
+export function getTomorrowInPaiTimezone(timezone: string = DEFAULT_TIMEZONE): string {
   const now = new Date()
-  // Convert to Pai time
-  const paiNow = new Date(now.toLocaleString("en-US", { timeZone: PAI_TIMEZONE }))
-  paiNow.setDate(paiNow.getDate() + 1)
-  return paiNow.toISOString().split("T")[0]
+  const localNow = new Date(now.toLocaleString("en-US", { timeZone: timezone }))
+  localNow.setDate(localNow.getDate() + 1)
+  return localNow.toISOString().split("T")[0]
 }
 
 /**
- * Get today's date in Pai timezone
+ * Get today's date in a given timezone
  */
-export function getTodayInPaiTimezone(): string {
+export function getTodayInPaiTimezone(timezone: string = DEFAULT_TIMEZONE): string {
   const now = new Date()
-  const paiNow = new Date(now.toLocaleString("en-US", { timeZone: PAI_TIMEZONE }))
-  return paiNow.toISOString().split("T")[0]
+  const localNow = new Date(now.toLocaleString("en-US", { timeZone: timezone }))
+  return localNow.toISOString().split("T")[0]
 }
