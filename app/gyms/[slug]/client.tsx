@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Instagram, Clock, Dumbbell } from "lucide-react"
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Instagram, Clock, Dumbbell, BadgeCheck, MessageCircle } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface GymPageClientProps {
@@ -18,10 +18,12 @@ interface GymPageClientProps {
     address: string | null
     phone: string | null
     email: string | null
+    whatsapp: string | null
     website: string | null
     instagram: string | null
     logo_url: string | null
     cover_image_url: string | null
+    verified: boolean
   }
   services: {
     id: string
@@ -42,10 +44,22 @@ interface GymPageClientProps {
     specialties: string[] | null
     years_experience: number | null
   }[]
+  settings: {
+    operating_hours: Record<string, { open: string; close: string }> | null
+    show_prices: boolean
+  } | null
   user: SupabaseUser | null
 }
 
-export default function GymPageClient({ gym, services, trainers, user }: GymPageClientProps) {
+const DAY_LABELS: Record<string, string> = {
+  monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
+  friday: "Fri", saturday: "Sat", sunday: "Sun",
+}
+const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+export default function GymPageClient({ gym, services, trainers, settings, user }: GymPageClientProps) {
+  const showPrices = settings?.show_prices !== false
+  const operatingHours = settings?.operating_hours
   // Group services by category
   const trainingServices = services.filter((s) => s.category === "training")
   const certificateServices = services.filter((s) => s.category === "certificate")
@@ -85,7 +99,10 @@ export default function GymPageClient({ gym, services, trainers, user }: GymPage
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">{gym.name}</h1>
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                {gym.name}
+                {gym.verified && <BadgeCheck className="h-5 w-5 text-blue-400" />}
+              </h1>
               <p className="text-neutral-400 flex items-center gap-1">
                 <MapPin className="w-4 h-4" />
                 {gym.city}
@@ -126,6 +143,17 @@ export default function GymPageClient({ gym, services, trainers, user }: GymPage
                 <Instagram className="w-4 h-4" />@{gym.instagram}
               </a>
             )}
+            {gym.whatsapp && (
+              <a
+                href={`https://wa.me/${gym.whatsapp.replace(/[^0-9]/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300"
+              >
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
+              </a>
+            )}
             {gym.website && (
               <a
                 href={gym.website}
@@ -138,6 +166,31 @@ export default function GymPageClient({ gym, services, trainers, user }: GymPage
               </a>
             )}
           </div>
+
+          {/* Operating Hours */}
+          {operatingHours && Object.keys(operatingHours).length > 0 && (
+            <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+              <h3 className="text-sm font-medium text-white flex items-center gap-1.5 mb-3">
+                <Clock className="w-4 h-4 text-neutral-400" />
+                Operating Hours
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {DAYS.map((day) => {
+                  const h = operatingHours[day]
+                  return (
+                    <div key={day} className="text-xs">
+                      <span className="font-medium text-neutral-300">{DAY_LABELS[day]}</span>{" "}
+                      {h ? (
+                        <span className="text-neutral-500">{h.open}–{h.close}</span>
+                      ) : (
+                        <span className="text-neutral-600">Closed</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Training Services */}
@@ -166,9 +219,11 @@ export default function GymPageClient({ gym, services, trainers, user }: GymPage
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-orange-400">฿{service.price_thb.toLocaleString()}</p>
-                      </div>
+                      {showPrices && (
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-orange-400">฿{service.price_thb.toLocaleString()}</p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -193,9 +248,11 @@ export default function GymPageClient({ gym, services, trainers, user }: GymPage
                           <p className="text-xs text-neutral-500 mt-2">{service.duration_days} day program</p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-orange-400">฿{service.price_thb.toLocaleString()}</p>
-                      </div>
+                      {showPrices && (
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-orange-400">฿{service.price_thb.toLocaleString()}</p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -257,7 +314,7 @@ export default function GymPageClient({ gym, services, trainers, user }: GymPage
           <CardContent className="p-6 text-center">
             <h3 className="text-lg font-semibold text-white mb-2">Ready to Train?</h3>
             <p className="text-neutral-400 text-sm mb-4">Book a session at {gym.name}</p>
-            <Link href="/train-and-stay">
+            <Link href={`/train-and-stay?gym=${gym.slug}`}>
               <Button className="bg-orange-600 hover:bg-orange-500">Book Now</Button>
             </Link>
           </CardContent>

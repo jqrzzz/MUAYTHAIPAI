@@ -44,26 +44,39 @@ export default async function GymPage({ params }: GymPageProps) {
     notFound()
   }
 
-  // Fetch services
-  const { data: services } = await supabase
-    .from("services")
-    .select("*")
-    .eq("org_id", gym.id)
-    .eq("is_active", true)
-    .order("display_order")
-
-  // Fetch trainers
-  const { data: trainers } = await supabase
-    .from("trainer_profiles")
-    .select("*")
-    .eq("org_id", gym.id)
-    .eq("is_available", true)
-    .order("display_order")
+  // Fetch services, trainers, and settings in parallel
+  const [servicesRes, trainersRes, settingsRes] = await Promise.all([
+    supabase
+      .from("services")
+      .select("*")
+      .eq("org_id", gym.id)
+      .eq("is_active", true)
+      .order("display_order"),
+    supabase
+      .from("trainer_profiles")
+      .select("*")
+      .eq("org_id", gym.id)
+      .eq("is_available", true)
+      .order("display_order"),
+    supabase
+      .from("org_settings")
+      .select("operating_hours, show_prices")
+      .eq("org_id", gym.id)
+      .single(),
+  ])
 
   // Check if user is logged in
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  return <GymPageClient gym={gym} services={services || []} trainers={trainers || []} user={user} />
+  return (
+    <GymPageClient
+      gym={gym}
+      services={servicesRes.data || []}
+      trainers={trainersRes.data || []}
+      settings={settingsRes.data}
+      user={user}
+    />
+  )
 }

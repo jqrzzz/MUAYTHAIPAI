@@ -99,19 +99,23 @@ export async function POST(request: Request) {
       .single()
 
     if (existingSettings) {
+      // Build update payload from allowed fields only
+      const allowed: Record<string, unknown> = {}
+      const fields = [
+        "booking_advance_days", "booking_max_days_ahead", "allow_guest_bookings",
+        "require_payment_upfront", "notify_on_booking_email", "notification_email",
+        "show_prices", "show_trainer_selection", "operating_hours",
+      ] as const
+      for (const key of fields) {
+        if (settingsUpdates[key] !== undefined) {
+          allowed[key] = settingsUpdates[key]
+        }
+      }
+      allowed.updated_at = new Date().toISOString()
+
       const { error: settingsError } = await supabase
         .from("org_settings")
-        .update({
-          booking_advance_days: settingsUpdates.booking_advance_days,
-          booking_max_days_ahead: settingsUpdates.booking_max_days_ahead,
-          allow_guest_bookings: settingsUpdates.allow_guest_bookings,
-          require_payment_upfront: settingsUpdates.require_payment_upfront,
-          notify_on_booking_email: settingsUpdates.notify_on_booking_email,
-          notification_email: settingsUpdates.notification_email,
-          show_prices: settingsUpdates.show_prices,
-          show_trainer_selection: settingsUpdates.show_trainer_selection,
-          updated_at: new Date().toISOString(),
-        })
+        .update(allowed)
         .eq("org_id", membership.org_id)
 
       if (settingsError) {

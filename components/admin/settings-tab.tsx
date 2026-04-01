@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Save } from "lucide-react"
+import { Save, Clock } from "lucide-react"
 
 export interface SettingsOrgSettings {
   description?: string | null
@@ -42,6 +42,37 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
   const router = useRouter()
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [settingsSuccess, setSettingsSuccess] = useState(false)
+  const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const
+  const DAY_LABELS: Record<string, string> = {
+    monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
+    friday: "Fri", saturday: "Sat", sunday: "Sun",
+  }
+
+  const defaultHours = Object.fromEntries(
+    DAYS.map((d) => [d, { open: "08:00", close: "18:00", closed: false }])
+  )
+  const savedHours = orgSettings?.operating_hours || {}
+  const initialHours = Object.fromEntries(
+    DAYS.map((d) => [
+      d,
+      savedHours[d]
+        ? { open: savedHours[d].open, close: savedHours[d].close, closed: false }
+        : defaultHours[d],
+    ])
+  )
+  // Mark days not in savedHours as closed if operating_hours was explicitly set
+  if (Object.keys(savedHours).length > 0) {
+    for (const d of DAYS) {
+      if (!savedHours[d]) {
+        initialHours[d] = { ...defaultHours[d], closed: true }
+      }
+    }
+  }
+
+  const [operatingHours, setOperatingHours] = useState<
+    Record<string, { open: string; close: string; closed: boolean }>
+  >(initialHours)
+
   const [settingsForm, setSettingsForm] = useState({
     name: organization.name || "",
     description: orgSettings?.description || "",
@@ -95,6 +126,12 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
             notification_email: settingsForm.notification_email || null,
             show_prices: settingsForm.show_prices,
             show_trainer_selection: settingsForm.show_trainer_selection,
+            operating_hours: Object.fromEntries(
+              DAYS.filter((d) => !operatingHours[d].closed).map((d) => [
+                d,
+                { open: operatingHours[d].open, close: operatingHours[d].close },
+              ])
+            ),
           },
         }),
       })
@@ -334,6 +371,74 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
               </Label>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Operating Hours */}
+      <Card className="bg-neutral-900/50 border-neutral-800">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Operating Hours
+          </CardTitle>
+          <CardDescription>When is your gym open for training?</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {DAYS.map((day) => (
+            <div
+              key={day}
+              className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                operatingHours[day].closed
+                  ? "border-neutral-800 bg-neutral-900/30"
+                  : "border-neutral-700 bg-neutral-800/50"
+              }`}
+            >
+              <span className={`w-10 text-sm font-medium ${operatingHours[day].closed ? "text-neutral-600" : "text-neutral-200"}`}>
+                {DAY_LABELS[day]}
+              </span>
+              <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                <input
+                  type="checkbox"
+                  checked={operatingHours[day].closed}
+                  onChange={(e) =>
+                    setOperatingHours((prev) => ({
+                      ...prev,
+                      [day]: { ...prev[day], closed: e.target.checked },
+                    }))
+                  }
+                  className="w-3.5 h-3.5 rounded border-neutral-600 bg-neutral-800"
+                />
+                Closed
+              </label>
+              {!operatingHours[day].closed && (
+                <div className="ml-auto flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={operatingHours[day].open}
+                    onChange={(e) =>
+                      setOperatingHours((prev) => ({
+                        ...prev,
+                        [day]: { ...prev[day], open: e.target.value },
+                      }))
+                    }
+                    className="bg-neutral-800 border-neutral-700 text-white w-28 h-8 text-sm"
+                  />
+                  <span className="text-neutral-600 text-xs">to</span>
+                  <Input
+                    type="time"
+                    value={operatingHours[day].close}
+                    onChange={(e) =>
+                      setOperatingHours((prev) => ({
+                        ...prev,
+                        [day]: { ...prev[day], close: e.target.value },
+                      }))
+                    }
+                    className="bg-neutral-800 border-neutral-700 text-white w-28 h-8 text-sm"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
 
