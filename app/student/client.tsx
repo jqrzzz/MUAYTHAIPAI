@@ -641,36 +641,44 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
 
             <div className="space-y-3">
               {gyms.map((gym) => (
-                <Link key={gym.id} href={`/gyms/${gym.slug}`}>
-                  <Card className="bg-neutral-900/50 border-neutral-800 hover:bg-neutral-800/50 transition-colors cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-neutral-800 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {gym.logo_url ? (
-                            <Image
-                              src={gym.logo_url || "/placeholder.svg"}
-                              alt={gym.name}
-                              width={48}
-                              height={48}
-                              className="object-contain"
-                            />
-                          ) : (
-                            <Dumbbell className="w-6 h-6 text-neutral-600" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-white truncate">{gym.name}</h3>
-                          <p className="text-sm text-neutral-500 flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {gym.city}
-                            {gym.province && `, ${gym.province}`}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-neutral-600 flex-shrink-0" />
+                <Card key={gym.id} className="bg-neutral-900/50 border-neutral-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-neutral-800 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {gym.logo_url ? (
+                          <Image
+                            src={gym.logo_url || "/placeholder.svg"}
+                            alt={gym.name}
+                            width={48}
+                            height={48}
+                            className="object-contain"
+                          />
+                        ) : (
+                          <Dumbbell className="w-6 h-6 text-neutral-600" />
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/gyms/${gym.slug}`}>
+                          <h3 className="font-medium text-white truncate hover:text-orange-400 transition-colors">{gym.name}</h3>
+                        </Link>
+                        <p className="text-sm text-neutral-500 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {gym.city}
+                          {gym.province && `, ${gym.province}`}
+                        </p>
+                        {gym.description && (
+                          <p className="text-xs text-neutral-600 mt-1 line-clamp-1">{gym.description}</p>
+                        )}
+                      </div>
+                      <Link
+                        href={`/book?gym=${gym.slug}`}
+                        className="flex-shrink-0 rounded-lg bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-400 hover:bg-orange-500/20 transition-colors"
+                      >
+                        Book
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
 
