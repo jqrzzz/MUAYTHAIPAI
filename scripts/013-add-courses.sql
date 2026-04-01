@@ -169,6 +169,8 @@ CREATE TABLE lesson_progress (
 );
 
 CREATE INDEX idx_progress_user_course ON lesson_progress(user_id, course_id);
+CREATE INDEX idx_progress_course_status ON lesson_progress(course_id, status);
+CREATE INDEX idx_enrollments_course_status ON enrollments(course_id, status);
 
 -- ============================================
 -- 6. QUIZ QUESTIONS (for quiz-type lessons)

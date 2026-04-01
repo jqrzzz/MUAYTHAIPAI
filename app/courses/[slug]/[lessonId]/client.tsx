@@ -60,8 +60,7 @@ interface QuizQuestion {
   id: string
   question_text: string
   question_type: string
-  options: { id: string; text: string; is_correct: boolean }[] | null
-  correct_answer: string
+  options: { id: string; text: string }[] | null
   explanation: string | null
   question_order: number
 }
@@ -86,6 +85,7 @@ export default function LessonPlayerClient({
   const router = useRouter()
   const [completed, setCompleted] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
 
   // Build flat lesson list for prev/next navigation
@@ -117,6 +117,7 @@ export default function LessonPlayerClient({
 
   async function markComplete() {
     setSaving(true)
+    setSaveError(null)
     try {
       const res = await fetch("/api/courses/progress", {
         method: "POST",
@@ -129,9 +130,11 @@ export default function LessonPlayerClient({
       })
       if (res.ok) {
         setCompleted(true)
+      } else {
+        setSaveError("Couldn't save progress. Please try again.")
       }
     } catch {
-      // Silently fail
+      setSaveError("Network error. Please check your connection.")
     } finally {
       setSaving(false)
     }
@@ -176,7 +179,7 @@ export default function LessonPlayerClient({
 
       <div className="flex">
         {/* Main content */}
-        <main className={`flex-1 ${showSidebar ? "hidden lg:block" : ""}`}>
+        <main className="flex-1">
           {/* Content area */}
           <div className="mx-auto max-w-3xl px-4 py-8">
             {/* Video lesson */}
@@ -226,6 +229,11 @@ export default function LessonPlayerClient({
               <div className="mt-6 text-sm text-neutral-400 leading-relaxed">
                 {lesson.description}
               </div>
+            )}
+
+            {/* Error message */}
+            {saveError && (
+              <p className="mt-6 text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{saveError}</p>
             )}
 
             {/* Bottom actions */}
@@ -282,41 +290,58 @@ export default function LessonPlayerClient({
           </div>
         </main>
 
-        {/* Sidebar - lesson nav */}
+        {/* Sidebar - desktop: inline panel, mobile: overlay */}
         {showSidebar && (
-          <aside className="w-full lg:w-80 border-l border-white/10 bg-neutral-950 overflow-y-auto max-h-[calc(100vh-3.5rem)]">
-            <div className="p-4">
-              <h3 className="text-sm font-medium text-neutral-400 mb-3">Course Contents</h3>
-              <div className="space-y-3">
-                {modules.map((mod) => (
-                  <div key={mod.id}>
-                    <p className="text-xs text-neutral-500 mb-1">{mod.title}</p>
-                    <div className="space-y-0.5">
-                      {mod.lessons.map((l) => (
-                        <Link
-                          key={l.id}
-                          href={`/courses/${course.slug}/${l.id}`}
-                          className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                            l.id === lesson.id
-                              ? "bg-orange-500/10 text-orange-400"
-                              : "text-neutral-400 hover:bg-white/5 hover:text-white"
-                          }`}
-                        >
-                          <span className="text-neutral-600">
-                            {l.content_type === "video" ? <Play className="h-3 w-3" /> :
-                             l.content_type === "text" ? <FileText className="h-3 w-3" /> :
-                             l.content_type === "drill" ? <Dumbbell className="h-3 w-3" /> :
-                             <HelpCircle className="h-3 w-3" />}
-                          </span>
-                          <span className="truncate">{l.title}</span>
-                        </Link>
-                      ))}
+          <>
+            {/* Mobile overlay backdrop */}
+            <div
+              className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+              onClick={() => setShowSidebar(false)}
+            />
+            <aside className="fixed right-0 top-[3.25rem] bottom-0 z-50 w-80 max-w-[85vw] border-l border-white/10 bg-neutral-950 overflow-y-auto lg:static lg:z-auto lg:max-w-none lg:w-80 lg:max-h-[calc(100vh-3.5rem)]">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-neutral-400">Course Contents</h3>
+                  <button
+                    onClick={() => setShowSidebar(false)}
+                    className="text-neutral-500 hover:text-white lg:hidden"
+                    aria-label="Close sidebar"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {modules.map((mod) => (
+                    <div key={mod.id}>
+                      <p className="text-xs text-neutral-500 mb-1">{mod.title}</p>
+                      <div className="space-y-0.5">
+                        {mod.lessons.map((l) => (
+                          <Link
+                            key={l.id}
+                            href={`/courses/${course.slug}/${l.id}`}
+                            onClick={() => setShowSidebar(false)}
+                            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                              l.id === lesson.id
+                                ? "bg-orange-500/10 text-orange-400"
+                                : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            <span className="text-neutral-600">
+                              {l.content_type === "video" ? <Play className="h-3 w-3" /> :
+                               l.content_type === "text" ? <FileText className="h-3 w-3" /> :
+                               l.content_type === "drill" ? <Dumbbell className="h-3 w-3" /> :
+                               <HelpCircle className="h-3 w-3" />}
+                            </span>
+                            <span className="truncate">{l.title}</span>
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          </aside>
+            </aside>
+          </>
         )}
       </div>
     </div>
@@ -404,6 +429,12 @@ function QuizPlayer({
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [showResults, setShowResults] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [quizResults, setQuizResults] = useState<{
+    score: number
+    total: number
+    correct_answers: Record<string, string>
+  } | null>(null)
+  const [quizError, setQuizError] = useState<string | null>(null)
 
   const question = questions[currentQ]
   if (!question) return null
@@ -413,13 +444,10 @@ function QuizPlayer({
 
   async function submitQuiz() {
     setSubmitting(true)
-    const correctCount = questions.filter(
-      (q) => answers[q.id] === q.correct_answer
-    ).length
-    const score = Math.round((correctCount / totalQuestions) * 100)
+    setQuizError(null)
 
     try {
-      await fetch("/api/courses/progress", {
+      const res = await fetch("/api/courses/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -427,33 +455,35 @@ function QuizPlayer({
           course_id: courseId,
           status: "completed",
           quiz_answers: answers,
-          quiz_score: score,
         }),
       })
-      onComplete()
+      if (res.ok) {
+        const data = await res.json()
+        setQuizResults(data.quiz_results || null)
+        onComplete()
+        setShowResults(true)
+      } else {
+        const data = await res.json().catch(() => null)
+        setQuizError(data?.error || "Failed to submit quiz. Please try again.")
+      }
     } catch {
-      // Silently fail
+      setQuizError("Network error. Please check your connection and try again.")
     } finally {
       setSubmitting(false)
-      setShowResults(true)
     }
   }
 
-  if (showResults) {
-    const correctCount = questions.filter(
-      (q) => answers[q.id] === q.correct_answer
-    ).length
-
+  if (showResults && quizResults) {
     return (
       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
         <div className="text-center mb-6">
           <p className="text-3xl font-bold text-white">
-            {correctCount}/{totalQuestions}
+            {quizResults.score}/{quizResults.total}
           </p>
           <p className="text-sm text-neutral-400 mt-1">
-            {correctCount === totalQuestions
+            {quizResults.score === quizResults.total
               ? "Perfect score!"
-              : correctCount >= totalQuestions * 0.7
+              : quizResults.score >= quizResults.total * 0.7
                 ? "Great job!"
                 : "Keep practicing!"}
           </p>
@@ -461,7 +491,7 @@ function QuizPlayer({
 
         <div className="space-y-4">
           {questions.map((q, i) => {
-            const isCorrect = answers[q.id] === q.correct_answer
+            const isCorrect = answers[q.id] === quizResults.correct_answers[q.id]
             return (
               <div
                 key={q.id}
@@ -473,7 +503,7 @@ function QuizPlayer({
                   {i + 1}. {q.question_text}
                 </p>
                 <p className={`text-xs ${isCorrect ? "text-emerald-400" : "text-red-400"}`}>
-                  {isCorrect ? "Correct" : `Correct answer: ${q.correct_answer}`}
+                  {isCorrect ? "Correct" : "Incorrect"}
                 </p>
                 {q.explanation && (
                   <p className="text-xs text-neutral-500 mt-1">{q.explanation}</p>
@@ -518,6 +548,11 @@ function QuizPlayer({
         </div>
       )}
 
+      {/* Error */}
+      {quizError && (
+        <p className="mt-4 text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{quizError}</p>
+      )}
+
       {/* Navigation */}
       <div className="mt-6 flex items-center justify-between">
         <button
@@ -549,12 +584,3 @@ function QuizPlayer({
   )
 }
 
-interface QuizQuestion {
-  id: string
-  question_text: string
-  question_type: string
-  options: { id: string; text: string; is_correct: boolean }[] | null
-  correct_answer: string
-  explanation: string | null
-  question_order: number
-}

@@ -59,11 +59,15 @@ export default async function CourseDetailPage({ params }: Props) {
     .order("module_order")
 
   // Sort lessons within each module
+  type LessonRow = {
+    id: string; title: string; description: string | null; content_type: string;
+    video_duration_seconds: number | null; estimated_minutes: number | null;
+    lesson_order: number; is_preview: boolean
+  }
   const sortedModules = (modules || []).map((m) => ({
     ...m,
-    lessons: ((m.lessons as unknown[]) || []).sort(
-      (a: { lesson_order: number }, b: { lesson_order: number }) =>
-        a.lesson_order - b.lesson_order
+    lessons: ((m.lessons || []) as LessonRow[]).sort(
+      (a, b) => a.lesson_order - b.lesson_order
     ),
   }))
 

@@ -127,10 +127,13 @@ export default function OnboardingClient({
           },
         }),
       })
-      if (!res.ok) throw new Error("Failed to save details")
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to save details")
+      }
       setStep("services")
-    } catch {
-      setError("Failed to save. Please try again.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -147,6 +150,7 @@ export default function OnboardingClient({
     setSaving(true)
     setError(null)
     try {
+      let savedCount = 0
       for (const svc of validServices) {
         const res = await fetch("/api/admin/services", {
           method: "POST",
@@ -160,7 +164,13 @@ export default function OnboardingClient({
             is_active: true,
           }),
         })
-        if (!res.ok) throw new Error(`Failed to create service: ${svc.name}`)
+        if (!res.ok) {
+          const msg = savedCount > 0
+            ? `Saved ${savedCount} service(s), but failed on "${svc.name}". You can continue and fix this later in Settings.`
+            : `Failed to create "${svc.name}". Please try again.`
+          throw new Error(msg)
+        }
+        savedCount++
       }
       setStep("hours")
     } catch (err) {

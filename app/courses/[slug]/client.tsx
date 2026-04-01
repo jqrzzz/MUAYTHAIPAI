@@ -96,6 +96,7 @@ export default function CourseDetailClient({
   const [progress, setProgress] = useState<LessonProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
+  const [enrollError, setEnrollError] = useState<string | null>(null)
   const [expandedModules, setExpandedModules] = useState<Set<string>>(
     new Set(modules.slice(0, 2).map((m) => m.id))
   )
@@ -121,6 +122,7 @@ export default function CourseDetailClient({
 
   async function handleEnroll() {
     setEnrolling(true)
+    setEnrollError(null)
     try {
       const res = await fetch("/api/courses/enroll", {
         method: "POST",
@@ -131,12 +133,17 @@ export default function CourseDetailClient({
         window.location.href = `/student/login?redirect=/courses/${course.slug}`
         return
       }
-      if (res.ok) {
+      if (res.status === 402) {
+        setEnrollError("This is a paid course. Payment integration coming soon.")
+      } else if (res.ok) {
         const data = await res.json()
         setEnrollment(data.enrollment)
+      } else {
+        const data = await res.json().catch(() => null)
+        setEnrollError(data?.error || "Enrollment failed. Please try again.")
       }
     } catch {
-      // Handle error silently
+      setEnrollError("Network error. Please check your connection.")
     } finally {
       setEnrolling(false)
     }
@@ -398,6 +405,9 @@ export default function CourseDetailClient({
                     )}
                     {course.is_free ? "Start Learning" : "Enroll Now"}
                   </button>
+                  {enrollError && (
+                    <p className="mt-2 text-xs text-red-400 text-center">{enrollError}</p>
+                  )}
                 </>
               )}
 

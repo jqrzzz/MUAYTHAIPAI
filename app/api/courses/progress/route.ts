@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
+
+const serviceClient = createServiceClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // GET /api/courses/progress?course_id=xxx — get user's progress for a course
 export async function GET(request: Request) {
@@ -47,10 +53,14 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { lesson_id, course_id, status, video_position_seconds, quiz_answers, quiz_score } = body
+  const { lesson_id, course_id, status, video_position_seconds, quiz_answers } = body
 
-  if (!lesson_id || !course_id) {
+  if (!lesson_id || !course_id || typeof lesson_id !== "string" || typeof course_id !== "string") {
     return NextResponse.json({ error: "lesson_id and course_id required" }, { status: 400 })
+  }
+
+  if (status && !["in_progress", "completed"].includes(status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 })
   }
 
   // Verify enrollment
@@ -65,6 +75,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not enrolled in this course" }, { status: 403 })
   }
 
+  // Server-side quiz scoring
+  let quizScore: number | undefined
+  let quizResults: { score: number; total: number; correct_answers: Record<string, string> } | undefined
+
+  if (quiz_answers && typeof quiz_answers === "object") {
+    const { data: questions } = await serviceClient
+      .from("quiz_questions")
+      .select("id, correct_answer, options")
+      .eq("lesson_id", lesson_id)
+
+    if (questions && questions.length > 0) {
+      const correctAnswers: Record<string, string> = {}
+      let correctCount = 0
+
+      for (const q of questions) {
+        correctAnswers[q.id] = q.correct_answer
+        if (quiz_answers[q.id] === q.correct_answer) {
+          correctCount++
+        }
+      }
+
+      quizScore = Math.round((correctCount / questions.length) * 100)
+      quizResults = {
+        score: correctCount,
+        total: questions.length,
+        correct_answers: correctAnswers,
+      }
+    }
+  }
+
   // Upsert lesson progress
   const now = new Date().toISOString()
   const updates: Record<string, unknown> = {
@@ -74,16 +114,16 @@ export async function POST(request: Request) {
     status: status || "in_progress",
   }
 
-  if (video_position_seconds !== undefined) {
+  if (video_position_seconds !== undefined && typeof video_position_seconds === "number") {
     updates.video_position_seconds = video_position_seconds
   }
   if (quiz_answers !== undefined) {
     updates.quiz_answers = quiz_answers
   }
-  if (quiz_score !== undefined) {
-    updates.quiz_score = quiz_score
+  if (quizScore !== undefined) {
+    updates.quiz_score = quizScore
   }
-  if (status === "in_progress" && !updates.started_at) {
+  if (status === "in_progress") {
     updates.started_at = now
   }
   if (status === "completed") {
@@ -137,5 +177,5 @@ export async function POST(request: Request) {
       .eq("course_id", course_id)
   }
 
-  return NextResponse.json({ progress })
+  return NextResponse.json({ progress, quiz_results: quizResults })
 }

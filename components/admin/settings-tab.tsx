@@ -42,6 +42,7 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
   const router = useRouter()
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [settingsSuccess, setSettingsSuccess] = useState(false)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
   const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const
   const DAY_LABELS: Record<string, string> = {
     monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
@@ -98,6 +99,7 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
   const handleSaveSettings = async () => {
     setIsSavingSettings(true)
     setSettingsSuccess(false)
+    setSettingsError(null)
     try {
       const response = await fetch("/api/admin/settings", {
         method: "POST",
@@ -138,11 +140,13 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
 
       if (response.ok) {
         setSettingsSuccess(true)
-        setTimeout(() => setSettingsSuccess(false), 3000)
+        setTimeout(() => setSettingsSuccess(false), 5000)
         router.refresh()
+      } else {
+        setSettingsError("Failed to save settings. Please try again.")
       }
-    } catch (error) {
-      console.error("Failed to save settings:", error)
+    } catch {
+      setSettingsError("Failed to save settings. Please try again.")
     } finally {
       setIsSavingSettings(false)
     }
@@ -527,6 +531,7 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
           {isSavingSettings ? "Saving..." : "Save Settings"}
         </Button>
         {settingsSuccess && <span className="text-green-400 text-sm">Settings saved successfully!</span>}
+        {settingsError && <span className="text-red-400 text-sm">{settingsError}</span>}
       </div>
     </div>
   )
