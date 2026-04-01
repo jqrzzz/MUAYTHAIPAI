@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, Shield } from "lucide-react"
+import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, Shield, Globe, Building2 } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 
@@ -167,6 +167,64 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
                   </Link>
                 </motion.div>
               ))}
+            </div>
+
+            {/* Network Section */}
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3
+                className={`text-sm font-semibold mb-3 ${resolvedTheme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+              >
+                Muay Thai Network
+              </h3>
+              <div className="grid gap-3">
+                {[
+                  {
+                    icon: Globe,
+                    label: "Browse Gyms",
+                    href: "/gyms",
+                    description: "Find Muay Thai gyms across Thailand",
+                  },
+                  {
+                    icon: Building2,
+                    label: "List Your Gym",
+                    href: "/signup",
+                    description: "Join the network — free 30-day trial",
+                  },
+                ].map((item, index) => (
+                  <motion.div
+                    key={item.href}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: (menuItems.length + index) * 0.05 }}
+                  >
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={`flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 min-h-[72px] ${
+                        resolvedTheme === "dark"
+                          ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-white border border-emerald-500/20"
+                          : "bg-emerald-50 hover:bg-emerald-100 text-gray-800 border border-emerald-200"
+                      }`}
+                    >
+                      <div
+                        className={`rounded-full p-3 ${
+                          resolvedTheme === "dark"
+                            ? "bg-emerald-500/30 text-emerald-400"
+                            : "bg-emerald-200 text-emerald-600"
+                        }`}
+                      >
+                        <item.icon className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{item.label}</h3>
+                        <p className={`text-sm ${resolvedTheme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                          {item.description}
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
             {/* Login Section */}
