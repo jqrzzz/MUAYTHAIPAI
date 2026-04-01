@@ -314,7 +314,7 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
           <CardContent className="p-6 text-center">
             <h3 className="text-lg font-semibold text-white mb-2">Ready to Train?</h3>
             <p className="text-neutral-400 text-sm mb-4">Book a session at {gym.name}</p>
-            <Link href={`/train-and-stay?gym=${gym.slug}`}>
+            <Link href={`/book?gym=${gym.slug}`}>
               <Button className="bg-orange-600 hover:bg-orange-500">Book Now</Button>
             </Link>
           </CardContent>

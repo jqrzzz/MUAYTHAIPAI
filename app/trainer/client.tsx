@@ -39,6 +39,7 @@ import {
   FileText,
   MessageSquare,
   List as LucideList,
+  Award,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import NavButton from "@/components/ui/nav-button"
@@ -182,6 +183,11 @@ export default function TrainerDashboardClient({
   const [newStudent, setNewStudent] = useState({ name: "", email: "" })
   const [isAddingStudent, setIsAddingStudent] = useState(false)
 
+  // Certificate issuance state
+  const [certLevel, setCertLevel] = useState("")
+  const [isIssuingCert, setIsIssuingCert] = useState(false)
+  const [certSuccess, setCertSuccess] = useState<string | null>(null)
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -292,6 +298,8 @@ export default function TrainerDashboardClient({
     setIsLoadingStudent(true)
     setStudentNotes([])
     setStudentBookingHistory([])
+    setCertLevel("")
+    setCertSuccess(null)
     try {
       const res = await fetch(`/api/trainer/student/${student.id}`)
       if (res.ok) {
@@ -328,6 +336,34 @@ export default function TrainerDashboardClient({
       console.error("Error adding note:", error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleIssueCertificate = async () => {
+    if (!selectedStudent?.email || !certLevel) return
+    setIsIssuingCert(true)
+    setCertSuccess(null)
+    try {
+      const res = await fetch("/api/admin/certificates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_email: selectedStudent.email,
+          level: certLevel,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to issue certificate")
+      setCertSuccess(data.certificate.certificate_number)
+      setCertLevel("")
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to issue certificate",
+        variant: "destructive",
+      })
+    } finally {
+      setIsIssuingCert(false)
     }
   }
 
@@ -1557,6 +1593,45 @@ export default function TrainerDashboardClient({
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              {/* Issue Certificate */}
+              {selectedStudent?.email && (
+                <div className="space-y-2">
+                  <Label className="text-neutral-300 flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Issue Certificate
+                  </Label>
+                  {certSuccess ? (
+                    <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm">
+                      <p className="text-emerald-400 font-medium">Certificate issued!</p>
+                      <p className="text-neutral-400 text-xs mt-1">
+                        #{certSuccess}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <select
+                        value={certLevel}
+                        onChange={(e) => setCertLevel(e.target.value)}
+                        className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select level...</option>
+                        <option value="naga">Naga (Level 1)</option>
+                        <option value="phayra-nak">Phayra Nak (Level 2)</option>
+                        <option value="singha">Singha (Level 3)</option>
+                        <option value="hanuman">Hanuman (Level 4)</option>
+                        <option value="garuda">Garuda (Level 5)</option>
+                      </select>
+                      <Button
+                        onClick={handleIssueCertificate}
+                        disabled={isIssuingCert || !certLevel}
+                        className="bg-orange-600 hover:bg-orange-500"
+                      >
+                        {isIssuingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
