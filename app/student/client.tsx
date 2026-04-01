@@ -265,14 +265,15 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
   }
 
   const getLevelInfo = (level: string) => {
+    const normalized = level.toLowerCase().replace(/[-_]/g, "")
     const levels: Record<string, { color: string; icon: string }> = {
-      naga: { color: "from-emerald-500 to-emerald-700", icon: "🐍" },
-      phayra_nak: { color: "from-blue-500 to-blue-700", icon: "🐉" },
-      ratchasi: { color: "from-purple-500 to-purple-700", icon: "🦁" },
-      hanuman: { color: "from-orange-500 to-orange-700", icon: "🐒" },
-      garuda: { color: "from-red-500 to-red-700", icon: "🦅" },
+      naga: { color: "from-blue-500 to-blue-700", icon: "🐍" },
+      phayanak: { color: "from-emerald-500 to-emerald-700", icon: "🐉" },
+      singha: { color: "from-amber-500 to-amber-700", icon: "🦁" },
+      hanuman: { color: "from-slate-400 to-slate-600", icon: "🐒" },
+      garuda: { color: "from-yellow-500 to-yellow-700", icon: "🦅" },
     }
-    return levels[level] || { color: "from-neutral-500 to-neutral-700", icon: "🥊" }
+    return levels[normalized] || { color: "from-neutral-500 to-neutral-700", icon: "🥊" }
   }
 
   const userName = profile?.full_name || user.email?.split("@")[0] || "Fighter"
@@ -408,7 +409,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                           Level {certificates[0].level_number}
                         </Badge>
                         <h3 className="text-lg font-bold text-white capitalize">
-                          {certificates[0].level.replace("_", " ")}
+                          {certificates[0].level.replace(/[-_]/g, " ")}
                         </h3>
                         <p className="text-white/60 text-xs">{certificates[0].organizations?.name}</p>
                       </div>
@@ -572,7 +573,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                           <Badge className="bg-white/20 text-white border-0 text-xs mb-1">
                             Level {cert.level_number}
                           </Badge>
-                          <h3 className="text-xl font-bold text-white capitalize">{cert.level.replace("_", " ")}</h3>
+                          <h3 className="text-xl font-bold text-white capitalize">{cert.level.replace(/[-_]/g, " ")}</h3>
                           <p className="text-white/70 text-sm">{cert.organizations?.name}</p>
                           <p className="text-white/50 text-xs mt-1">
                             Issued {new Date(cert.issued_at).toLocaleDateString()}
@@ -580,7 +581,14 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                         </div>
                       </div>
                       {cert.certificate_number && (
-                        <p className="text-white/30 text-xs mt-4 font-mono">{cert.certificate_number}</p>
+                        <a
+                          href={`/verify/${cert.certificate_number}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-white/30 text-xs mt-4 font-mono hover:text-white/60 transition-colors"
+                        >
+                          {cert.certificate_number} &rarr;
+                        </a>
                       )}
                     </CardContent>
                   </Card>
@@ -600,8 +608,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             <div>
               <h3 className="text-sm font-medium text-neutral-500 mb-3">Certificate Levels</h3>
               <div className="space-y-2">
-                {["naga", "phayra_nak", "ratchasi", "hanuman", "garuda"].map((level, i) => {
-                  const earned = certificates.some((c) => c.level === level)
+                {["naga", "phayra-nak", "singha", "hanuman", "garuda"].map((level, i) => {
+                  const earned = certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, ""))
                   return (
                     <div
                       key={level}
@@ -610,7 +618,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                       <div className="text-2xl">{getLevelInfo(level).icon}</div>
                       <div className="flex-1">
                         <p className={`capitalize font-medium ${earned ? "text-white" : "text-neutral-500"}`}>
-                          {level.replace("_", " ")}
+                          {level.replace(/[-_]/g, " ")}
                         </p>
                         <p className="text-xs text-neutral-600">Level {i + 1}</p>
                       </div>
