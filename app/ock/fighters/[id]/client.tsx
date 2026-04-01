@@ -46,16 +46,15 @@ export default function FighterDetailClient() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // For now, fetch all fighters and find by ID
-    // In production, we'd have a dedicated /api/public/fighters/[id] endpoint
     async function fetchFighter() {
       try {
-        const response = await fetch("/api/public/fighters?limit=50")
+        const response = await fetch(`/api/public/fighters/${params.id}`)
+        if (!response.ok) {
+          setFighter(null)
+          return
+        }
         const data = await response.json()
-        const found = (data.fighters || []).find(
-          (f: FighterDetail) => f.id === params.id
-        )
-        setFighter(found || null)
+        setFighter(data.fighter || null)
       } catch {
         setFighter(null)
       } finally {
