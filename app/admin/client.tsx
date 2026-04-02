@@ -235,6 +235,18 @@ export default function AdminDashboardClient({
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
+  // Global action feedback
+  const [actionFeedback, setActionFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
+
+  function showFeedback(type: "success" | "error", message: string) {
+    setActionFeedback({ type, message })
+    if (type === "success") {
+      setTimeout(() => setActionFeedback(null), 3000)
+    } else {
+      setTimeout(() => setActionFeedback(null), 5000)
+    }
+  }
+
   // New Booking state
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false)
   const [isCreatingBooking, setIsCreatingBooking] = useState(false)
@@ -330,10 +342,13 @@ export default function AdminDashboardClient({
         body: JSON.stringify({ invite_id: inviteId }),
       })
       if (res.ok) {
+        showFeedback("success", "Invite resent")
         fetchPendingInvites()
+      } else {
+        showFeedback("error", "Failed to resend invite")
       }
     } catch {
-      // Non-critical
+      showFeedback("error", "Network error — couldn't resend invite")
     } finally {
       setResendingInvite(null)
     }
@@ -344,9 +359,12 @@ export default function AdminDashboardClient({
       const res = await fetch(`/api/admin/invites?id=${inviteId}`, { method: "DELETE" })
       if (res.ok) {
         setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId))
+        showFeedback("success", "Invite cancelled")
+      } else {
+        showFeedback("error", "Failed to cancel invite")
       }
     } catch {
-      // Non-critical
+      showFeedback("error", "Network error — couldn't cancel invite")
     }
   }
 
@@ -359,8 +377,8 @@ export default function AdminDashboardClient({
         setStudents(data.students || [])
         setStudentTransactions(data.transactions || [])
       }
-    } catch (error) {
-      console.error("Failed to fetch students:", error)
+    } catch {
+      showFeedback("error", "Couldn't load students")
     }
     setStudentsLoading(false)
   }
@@ -490,9 +508,11 @@ export default function AdminDashboardClient({
 
       if (response.ok) {
         setTrainers((prev) => prev.map((t) => (t.id === trainer.id ? { ...t, is_available: !t.is_available } : t)))
+      } else {
+        showFeedback("error", "Failed to update trainer availability")
       }
-    } catch (error) {
-      console.error("Failed to toggle trainer availability:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't update trainer")
     } finally {
       setIsUpdating(null)
     }
@@ -511,9 +531,12 @@ export default function AdminDashboardClient({
 
       if (response.ok) {
         setTrainers((prev) => prev.filter((t) => t.id !== trainerId))
+        showFeedback("success", "Trainer removed")
+      } else {
+        showFeedback("error", "Failed to remove trainer")
       }
-    } catch (error) {
-      console.error("Failed to delete trainer:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't remove trainer")
     } finally {
       setIsUpdating(null)
     }
@@ -671,9 +694,11 @@ export default function AdminDashboardClient({
 
       if (response.ok) {
         setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, is_active: !s.is_active } : s)))
+      } else {
+        showFeedback("error", "Failed to update service")
       }
-    } catch (error) {
-      console.error("Failed to toggle service:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't update service")
     } finally {
       setIsUpdating(null)
     }
@@ -690,12 +715,13 @@ export default function AdminDashboardClient({
       })
 
       if (response.ok) {
-        // Update local state
         setTodaysBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b)))
         setRecentBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b)))
+      } else {
+        showFeedback("error", "Failed to update booking status")
       }
-    } catch (error) {
-      console.error("Failed to update booking:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't update booking")
     } finally {
       setIsUpdating(null)
     }
@@ -714,9 +740,12 @@ export default function AdminDashboardClient({
       if (response.ok) {
         setTodaysBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, payment_status: "paid" } : b)))
         setRecentBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, payment_status: "paid" } : b)))
+        showFeedback("success", "Payment recorded")
+      } else {
+        showFeedback("error", "Failed to record payment")
       }
-    } catch (error) {
-      console.error("Failed to mark as paid:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't record payment")
     } finally {
       setIsUpdating(null)
     }
@@ -819,8 +848,7 @@ export default function AdminDashboardClient({
           payment_method: newBookingForm.paymentMethod,
           payment_status: newBookingForm.isPaid ? "paid" : "pending",
           payment_amount_thb: selectedService.price_thb,
-          payment_amount_usd: 0, // Defaulting to 0 for now
-          payment_currency: "THB", // Defaulting to THB for now
+          payment_currency: "THB",
           status: "confirmed",
         }),
       })
@@ -842,6 +870,7 @@ export default function AdminDashboardClient({
         isPaid: false,
       })
       setIsNewBookingOpen(false)
+      showFeedback("success", "Booking created successfully")
 
       // Refresh data
       router.refresh()
@@ -1113,6 +1142,17 @@ export default function AdminDashboardClient({
           </div>
 
           {activeTab === "profile" && <ProfileTab />}
+
+          {/* Action Feedback Banner */}
+          {actionFeedback && (
+            <div className={`fixed top-4 right-4 z-[100] max-w-sm rounded-lg px-4 py-3 text-sm shadow-lg animate-in fade-in slide-in-from-top-2 ${
+              actionFeedback.type === "success"
+                ? "bg-emerald-500/90 text-white"
+                : "bg-red-500/90 text-white"
+            }`}>
+              {actionFeedback.message}
+            </div>
+          )}
 
           {/* Today's Bookings Tab */}
           {activeTab === "today" && (
@@ -2085,7 +2125,7 @@ export default function AdminDashboardClient({
             }}
             onUseCredit={async (studentId, creditId) => {
               try {
-                await fetch(`/api/admin/students/${studentId}/credits`, {
+                const res = await fetch(`/api/admin/students/${studentId}/credits`, {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -2095,9 +2135,15 @@ export default function AdminDashboardClient({
                     description: "Session used",
                   }),
                 })
-                fetchStudents()
-              } catch (error) {
-                console.error("Failed to use credit:", error)
+                if (res.ok) {
+                  showFeedback("success", "Credit used")
+                  fetchStudents()
+                } else {
+                  const data = await res.json().catch(() => null)
+                  showFeedback("error", data?.error || "Failed to use credit")
+                }
+              } catch {
+                showFeedback("error", "Network error — couldn't deduct credit")
               }
             }}
           />
