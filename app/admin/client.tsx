@@ -25,6 +25,7 @@ import ReportsTab from "@/components/admin/reports-tab"
 import TrainOckockTab from "@/components/admin/train-ockock-tab"
 import OckockChatTab from "@/components/admin/ockock-chat-tab"
 import MarketingTab from "@/components/admin/marketing-tab"
+import NotificationBell from "@/components/admin/notification-bell"
 import {
   Calendar,
   Users,
@@ -943,9 +944,12 @@ export default function AdminDashboardClient({
           <div className="text-center">
             <h1 className="text-lg font-bold text-orange-500">{organization.name}</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <Button variant="ghost" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -1009,16 +1013,20 @@ export default function AdminDashboardClient({
         {/* Sidebar Header */}
         <div className="p-4 border-b border-neutral-800">
           {!sidebarCollapsed && (
-            <div>
-              <h2 className="font-bold text-orange-500 truncate">{organization.name}</h2>
-              <p className="text-xs text-neutral-400">Admin Dashboard</p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="font-bold text-orange-500 truncate">{organization.name}</h2>
+                <p className="text-xs text-neutral-400">Admin Dashboard</p>
+              </div>
+              <NotificationBell />
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold text-sm">
                 {organization.name.charAt(0)}
               </div>
+              <NotificationBell />
             </div>
           )}
         </div>

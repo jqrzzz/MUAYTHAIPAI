@@ -103,7 +103,8 @@ export async function POST(request: Request) {
       const allowed: Record<string, unknown> = {}
       const fields = [
         "booking_advance_days", "booking_max_days_ahead", "allow_guest_bookings",
-        "require_payment_upfront", "notify_on_booking_email", "notification_email",
+        "require_payment_upfront", "notify_on_booking_email", "notify_on_cancellation",
+        "notify_on_payment", "notification_email", "notification_emails",
         "show_prices", "show_trainer_selection", "operating_hours",
       ] as const
       for (const key of fields) {

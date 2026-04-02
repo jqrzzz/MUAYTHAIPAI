@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Save, Clock } from "lucide-react"
+import { Save, Clock, Bell, Plus, X } from "lucide-react"
 
 export interface SettingsOrgSettings {
   description?: string | null
@@ -25,7 +25,10 @@ export interface SettingsOrgSettings {
   allow_guest_bookings?: boolean
   require_payment_upfront?: boolean
   notify_on_booking_email?: boolean
+  notify_on_cancellation?: boolean
+  notify_on_payment?: boolean
   notification_email?: string | null
+  notification_emails?: string[]
   show_prices?: boolean
   show_trainer_selection?: boolean
   [key: string]: unknown
@@ -91,10 +94,33 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
     allow_guest_bookings: orgSettings?.allow_guest_bookings ?? true,
     require_payment_upfront: orgSettings?.require_payment_upfront ?? false,
     notify_on_booking_email: orgSettings?.notify_on_booking_email ?? true,
+    notify_on_cancellation: orgSettings?.notify_on_cancellation ?? true,
+    notify_on_payment: orgSettings?.notify_on_payment ?? true,
     notification_email: orgSettings?.notification_email || "",
+    notification_emails: (orgSettings?.notification_emails as string[]) || [],
     show_prices: orgSettings?.show_prices ?? true,
     show_trainer_selection: orgSettings?.show_trainer_selection ?? true,
   })
+
+  const [newRecipientEmail, setNewRecipientEmail] = useState("")
+
+  const addRecipient = () => {
+    const email = newRecipientEmail.trim().toLowerCase()
+    if (!email || !email.includes("@")) return
+    if (settingsForm.notification_emails.includes(email)) return
+    setSettingsForm((prev) => ({
+      ...prev,
+      notification_emails: [...prev.notification_emails, email],
+    }))
+    setNewRecipientEmail("")
+  }
+
+  const removeRecipient = (email: string) => {
+    setSettingsForm((prev) => ({
+      ...prev,
+      notification_emails: prev.notification_emails.filter((e) => e !== email),
+    }))
+  }
 
   const handleSaveSettings = async () => {
     setIsSavingSettings(true)
@@ -125,7 +151,10 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
             allow_guest_bookings: settingsForm.allow_guest_bookings,
             require_payment_upfront: settingsForm.require_payment_upfront,
             notify_on_booking_email: settingsForm.notify_on_booking_email,
+            notify_on_cancellation: settingsForm.notify_on_cancellation,
+            notify_on_payment: settingsForm.notify_on_payment,
             notification_email: settingsForm.notification_email || null,
+            notification_emails: settingsForm.notification_emails,
             show_prices: settingsForm.show_prices,
             show_trainer_selection: settingsForm.show_trainer_selection,
             operating_hours: Object.fromEntries(
@@ -485,38 +514,124 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
       {/* Notification Settings */}
       <Card className="bg-neutral-900/50 border-neutral-800">
         <CardHeader>
-          <CardTitle className="text-white">Notifications</CardTitle>
-          <CardDescription>How you want to be notified about bookings</CardDescription>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notifications
+          </CardTitle>
+          <CardDescription>Choose what events trigger alerts and who receives them</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="emailNotifications"
-              checked={settingsForm.notify_on_booking_email}
-              onChange={(e) =>
-                setSettingsForm((prev) => ({ ...prev, notify_on_booking_email: e.target.checked }))
-              }
-              className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
-            />
-            <Label htmlFor="emailNotifications" className="text-neutral-200">
-              Email notifications for new bookings
-            </Label>
+        <CardContent className="space-y-6">
+          {/* Event toggles */}
+          <div className="space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">Email alerts for</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="emailNotifications"
+                checked={settingsForm.notify_on_booking_email}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, notify_on_booking_email: e.target.checked }))
+                }
+                className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
+              />
+              <Label htmlFor="emailNotifications" className="text-neutral-200">
+                New bookings
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="cancelNotifications"
+                checked={settingsForm.notify_on_cancellation}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, notify_on_cancellation: e.target.checked }))
+                }
+                className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
+              />
+              <Label htmlFor="cancelNotifications" className="text-neutral-200">
+                Booking cancellations
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="paymentNotifications"
+                checked={settingsForm.notify_on_payment}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, notify_on_payment: e.target.checked }))
+                }
+                className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
+              />
+              <Label htmlFor="paymentNotifications" className="text-neutral-200">
+                Payments received
+              </Label>
+            </div>
           </div>
 
-          {settingsForm.notify_on_booking_email && (
-            <div className="space-y-2 pl-7">
-              <Label className="text-neutral-200">Notification email address</Label>
+          <hr className="border-neutral-800" />
+
+          {/* Primary notification email */}
+          <div className="space-y-2">
+            <Label className="text-neutral-200">Primary notification email</Label>
+            <Input
+              type="email"
+              value={settingsForm.notification_email}
+              onChange={(e) => setSettingsForm((prev) => ({ ...prev, notification_email: e.target.value }))}
+              placeholder="owner@yourgym.com"
+              className="bg-neutral-800 border-neutral-700 text-white max-w-md"
+            />
+            <p className="text-xs text-neutral-500">Leave empty to use the gym email above</p>
+          </div>
+
+          {/* Additional recipients */}
+          <div className="space-y-3">
+            <Label className="text-neutral-200">Additional recipients</Label>
+            <p className="text-xs text-neutral-500">Add front desk staff, trainers, or managers who should also receive alerts</p>
+
+            {settingsForm.notification_emails.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {settingsForm.notification_emails.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-sm text-neutral-200"
+                  >
+                    {email}
+                    <button
+                      onClick={() => removeRecipient(email)}
+                      className="text-neutral-500 hover:text-red-400 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 max-w-md">
               <Input
                 type="email"
-                value={settingsForm.notification_email}
-                onChange={(e) => setSettingsForm((prev) => ({ ...prev, notification_email: e.target.value }))}
+                value={newRecipientEmail}
+                onChange={(e) => setNewRecipientEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRecipient() } }}
                 placeholder="staff@yourgym.com"
-                className="bg-neutral-800 border-neutral-700 text-white max-w-md"
+                className="bg-neutral-800 border-neutral-700 text-white"
               />
-              <p className="text-xs text-neutral-500">Leave empty to use the gym email above</p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addRecipient}
+                className="border-neutral-700 hover:bg-neutral-800 shrink-0"
+              >
+                <Plus className="w-4 h-4 mr-1" /> Add
+              </Button>
             </div>
-          )}
+          </div>
+
+          <div className="rounded-lg bg-orange-500/5 border border-orange-500/20 p-3">
+            <p className="text-xs text-orange-300/80">
+              In-app notifications always appear in the bell icon at the top of your dashboard, regardless of email settings.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
