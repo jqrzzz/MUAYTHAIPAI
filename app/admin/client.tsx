@@ -247,6 +247,9 @@ export default function AdminDashboardClient({
     }
   }
 
+  // Recent bookings search
+  const [recentSearch, setRecentSearch] = useState("")
+
   // New Booking state
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false)
   const [isCreatingBooking, setIsCreatingBooking] = useState(false)
@@ -1103,13 +1106,13 @@ export default function AdminDashboardClient({
             <span className="text-xs text-white font-medium">OckOck</span>
           </button>
           <button
-            onClick={() => setActiveTab("reports")}
+            onClick={() => setActiveTab("marketing")}
             className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg ${
-              activeTab === "reports" ? "text-orange-500" : "text-neutral-400"
+              activeTab === "marketing" ? "text-orange-500" : "text-neutral-400"
             }`}
           >
-            <BarChart3 className="w-5 h-5" />
-            <span className="text-xs">Reports</span>
+            <Megaphone className="w-5 h-5" />
+            <span className="text-xs">Marketing</span>
           </button>
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -1256,6 +1259,7 @@ export default function AdminDashboardClient({
                           id="date"
                           type="date"
                           value={newBookingForm.bookingDate}
+                          min={getTodayInPaiTimezone()}
                           onChange={(e) => setNewBookingForm((prev) => ({ ...prev, bookingDate: e.target.value }))}
                           className="bg-neutral-800 border-neutral-700 text-white"
                         />
@@ -1426,8 +1430,18 @@ export default function AdminDashboardClient({
           {activeTab === "recent" && (
           <Card className="bg-neutral-900/50 border-neutral-800">
             <CardHeader>
-              <CardTitle className="text-white">Recent Bookings</CardTitle>
-              <CardDescription>Last 7 days</CardDescription>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-white">Recent Bookings</CardTitle>
+                  <CardDescription>Last 7 days</CardDescription>
+                </div>
+                <Input
+                  placeholder="Search by name or service..."
+                  value={recentSearch}
+                  onChange={(e) => setRecentSearch(e.target.value)}
+                  className="bg-neutral-800 border-neutral-700 text-white md:max-w-[260px]"
+                />
+              </div>
             </CardHeader>
             <CardContent>
               {recentBookings.length === 0 ? (
@@ -1437,7 +1451,16 @@ export default function AdminDashboardClient({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentBookings.map((booking) => (
+                  {recentBookings
+                    .filter((booking) => {
+                      if (!recentSearch.trim()) return true
+                      const q = recentSearch.toLowerCase()
+                      return (
+                        (booking.guest_name || "").toLowerCase().includes(q) ||
+                        (booking.services?.name || "").toLowerCase().includes(q)
+                      )
+                    })
+                    .map((booking) => (
                     <div
                       key={booking.id}
                       className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-neutral-800/50 border border-neutral-700 gap-4"
