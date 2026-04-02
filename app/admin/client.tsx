@@ -289,6 +289,9 @@ export default function AdminDashboardClient({
   const [inviteError, setInviteError] = useState("")
   const [inviteSuccess, setInviteSuccess] = useState("")
 
+  // Pending invites state
+  const [pendingInvites, setPendingInvites] = useState<{ id: string; email: string; role: string; created_at: string; expires_at: string }[]>([])
+  const [resendingInvite, setResendingInvite] = useState<string | null>(null)
 
   // Student state
   const [students, setStudents] = useState<Student[]>([])
@@ -296,10 +299,54 @@ export default function AdminDashboardClient({
   const [studentTransactions, setStudentTransactions] = useState<CreditTransaction[]>([])
 
   useEffect(() => {
+    if (activeTab === "trainers") {
+      fetchPendingInvites()
+    }
     if (activeTab === "students" && students.length === 0) {
       fetchStudents()
     }
   }, [activeTab])
+
+  const fetchPendingInvites = async () => {
+    try {
+      const res = await fetch("/api/admin/invites")
+      if (res.ok) {
+        const data = await res.json()
+        setPendingInvites(data.invites || [])
+      }
+    } catch {
+      // Non-critical
+    }
+  }
+
+  const handleResendInvite = async (inviteId: string) => {
+    setResendingInvite(inviteId)
+    try {
+      const res = await fetch("/api/admin/invites", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invite_id: inviteId }),
+      })
+      if (res.ok) {
+        fetchPendingInvites()
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setResendingInvite(null)
+    }
+  }
+
+  const handleCancelInvite = async (inviteId: string) => {
+    try {
+      const res = await fetch(`/api/admin/invites?id=${inviteId}`, { method: "DELETE" })
+      if (res.ok) {
+        setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId))
+      }
+    } catch {
+      // Non-critical
+    }
+  }
 
   const fetchStudents = async () => {
     setStudentsLoading(true)
@@ -501,6 +548,7 @@ export default function AdminDashboardClient({
       setInviteSuccess(`Invite sent to ${inviteEmail}`)
       setInviteEmail("")
       setInviteName("")
+      fetchPendingInvites()
       setTimeout(() => {
         setIsInviteDialogOpen(false)
         setInviteSuccess("")
@@ -1920,8 +1968,60 @@ export default function AdminDashboardClient({
           </Card>
         )}
 
-          {/* Trainer Add/Edit Dialog */}
-          {/* The dialog for adding/editing trainers is already present in the original code, no changes needed here */}
+          {activeTab === "trainers" && pendingInvites.length > 0 && (
+            <Card className="bg-neutral-900/50 border-neutral-800 mt-4">
+              <CardHeader>
+                <CardTitle className="text-sm text-neutral-400">Pending Invites</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {pendingInvites.map((inv) => {
+                    const isExpired = new Date(inv.expires_at) < new Date()
+                    return (
+                      <div
+                        key={inv.id}
+                        className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-800/30 px-4 py-3"
+                      >
+                        <div>
+                          <p className="text-sm text-white">{inv.email}</p>
+                          <p className="text-xs text-neutral-500">
+                            {isExpired ? (
+                              <span className="text-red-400">Expired</span>
+                            ) : (
+                              <>Sent {new Date(inv.created_at).toLocaleDateString()}</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleResendInvite(inv.id)}
+                            disabled={resendingInvite === inv.id}
+                            className="border-neutral-700 hover:bg-neutral-800 text-xs"
+                          >
+                            {resendingInvite === inv.id ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>{isExpired ? "Resend" : "Resend"}</>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCancelInvite(inv.id)}
+                            className="border-red-700/50 text-red-400 hover:bg-red-900/30 text-xs"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {activeTab === "students" && (
           <StudentsTab
