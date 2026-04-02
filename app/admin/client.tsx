@@ -24,6 +24,7 @@ import SettingsTab from "@/components/admin/settings-tab"
 import ReportsTab from "@/components/admin/reports-tab"
 import TrainOckockTab from "@/components/admin/train-ockock-tab"
 import OckockChatTab from "@/components/admin/ockock-chat-tab"
+import MarketingTab from "@/components/admin/marketing-tab"
 import {
   Calendar,
   Users,
@@ -51,6 +52,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
+  Megaphone,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -222,7 +224,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "profile" | "train-ockock"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "profile" | "train-ockock" | "marketing"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -875,6 +877,7 @@ export default function AdminDashboardClient({
       label: "AI Assistant",
       labelTh: "ผู้ช่วย AI",
       items: [
+        { id: "marketing" as const, label: "Marketing", labelTh: "การตลาด", icon: Megaphone },
         { id: "train-ockock" as const, label: "Train OckOck", labelTh: "สอน OckOck", icon: BookOpen },
         { id: "ockock" as const, label: "OckOck", labelTh: "OckOck", icon: null, isOckOck: true },
       ],
@@ -2108,6 +2111,8 @@ export default function AdminDashboardClient({
               orgId={membership.org_id}
             />
           )}
+
+          {activeTab === "marketing" && <MarketingTab orgId={membership.org_id} />}
 
           {activeTab === "train-ockock" && <TrainOckockTab />}
 
