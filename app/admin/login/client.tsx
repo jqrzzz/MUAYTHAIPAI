@@ -42,8 +42,8 @@ export default function AdminLoginClient() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true,
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/admin`,
+          shouldCreateUser: false,
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback?next=/admin`,
         },
       })
 
@@ -51,7 +51,11 @@ export default function AdminLoginClient() {
 
       setStep("sent")
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      if (err instanceof Error && err.message.includes("Signups not allowed")) {
+        setError("No staff account found with this email. You need an invite from a gym owner first.")
+      } else {
+        setError(err instanceof Error ? err.message : "An error occurred")
+      }
     } finally {
       setIsLoading(false)
     }

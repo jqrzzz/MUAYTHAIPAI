@@ -103,8 +103,8 @@ export default function InviteAcceptClient({ invite, organization, isLoggedIn, u
 
       setStep("success")
       setTimeout(() => {
-        // Redirect trainers to /trainer, owners/admins to /admin
-        const redirectPath = invite.role === "trainer" ? "/trainer" : "/admin"
+        // Redirect trainers to /trainer, new owners to onboarding, admins to /admin
+        const redirectPath = invite.role === "trainer" ? "/trainer" : invite.role === "owner" ? "/onboarding" : "/admin"
         router.push(redirectPath)
       }, 2000)
     } catch (err) {

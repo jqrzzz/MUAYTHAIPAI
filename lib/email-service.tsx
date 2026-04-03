@@ -3,6 +3,18 @@ import { Resend } from "resend"
 import { env, hasEnv } from "@/lib/env"
 import { formatBookingDateTime } from "@/lib/timezone"
 
+interface OrgEmailContext {
+  orgName: string
+  orgEmail?: string
+  staffEmail?: string
+}
+
+const DEFAULT_ORG: OrgEmailContext = {
+  orgName: "Muay Thai Pai",
+  orgEmail: "info@paimuaythai.com",
+  staffEmail: undefined, // falls back to env.email.staffNotification()
+}
+
 interface BookingEmailData {
   customerName: string
   customerEmail: string
@@ -12,6 +24,7 @@ interface BookingEmailData {
   amount: number
   paymentId: string
   paymentMethod?: "card" | "apple-pay" | "cash"
+  org?: OrgEmailContext
 }
 
 interface ContactFormData {
@@ -19,6 +32,7 @@ interface ContactFormData {
   email: string
   phone: string
   message: string
+  org?: OrgEmailContext
 }
 
 interface EmailTemplate {
@@ -48,12 +62,14 @@ export class EmailService {
 
   async sendBookingConfirmation(data: BookingEmailData): Promise<boolean> {
     try {
+      const org = data.org || DEFAULT_ORG
       console.log("[v0] Attempting to send customer confirmation to:", data.customerEmail)
       const template = this.generateBookingConfirmationTemplate(data)
 
       if (this.resend) {
+        const fromEmail = org.orgEmail || "info@paimuaythai.com"
         const result = await this.resend.emails.send({
-          from: "Muay Thai Pai <info@paimuaythai.com>",
+          from: `${org.orgName} <${fromEmail}>`,
           to: data.customerEmail,
           subject: template.subject,
           html: template.html,
@@ -84,14 +100,16 @@ export class EmailService {
 
   async sendStaffNotification(data: BookingEmailData): Promise<boolean> {
     try {
+      const org = data.org || DEFAULT_ORG
       const template = this.generateStaffNotificationTemplate(data)
-      const staffEmail = env.email.staffNotification()
+      const staffEmail = org.staffEmail || env.email.staffNotification()
 
       console.log("[v0] Attempting to send staff notification to:", staffEmail)
 
       if (this.resend) {
+        const fromEmail = org.orgEmail || "info@paimuaythai.com"
         const result = await this.resend.emails.send({
-          from: "Muay Thai Pai <info@paimuaythai.com>",
+          from: `${org.orgName} <${fromEmail}>`,
           to: staffEmail,
           subject: template.subject,
           html: template.html,
@@ -117,6 +135,7 @@ export class EmailService {
 
   async sendContactFormEmail(data: ContactFormData): Promise<boolean> {
     try {
+      const org = data.org || DEFAULT_ORG
       console.log("[v0] Attempting to send contact form email from:", data.email)
       const customerTemplate = this.generateContactFormCustomerTemplate(data)
       const staffTemplate = this.generateContactFormStaffTemplate(data)
@@ -126,9 +145,11 @@ export class EmailService {
         return false
       }
 
+      const fromEmail = org.orgEmail || "info@paimuaythai.com"
+
       // Send confirmation to customer
       const customerResult = await this.resend.emails.send({
-        from: "Muay Thai Pai <info@paimuaythaipai.com>",
+        from: `${org.orgName} <${fromEmail}>`,
         to: data.email,
         subject: customerTemplate.subject,
         html: customerTemplate.html,
@@ -143,9 +164,9 @@ export class EmailService {
       console.log("[v0] Contact form customer confirmation sent to:", data.email)
 
       // Send notification to staff
-      const staffEmail = env.email.staffNotification()
+      const staffEmail = org.staffEmail || env.email.staffNotification()
       const staffResult = await this.resend.emails.send({
-        from: "Muay Thai Pai <info@paimuaythaipai.com>",
+        from: `${org.orgName} <${fromEmail}>`,
         to: staffEmail,
         subject: staffTemplate.subject,
         html: staffTemplate.html,
@@ -166,10 +187,11 @@ export class EmailService {
   }
 
   private generateBookingConfirmationTemplate(data: BookingEmailData): EmailTemplate {
+    const org = data.org || DEFAULT_ORG
     const isCashPayment = data.paymentMethod === "cash"
     const formattedDateTime = formatBookingDateTime(data.bookingDate, data.bookingTime)
     const subject = isCashPayment
-      ? `Booking Confirmed - ${data.serviceType} at Muay Thai Pai (Payment Due Upon Arrival)`
+      ? `Booking Confirmed - ${data.serviceType} at ${org.orgName} (Payment Due Upon Arrival)`
       : `Booking Confirmed - ${data.serviceType}`
 
     const html = `
@@ -201,7 +223,7 @@ export class EmailService {
             
             <div class="content">
               <h2>Hello ${data.customerName}!</h2>
-              <p>Thank you for booking with Muay Thai Pai. Your session has been confirmed and we're excited to train with you!</p>
+              <p>Thank you for booking with ${org.orgName}. Your session has been confirmed and we're excited to train with you!</p>
               
               ${
                 isCashPayment
@@ -251,18 +273,17 @@ export class EmailService {
               </ul>
               
               <h3>Location:</h3>
-              <p>Muay Thai Pai<br>
-              Pai, Mae Hong Son, Thailand</p>
+              <p>${org.orgName}</p>
               
               <p>If you have any questions or need to reschedule, please contact us at:</p>
               <ul>
-                <li>Email: help@muaythaipai.com</li>
+                <li>Email: ${org.orgEmail || "help@muaythaipai.com"}</li>
               </ul>
               
               <div style="background: #1f2937; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center;">
                 <h3 style="color: #f97316; margin-top: 0;">Create an Account</h3>
                 <p style="color: #9ca3af; margin: 10px 0;">Keep track of all your reservations and training history.</p>
-                <a href="https://paimuaythai.com/student/login?email=${encodeURIComponent(data.customerEmail)}" 
+                <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://muaythaipai.com'}/student/login?email=${encodeURIComponent(data.customerEmail)}" 
                    style="display: inline-block; background: #f97316; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
                   Create Account
                 </a>
@@ -271,7 +292,7 @@ export class EmailService {
             
             <div class="footer">
               <p>See you on the mats!</p>
-              <p>Muay Thai Pai - Authentic Training in the Heart of Thailand</p>
+              <p>${org.orgName}</p>
             </div>
           </div>
         </body>
@@ -283,7 +304,7 @@ export class EmailService {
       
       Hello ${data.customerName}!
       
-      Thank you for booking with Muay Thai Pai. Your session has been confirmed.
+      Thank you for booking with ${org.orgName}. Your session has been confirmed.
       
       ${isCashPayment ? `⚠️ PAYMENT DUE UPON ARRIVAL: Please bring ฿${data.amount.toLocaleString()} cash to your session.\n` : ""}
       
@@ -300,16 +321,16 @@ export class EmailService {
       - Towel
       - Positive attitude!
       
-      Location: Muay Thai Pai, Pai, Mae Hong Son, Thailand
+      Location: ${org.orgName}
       
       Contact us:
-      Email: help@muaythaipai.com
+      Email: ${org.orgEmail || "help@muaythaipai.com"}
       
       ---
       
       CREATE AN ACCOUNT
       Keep track of all your reservations and training history.
-      Visit: https://paimuaythai.com/student/login?email=${encodeURIComponent(data.customerEmail)}
+      Visit: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://muaythaipai.com'}/student/login?email=${encodeURIComponent(data.customerEmail)}
       
       See you on the mats!
     `
@@ -424,7 +445,8 @@ export class EmailService {
   }
 
   private generateContactFormCustomerTemplate(data: ContactFormData): EmailTemplate {
-    const subject = "We received your message - Muay Thai Pai"
+    const org = data.org || DEFAULT_ORG
+    const subject = `We received your message - ${org.orgName}`
 
     const html = `
       <!DOCTYPE html>
@@ -455,11 +477,11 @@ export class EmailService {
               
               <p>In the meantime, feel free to explore our programs or follow us on social media!</p>
               
-              <p>Best regards,<br>The Muay Thai Pai Team</p>
+              <p>Best regards,<br>The ${org.orgName} Team</p>
             </div>
             
             <div class="footer">
-              <p>Muay Thai Pai - Authentic Training in the Heart of Thailand</p>
+              <p>${org.orgName}</p>
             </div>
           </div>
         </body>
@@ -477,7 +499,7 @@ export class EmailService {
       ${data.message}
       
       Best regards,
-      The Muay Thai Pai Team
+      The ${org.orgName} Team
     `
 
     return { subject, html, text }

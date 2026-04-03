@@ -39,6 +39,8 @@ import {
   FileText,
   MessageSquare,
   List as LucideList,
+  Award,
+  ExternalLink,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import NavButton from "@/components/ui/nav-button"
@@ -182,6 +184,11 @@ export default function TrainerDashboardClient({
   const [newStudent, setNewStudent] = useState({ name: "", email: "" })
   const [isAddingStudent, setIsAddingStudent] = useState(false)
 
+  // Certificate issuance state
+  const [certLevel, setCertLevel] = useState("")
+  const [isIssuingCert, setIsIssuingCert] = useState(false)
+  const [certSuccess, setCertSuccess] = useState<string | null>(null)
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -292,6 +299,8 @@ export default function TrainerDashboardClient({
     setIsLoadingStudent(true)
     setStudentNotes([])
     setStudentBookingHistory([])
+    setCertLevel("")
+    setCertSuccess(null)
     try {
       const res = await fetch(`/api/trainer/student/${student.id}`)
       if (res.ok) {
@@ -328,6 +337,34 @@ export default function TrainerDashboardClient({
       console.error("Error adding note:", error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleIssueCertificate = async () => {
+    if (!selectedStudent?.email || !certLevel) return
+    setIsIssuingCert(true)
+    setCertSuccess(null)
+    try {
+      const res = await fetch("/api/admin/certificates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_email: selectedStudent.email,
+          level: certLevel,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to issue certificate")
+      setCertSuccess(data.certificate.certificate_number)
+      setCertLevel("")
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to issue certificate",
+        variant: "destructive",
+      })
+    } finally {
+      setIsIssuingCert(false)
     }
   }
 
@@ -657,6 +694,18 @@ export default function TrainerDashboardClient({
         {/* Today View */}
         {activeView === "today" && (
           <div className="space-y-4">
+            {/* Welcome Summary */}
+            <div className="rounded-xl bg-gradient-to-r from-orange-600/20 to-orange-500/5 border border-orange-500/10 px-4 py-3">
+              <p className="text-sm text-white">
+                สวัสดี <span className="font-semibold">{trainerProfile.display_name}</span>
+              </p>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                {bookings.length === 0
+                  ? "No sessions today — enjoy the rest!"
+                  : `${pendingBookings.length} upcoming${needsAttentionBookings.length > 0 ? ` · ${needsAttentionBookings.length} need attention` : ""}${completedBookings.length > 0 ? ` · ${completedBookings.length} done` : ""}`}
+              </p>
+            </div>
+
             {/* View Toggle */}
             <div className="flex items-center justify-between">
               <div className="flex bg-neutral-800 rounded-lg p-1">
@@ -683,16 +732,26 @@ export default function TrainerDashboardClient({
                   <span>Calendar</span>
                 </button>
               </div>
-              {scheduleView === "list" && selectedDate !== new Date().toISOString().split("T")[0] && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchBookingsForDate(new Date().toISOString().split("T")[0])}
-                  className="border-neutral-700 bg-transparent text-xs"
+              <div className="flex items-center gap-2">
+                {scheduleView === "list" && selectedDate !== new Date().toISOString().split("T")[0] && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchBookingsForDate(new Date().toISOString().split("T")[0])}
+                    className="border-neutral-700 bg-transparent text-xs"
+                  >
+                    Back to Today
+                  </Button>
+                )}
+                <button
+                  onClick={() => fetchBookingsForDate(selectedDate)}
+                  disabled={isLoading}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                  aria-label="Refresh"
                 >
-                  Back to Today
-                </Button>
-              )}
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                </button>
+              </div>
             </div>
 
             {/* Calendar View */}
@@ -1329,12 +1388,66 @@ export default function TrainerDashboardClient({
                 "Save Profile (บันทึกโปรไฟล์)"
               )}
             </Button>
+
+            {/* View Public Profile */}
+            {organization?.slug && (
+              <a
+                href={`/gyms/${organization.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full rounded-lg border border-neutral-700 py-2.5 text-sm text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View Public Gym Page
+              </a>
+            )}
           </div>
         )}
 
         {/* OckOck Chat View */}
         {activeView === "ockock" && (
           <div className="flex flex-col h-[calc(100vh-180px)]">
+            {/* Suggested Prompts - show only when just the greeting message */}
+            {messages.length === 1 && (
+              <div className="flex flex-wrap gap-2 pb-3">
+                {[
+                  "How many students today?",
+                  "Show me this week's schedule",
+                  "Any students with low credits?",
+                  "Help me write a training plan",
+                ].map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => {
+                      setInputMessage(prompt)
+                      // Auto-send
+                      setMessages((prev) => [...prev, { role: "user", content: prompt }])
+                      setIsSending(true)
+                      fetch("/api/admin/ockock", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message: prompt, org_id: organization?.id }),
+                      })
+                        .then((res) => res.json())
+                        .then((data) => {
+                          setMessages((prev) => [...prev, { role: "assistant", content: data.reply || data.message || "I couldn't process that. Try again?" }])
+                        })
+                        .catch(() => {
+                          setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }])
+                        })
+                        .finally(() => {
+                          setIsSending(false)
+                          setInputMessage("")
+                        })
+                    }}
+                    className="rounded-full border border-neutral-700 bg-neutral-800/50 px-3 py-1.5 text-xs text-neutral-300 hover:border-orange-500/50 hover:text-white transition-colors"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 pb-4">
               {messages.map((msg, idx) => (
@@ -1477,86 +1590,123 @@ export default function TrainerDashboardClient({
               <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
             </div>
           ) : (
-            <div className="space-y-4 mt-2">
+            <div className="space-y-5 mt-2">
               {/* Quick Stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-neutral-800/50 rounded-lg p-3">
-                  <p className="text-xs text-neutral-500">Last Visit</p>
-                  <p className="text-sm font-medium">
-                    {selectedStudent?.last_visit 
-                      ? new Date(selectedStudent.last_visit).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                      : "No visits yet"}
-                  </p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-neutral-800/50 rounded-lg p-3 text-center">
+                  <p className="text-lg font-bold text-white">{selectedStudent?.total_sessions || 0}</p>
+                  <p className="text-[10px] text-neutral-500">Sessions</p>
                 </div>
-                <div className="bg-neutral-800/50 rounded-lg p-3">
-                  <p className="text-xs text-neutral-500">Total Sessions</p>
-                  <p className="text-sm font-medium">{selectedStudent?.total_sessions || 0}</p>
+                <div className="bg-neutral-800/50 rounded-lg p-3 text-center">
+                  <p className="text-lg font-bold text-white">{selectedStudent?.credits_remaining || 0}</p>
+                  <p className="text-[10px] text-neutral-500">Credits</p>
+                </div>
+                <div className="bg-neutral-800/50 rounded-lg p-3 text-center">
+                  <p className="text-sm font-medium text-white">
+                    {selectedStudent?.last_visit
+                      ? new Date(selectedStudent.last_visit).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      : "—"}
+                  </p>
+                  <p className="text-[10px] text-neutral-500">Last Visit</p>
                 </div>
               </div>
 
-              {/* Add Note */}
+              {/* Notes Section */}
               <div className="space-y-2">
-                <Label className="text-neutral-300 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  Add Note (เพิ่มบันทึก)
-                </Label>
+                <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <MessageSquare className="w-3 h-3" />
+                  Notes
+                </p>
                 <div className="flex gap-2">
-                  <Input
+                  <Textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Note about this student..."
-                    className="bg-neutral-800 border-neutral-700 text-white"
+                    placeholder="Add a note about this student..."
+                    rows={2}
+                    className="bg-neutral-800 border-neutral-700 text-white text-sm resize-none"
                   />
                   <Button
                     onClick={handleAddNote}
                     disabled={isLoading || !newNote.trim()}
-                    className="bg-orange-600 hover:bg-orange-500"
+                    className="bg-orange-600 hover:bg-orange-500 self-end"
+                    size="sm"
                   >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </Button>
                 </div>
+                {studentNotes.length > 0 && (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {studentNotes.map((note) => (
+                      <div key={note.id} className="bg-neutral-800/30 rounded-lg px-3 py-2 text-sm">
+                        <p className="text-neutral-200">{note.content}</p>
+                        <p className="text-[10px] text-neutral-600 mt-1">
+                          {note.trainer_name} · {new Date(note.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Notes History */}
-              {studentNotes.length > 0 && (
+              {/* Recent Sessions */}
+              {studentBookingHistory.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-neutral-300 flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Notes History ({studentNotes.length})
-                  </Label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {studentNotes.map((note) => (
-                      <div key={note.id} className="bg-neutral-800/50 rounded-lg p-3 text-sm">
-                        <p className="text-white">{note.content}</p>
-                        <p className="text-xs text-neutral-500 mt-1">
-                          {note.trainer_name} • {new Date(note.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </p>
+                  <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3" />
+                    Recent Sessions
+                  </p>
+                  <div className="space-y-1">
+                    {studentBookingHistory.slice(0, 5).map((booking) => (
+                      <div key={booking.id} className="flex items-center justify-between text-sm py-1.5 border-b border-neutral-800/50 last:border-0">
+                        <span className="text-neutral-300">
+                          {new Date(booking.booking_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                        <span className="text-neutral-500 text-xs">{booking.services?.name || "Session"}</span>
+                        <Badge className={`text-[10px] ${booking.status === "completed" ? "bg-green-500/10 text-green-400" : "bg-neutral-500/10 text-neutral-400"}`}>
+                          {booking.status}
+                        </Badge>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Recent Bookings */}
-              {studentBookingHistory.length > 0 && (
+              {/* Issue Certificate */}
+              {selectedStudent?.email && (
                 <div className="space-y-2">
-                  <Label className="text-neutral-300 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Recent Sessions ({studentBookingHistory.length})
-                  </Label>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {studentBookingHistory.slice(0, 5).map((booking) => (
-                      <div key={booking.id} className="flex items-center justify-between text-sm py-1.5 border-b border-neutral-800 last:border-0">
-                        <span className="text-neutral-300">
-                          {new Date(booking.booking_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
-                        <span className="text-neutral-500">{booking.services?.name || "Session"}</span>
-                        <Badge className={`text-xs ${booking.status === "completed" ? "bg-green-500/10 text-green-400" : "bg-neutral-500/10 text-neutral-400"}`}>
-                          {booking.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Award className="w-3 h-3" />
+                    Certificate
+                  </p>
+                  {certSuccess ? (
+                    <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm">
+                      <p className="text-emerald-400 font-medium">Certificate issued!</p>
+                      <p className="text-neutral-400 text-xs mt-1">#{certSuccess}</p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <select
+                        value={certLevel}
+                        onChange={(e) => setCertLevel(e.target.value)}
+                        className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="">Select level...</option>
+                        <option value="naga">Naga (Level 1)</option>
+                        <option value="phayra-nak">Phayra Nak (Level 2)</option>
+                        <option value="singha">Singha (Level 3)</option>
+                        <option value="hanuman">Hanuman (Level 4)</option>
+                        <option value="garuda">Garuda (Level 5)</option>
+                      </select>
+                      <Button
+                        onClick={handleIssueCertificate}
+                        disabled={isIssuingCert || !certLevel}
+                        className="bg-orange-600 hover:bg-orange-500"
+                        size="sm"
+                      >
+                        {isIssuingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

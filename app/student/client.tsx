@@ -28,6 +28,7 @@ import {
   FileText,
   Send,
   Loader2,
+  BookOpen,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -265,14 +266,15 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
   }
 
   const getLevelInfo = (level: string) => {
+    const normalized = level.toLowerCase().replace(/[-_]/g, "")
     const levels: Record<string, { color: string; icon: string }> = {
-      naga: { color: "from-emerald-500 to-emerald-700", icon: "🐍" },
-      phayra_nak: { color: "from-blue-500 to-blue-700", icon: "🐉" },
-      ratchasi: { color: "from-purple-500 to-purple-700", icon: "🦁" },
-      hanuman: { color: "from-orange-500 to-orange-700", icon: "🐒" },
-      garuda: { color: "from-red-500 to-red-700", icon: "🦅" },
+      naga: { color: "from-blue-500 to-blue-700", icon: "🐍" },
+      phayanak: { color: "from-emerald-500 to-emerald-700", icon: "🐉" },
+      singha: { color: "from-amber-500 to-amber-700", icon: "🦁" },
+      hanuman: { color: "from-slate-400 to-slate-600", icon: "🐒" },
+      garuda: { color: "from-yellow-500 to-yellow-700", icon: "🦅" },
     }
-    return levels[level] || { color: "from-neutral-500 to-neutral-700", icon: "🥊" }
+    return levels[normalized] || { color: "from-neutral-500 to-neutral-700", icon: "🥊" }
   }
 
   const userName = profile?.full_name || user.email?.split("@")[0] || "Fighter"
@@ -408,7 +410,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                           Level {certificates[0].level_number}
                         </Badge>
                         <h3 className="text-lg font-bold text-white capitalize">
-                          {certificates[0].level.replace("_", " ")}
+                          {certificates[0].level.replace(/[-_]/g, " ")}
                         </h3>
                         <p className="text-white/60 text-xs">{certificates[0].organizations?.name}</p>
                       </div>
@@ -454,6 +456,14 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                   <p className="text-white font-medium text-sm">Find Gyms</p>
                   <p className="text-neutral-500 text-xs">Browse network</p>
                 </button>
+                <Link
+                  href="/courses"
+                  className="bg-gradient-to-br from-purple-900/30 to-indigo-800/20 border border-purple-500/30 rounded-xl p-4 text-left hover:border-purple-500/50 transition-colors block"
+                >
+                  <BookOpen className="w-5 h-5 text-purple-400 mb-2" />
+                  <p className="text-white font-medium text-sm">Learn Online</p>
+                  <p className="text-purple-400/70 text-xs">Video courses</p>
+                </Link>
                 <button
                   onClick={() => setActiveView("bookings")}
                   className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-left hover:bg-neutral-800/50 transition-colors"
@@ -572,7 +582,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                           <Badge className="bg-white/20 text-white border-0 text-xs mb-1">
                             Level {cert.level_number}
                           </Badge>
-                          <h3 className="text-xl font-bold text-white capitalize">{cert.level.replace("_", " ")}</h3>
+                          <h3 className="text-xl font-bold text-white capitalize">{cert.level.replace(/[-_]/g, " ")}</h3>
                           <p className="text-white/70 text-sm">{cert.organizations?.name}</p>
                           <p className="text-white/50 text-xs mt-1">
                             Issued {new Date(cert.issued_at).toLocaleDateString()}
@@ -580,7 +590,14 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                         </div>
                       </div>
                       {cert.certificate_number && (
-                        <p className="text-white/30 text-xs mt-4 font-mono">{cert.certificate_number}</p>
+                        <a
+                          href={`/verify/${cert.certificate_number}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-white/30 text-xs mt-4 font-mono hover:text-white/60 transition-colors"
+                        >
+                          {cert.certificate_number} &rarr;
+                        </a>
                       )}
                     </CardContent>
                   </Card>
@@ -600,8 +617,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             <div>
               <h3 className="text-sm font-medium text-neutral-500 mb-3">Certificate Levels</h3>
               <div className="space-y-2">
-                {["naga", "phayra_nak", "ratchasi", "hanuman", "garuda"].map((level, i) => {
-                  const earned = certificates.some((c) => c.level === level)
+                {["naga", "phayra-nak", "singha", "hanuman", "garuda"].map((level, i) => {
+                  const earned = certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, ""))
                   return (
                     <div
                       key={level}
@@ -610,7 +627,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                       <div className="text-2xl">{getLevelInfo(level).icon}</div>
                       <div className="flex-1">
                         <p className={`capitalize font-medium ${earned ? "text-white" : "text-neutral-500"}`}>
-                          {level.replace("_", " ")}
+                          {level.replace(/[-_]/g, " ")}
                         </p>
                         <p className="text-xs text-neutral-600">Level {i + 1}</p>
                       </div>
@@ -633,36 +650,44 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
 
             <div className="space-y-3">
               {gyms.map((gym) => (
-                <Link key={gym.id} href={`/gyms/${gym.slug}`}>
-                  <Card className="bg-neutral-900/50 border-neutral-800 hover:bg-neutral-800/50 transition-colors cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-neutral-800 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {gym.logo_url ? (
-                            <Image
-                              src={gym.logo_url || "/placeholder.svg"}
-                              alt={gym.name}
-                              width={48}
-                              height={48}
-                              className="object-contain"
-                            />
-                          ) : (
-                            <Dumbbell className="w-6 h-6 text-neutral-600" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-white truncate">{gym.name}</h3>
-                          <p className="text-sm text-neutral-500 flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {gym.city}
-                            {gym.province && `, ${gym.province}`}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-neutral-600 flex-shrink-0" />
+                <Card key={gym.id} className="bg-neutral-900/50 border-neutral-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-neutral-800 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {gym.logo_url ? (
+                          <Image
+                            src={gym.logo_url || "/placeholder.svg"}
+                            alt={gym.name}
+                            width={48}
+                            height={48}
+                            className="object-contain"
+                          />
+                        ) : (
+                          <Dumbbell className="w-6 h-6 text-neutral-600" />
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/gyms/${gym.slug}`}>
+                          <h3 className="font-medium text-white truncate hover:text-orange-400 transition-colors">{gym.name}</h3>
+                        </Link>
+                        <p className="text-sm text-neutral-500 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {gym.city}
+                          {gym.province && `, ${gym.province}`}
+                        </p>
+                        {gym.description && (
+                          <p className="text-xs text-neutral-600 mt-1 line-clamp-1">{gym.description}</p>
+                        )}
+                      </div>
+                      <Link
+                        href={`/book?gym=${gym.slug}`}
+                        className="flex-shrink-0 rounded-lg bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-400 hover:bg-orange-500/20 transition-colors"
+                      >
+                        Book
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
 

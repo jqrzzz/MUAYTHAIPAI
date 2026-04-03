@@ -32,16 +32,19 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login") && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/admin/login"
-    return NextResponse.redirect(url)
-  }
+  // Protected route guards — redirect unauthenticated users to login
+  const guards: [string, string][] = [
+    ["/admin", "/admin/login"],
+    ["/trainer", "/trainer/login"],
+    ["/student", "/student/login"],
+  ]
 
-  if (pathname.startsWith("/student") && !pathname.startsWith("/student/login") && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/student/login"
-    return NextResponse.redirect(url)
+  for (const [prefix, loginPath] of guards) {
+    if (pathname.startsWith(prefix) && !pathname.startsWith(loginPath) && !user) {
+      const url = request.nextUrl.clone()
+      url.pathname = loginPath
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

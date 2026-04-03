@@ -4,7 +4,6 @@ import Stripe from "stripe"
 import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
-import { WISARUT_GYM_ID } from "@/lib/supabase/types"
 
 const stripe = new Stripe(env.stripe.secretKey(), {
   apiVersion: "2024-06-20",
@@ -21,13 +20,33 @@ async function saveBookingToDatabase(data: {
   paymentAmountUsd: number
   stripePaymentIntentId: string
   userId?: string
+  orgId?: string
 }) {
   try {
-    // Find service by name
+    // Resolve org_id: use metadata if provided, otherwise look up the first org with this service
+    let orgId = data.orgId
+
+    if (!orgId) {
+      // Fallback: find any org that has a service matching this name
+      const { data: serviceMatch } = await supabase
+        .from("services")
+        .select("org_id")
+        .ilike("name", `%${data.serviceName}%`)
+        .limit(1)
+        .single()
+      orgId = serviceMatch?.org_id
+    }
+
+    if (!orgId) {
+      console.error("No org_id found for booking:", data.serviceName)
+      return null
+    }
+
+    // Find service by name within the org
     const { data: service } = await supabase
       .from("services")
       .select("id")
-      .eq("org_id", WISARUT_GYM_ID)
+      .eq("org_id", orgId)
       .ilike("name", `%${data.serviceName}%`)
       .single()
 
@@ -46,7 +65,7 @@ async function saveBookingToDatabase(data: {
     const { data: booking, error } = await supabase
       .from("bookings")
       .insert({
-        org_id: WISARUT_GYM_ID,
+        org_id: orgId,
         service_id: service?.id || null,
         user_id: finalUserId,
         guest_name: data.guestName,
@@ -143,6 +162,7 @@ export async function POST(request: NextRequest) {
             paymentAmountUsd: paymentIntent.amount / 100,
             stripePaymentIntentId: paymentIntent.id,
             userId: metadata.user_id || undefined,
+            orgId: metadata.org_id || undefined,
           })
         } else {
           console.warn("Missing required booking details in metadata, skipping emails")
@@ -249,6 +269,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         paymentAmountUsd: session.amount_total ? session.amount_total / 100 : 0,
         stripePaymentIntentId: (session.payment_intent as string) || session.id,
         userId: metadata.user_id || undefined,
+        orgId: metadata.org_id || undefined,
       })
     } else {
       console.warn("Missing booking details in session metadata")

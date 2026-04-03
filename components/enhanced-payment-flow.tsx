@@ -30,6 +30,8 @@ interface EnhancedPaymentFlowProps {
   servicePrice: number
   serviceDuration: string
   serviceDescription: string
+  orgId?: string
+  orgName?: string
   onClose: () => void
 }
 
@@ -132,6 +134,8 @@ export function EnhancedPaymentFlow({
   servicePrice,
   serviceDuration,
   serviceDescription,
+  orgId,
+  orgName,
   onClose,
 }: EnhancedPaymentFlowProps) {
   const { theme } = useTheme()
@@ -239,6 +243,7 @@ export function EnhancedPaymentFlow({
             booking_date: formData.date,
             booking_time: formData.time,
             user_id: currentUser?.id || "",
+            org_id: orgId || "",
           },
         }),
       })
@@ -282,6 +287,7 @@ export function EnhancedPaymentFlow({
           amount: servicePrice,
           paymentMethod: "cash",
           userId: currentUser?.id || null,
+          orgId: orgId || null,
         }),
       })
     } catch (err) {
