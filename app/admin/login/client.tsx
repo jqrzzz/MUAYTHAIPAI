@@ -43,7 +43,7 @@ export default function AdminLoginClient() {
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/admin`,
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback?next=/admin`,
         },
       })
 
