@@ -6,6 +6,7 @@ import type { Metadata, Viewport } from "next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/react"
 import { SOCIAL_LINKS } from "@/lib/socials"
+import { NavigationWrapper } from "@/components/navigation-wrapper"
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
 
@@ -230,6 +231,7 @@ export default function RootLayout({
       <body className={`${cinzel.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
+          <NavigationWrapper />
         </ThemeProvider>
         <SpeedInsights />
         <Analytics />

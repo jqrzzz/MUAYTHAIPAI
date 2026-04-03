@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 
 import { SacredBackground, DynamicGradient } from "@/components/sacred-background"
-import { SiteFooterMenu } from "@/components/site-footer-menu"
 import { SiteHeader } from "@/components/site-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -336,7 +335,6 @@ export default function LoginClient() {
         </motion.div>
       </main>
 
-      <SiteFooterMenu />
     </div>
   )
 }

@@ -44,5 +44,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  if (pathname.startsWith("/trainer") && !pathname.startsWith("/trainer/login") && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/trainer/login"
+    return NextResponse.redirect(url)
+  }
+
+  if (pathname.startsWith("/platform-admin") && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/admin/login"
+    return NextResponse.redirect(url)
+  }
+
   return supabaseResponse
 }

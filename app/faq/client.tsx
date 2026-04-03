@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
-import { SiteFooterMenu } from "@/components/site-footer-menu"
 import { ContinueLearning } from "@/components/blog/continue-learning"
 
 const faqData = [
@@ -322,7 +321,6 @@ export default function FAQClient() {
         </div>
       </div>
 
-      <SiteFooterMenu />
     </div>
   )
 }

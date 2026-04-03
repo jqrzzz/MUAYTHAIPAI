@@ -257,9 +257,21 @@ export default function GymPageClient({ gym, services, trainers, user }: GymPage
           <CardContent className="p-6 text-center">
             <h3 className="text-lg font-semibold text-white mb-2">Ready to Train?</h3>
             <p className="text-neutral-400 text-sm mb-4">Book a session at {gym.name}</p>
-            <Link href="/train-and-stay">
-              <Button className="bg-orange-600 hover:bg-orange-500">Book Now</Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {gym.phone && (
+                <a href={`https://wa.me/${gym.phone.replace(/[^0-9+]/g, "")}`} target="_blank" rel="noopener noreferrer">
+                  <Button className="bg-green-600 hover:bg-green-500 w-full sm:w-auto">WhatsApp Us</Button>
+                </a>
+              )}
+              {gym.email && (
+                <a href={`mailto:${gym.email}?subject=Booking Inquiry - ${gym.name}`}>
+                  <Button variant="outline" className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 w-full sm:w-auto">Email to Book</Button>
+                </a>
+              )}
+              <Link href="/classes">
+                <Button className="bg-orange-600 hover:bg-orange-500 w-full sm:w-auto">View Classes</Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </main>

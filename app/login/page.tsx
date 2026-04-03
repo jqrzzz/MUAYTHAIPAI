@@ -1,20 +1,6 @@
-import type { Metadata } from "next"
-import LoginClient from "./client"
+import { redirect } from "next/navigation"
 
-export const metadata: Metadata = {
-  title: "Login | Muay Thai Pai Online Courses",
-  description:
-    "Log in to access your Muay Thai Pai online courses. Subscribe to our online certification program with video instruction from Thai masters.",
-  keywords: ["Muay Thai online courses", "Login Muay Thai Pai", "Online Muay Thai training", "Thai boxing courses"],
-  robots: "noindex, nofollow",
-  openGraph: {
-    title: "Login | Muay Thai Pai Online Courses",
-    description: "Log in to access your Muay Thai Pai online courses.",
-    url: "https://muaythaipai.com/login",
-    images: [{ url: "/images/pai-hero-main.jpeg", width: 1200, height: 630 }],
-  },
-}
-
+// Redirect /login to the student login page (the primary signup flow)
 export default function LoginPage() {
-  return <LoginClient />
+  redirect("/student/login")
 }
