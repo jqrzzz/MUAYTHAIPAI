@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, Shield } from "lucide-react"
+import { X, Calendar, Users, Award, Plane, Swords, Phone, HelpCircle, PenTool, User, Shield } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 
@@ -44,10 +44,10 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
       description: "Study visa assistance",
     },
     {
-      icon: BookOpen,
+      icon: Swords,
       label: "Fighters",
       href: "/fighters",
-      description: "Meet our champion fighters",
+      description: "Browse the OckOck fighter registry",
     },
     {
       icon: Phone,

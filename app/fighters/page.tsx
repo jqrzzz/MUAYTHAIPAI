@@ -1,14 +1,14 @@
 import FightersPageClient from "./client"
 
 export const metadata = {
-  title: "Muay Thai Fighters | Active & Retired Champions from Pai",
+  title: "Fighters | OckOck Fighter Registry",
   description:
-    "Meet the fighters of Muay Thai Pai. Active competitors and retired champions from our third-generation family gym in Pai, Thailand.",
+    "Browse the OckOck fighter registry — active and retired Muay Thai fighters from gyms across Thailand. Records, stats, and profiles.",
   keywords:
-    "muay thai fighters pai, thai boxing champions, kru wisarut fighters, muay thai gym fighters, thai boxers pai",
+    "muay thai fighters, thai boxing champions, ockock fighters, muay thai records, fighter database thailand",
   openGraph: {
-    title: "Muay Thai Fighters | Champions from Muay Thai Pai",
-    description: "Meet our active and retired Muay Thai fighters from the Wisarut family gym in Pai, Thailand.",
+    title: "Fighters | OckOck Fighter Registry",
+    description: "Browse Muay Thai fighters from gyms across Thailand. Records, stats, and profiles.",
     url: "https://www.muaythaipai.com/fighters",
   },
 }

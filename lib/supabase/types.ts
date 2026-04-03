@@ -230,8 +230,9 @@ export type BoutMethod = "KO" | "TKO" | "decision" | "unanimous_decision" | "spl
 
 export interface Fighter {
   id: string
-  user_id: string
+  user_id: string | null
   gym_id: string | null
+  display_name: string | null
   ring_name: string | null
   weight_class: string | null
   stance: FighterStance | null
@@ -239,15 +240,27 @@ export interface Fighter {
   losses: number
   draws: number
   no_contests: number
+  ko_wins: number
   status: FighterStatus
   open_to_fights: boolean
   open_to_events: boolean
   bio: string | null
   photo_url: string | null
   photos: string[]
+  nationality: string | null
+  height_cm: number | null
+  weight_kg: number | null
+  date_of_birth: string | null
   trainer_profile_id: string | null
   created_at: string
   updated_at: string
+}
+
+// Fighter with joined gym data for marketplace display
+export interface FighterWithGym extends Fighter {
+  gym_name: string | null
+  gym_slug: string | null
+  gym_city: string | null
 }
 
 export interface Event {
