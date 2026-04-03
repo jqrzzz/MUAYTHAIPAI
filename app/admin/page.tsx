@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import AdminDashboardClient from "./client"
-import { getTodayInPaiTimezone, PAI_TIMEZONE } from "@/lib/timezone"
+import { getTodayInPaiTimezone, DEFAULT_TIMEZONE } from "@/lib/timezone"
 
 export const metadata = {
-  title: "Admin Dashboard | Muay Thai Pai",
-  description: "Manage bookings, services, and trainers for Wisarut Family Gym",
+  title: "Admin Dashboard | MUAYTHAIPAI",
+  description: "Manage bookings, services, and trainers for your gym",
   robots: "noindex, nofollow",
 }
 
@@ -36,7 +36,8 @@ export default async function AdminPage() {
     redirect("/admin/login?error=no_access")
   }
 
-  const todayInPai = getTodayInPaiTimezone()
+  const orgTimezone = (membership.organizations as { timezone?: string })?.timezone || DEFAULT_TIMEZONE
+  const todayInPai = getTodayInPaiTimezone(orgTimezone)
 
   // Fetch today's bookings (in Pai time)
   const { data: todaysBookings } = await supabase
@@ -106,7 +107,7 @@ export default async function AdminPage() {
       services={services || []}
       trainers={trainers || []}
       todayDate={todayInPai}
-      timezone={PAI_TIMEZONE}
+      timezone={orgTimezone}
       orgSettings={orgSettings}
     />
   )

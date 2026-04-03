@@ -19,14 +19,18 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import StudentsTab from "@/components/admin/students-tab"
+import ProfileTab from "@/components/admin/profile-tab"
+import SettingsTab from "@/components/admin/settings-tab"
+import ReportsTab from "@/components/admin/reports-tab"
+import TrainOckockTab from "@/components/admin/train-ockock-tab"
+import OckockChatTab from "@/components/admin/ockock-chat-tab"
+import MarketingTab from "@/components/admin/marketing-tab"
+import NotificationBell from "@/components/admin/notification-bell"
 import {
   Calendar,
   Users,
-  CreditCard,
   LogOut,
-  CheckCircle,
   Clock,
-  TrendingUp,
   Dumbbell,
   UserCheck,
   UserX,
@@ -37,83 +41,28 @@ import {
   ToggleRight,
   BarChart3,
   Banknote,
-  Wallet,
   Trash2,
   Settings,
-  Save,
   Mail,
   GraduationCap,
   Send,
   User,
-  Camera,
   X,
   BookOpen,
-  MessageSquare,
-  Copy,
-  Sparkles,
   Menu,
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
+  Megaphone,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import { getTodayInPaiTimezone } from "@/lib/timezone"
-
-// Define CreditTransaction type if it's not imported from anywhere else
-interface CreditTransaction {
-  id: string
-  user_id: string | null // or the actual user ID type
-  amount: number
-  transaction_type: string
-  description: string | null
-  created_at: string
-  org_id: string
-  payment_method: string | null
-  payment_amount_thb: number | null
-  payment_amount_usd: number | null
-  payment_currency: string | null
-  users?: {
-    // Assuming 'users' is a joined table or relation
-    id: string
-    full_name: string | null
-    display_name: string | null
-    email: string | null
-    phone: string | null
-  }
-}
+import type { CreditTransaction } from "@/components/admin/students-tab"
 
 const OckOckAvatar = ({ size = 32 }: { size?: number }) => (
   <Image src="/images/ockock-avatar.png" alt="OckOck" width={size} height={size} className="rounded-full" />
 )
-
-interface TrainerProfile {
-  id: string
-  user_id: string
-  display_name: string
-  title: string | null
-  bio: string | null
-  photo_url: string | null
-  photos: string[]
-  is_available: boolean
-  availability_note: string | null
-  years_experience: number | null
-  fight_record_wins: number
-  fight_record_losses: number
-  fight_record_draws: number
-  open_to_fights: boolean
-  open_to_events: boolean
-}
-
-interface FAQ {
-  id: string
-  question: string
-  answer: string
-  category: string
-  is_active: boolean
-  usage_count: number
-  created_at: string
-}
 
 interface Booking {
   id: string
@@ -276,7 +225,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "profile" | "train-ockock"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "profile" | "train-ockock" | "marketing"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -286,6 +235,21 @@ export default function AdminDashboardClient({
   const [trainers, setTrainers] = useState(initialTrainers)
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Global action feedback
+  const [actionFeedback, setActionFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
+
+  function showFeedback(type: "success" | "error", message: string) {
+    setActionFeedback({ type, message })
+    if (type === "success") {
+      setTimeout(() => setActionFeedback(null), 3000)
+    } else {
+      setTimeout(() => setActionFeedback(null), 5000)
+    }
+  }
+
+  // Recent bookings search
+  const [recentSearch, setRecentSearch] = useState("")
 
   // New Booking state
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false)
@@ -343,269 +307,69 @@ export default function AdminDashboardClient({
   const [inviteError, setInviteError] = useState("")
   const [inviteSuccess, setInviteSuccess] = useState("")
 
-  const [isSavingSettings, setIsSavingSettings] = useState(false)
-  const [settingsSuccess, setSettingsSuccess] = useState(false)
-  const [orgSettings, setOrgSettings] = useState(initialOrgSettings)
-  const [settingsForm, setSettingsForm] = useState({
-    // Org details
-    name: organization.name || "",
-    description: initialOrgSettings?.description || "",
-    email: initialOrgSettings?.email || "",
-    phone: initialOrgSettings?.phone || "",
-    whatsapp: initialOrgSettings?.whatsapp || "",
-    address: initialOrgSettings?.address || "",
-    city: initialOrgSettings?.city || "",
-    province: initialOrgSettings?.province || "",
-    instagram: initialOrgSettings?.instagram || "",
-    facebook: initialOrgSettings?.facebook || "",
-    website: initialOrgSettings?.website || "",
-    // Booking settings
-    booking_advance_days: initialOrgSettings?.booking_advance_days ?? 1,
-    booking_max_days_ahead: initialOrgSettings?.booking_max_days_ahead ?? 60,
-    allow_guest_bookings: initialOrgSettings?.allow_guest_bookings ?? true,
-    require_payment_upfront: initialOrgSettings?.require_payment_upfront ?? false,
-    notify_on_booking_email: initialOrgSettings?.notify_on_booking_email ?? true,
-    notification_email: initialOrgSettings?.notification_email || "",
-    show_prices: initialOrgSettings?.show_prices ?? true,
-    show_trainer_selection: initialOrgSettings?.show_trainer_selection ?? true,
-  })
-
-  // Train OckOck / FAQ state
-  const [faqs, setFaqs] = useState<FAQ[]>([])
-  const [faqsLoading, setFaqsLoading] = useState(false)
-  const [newFaqForm, setNewFaqForm] = useState({ question: "", answer: "", category: "general" })
-  const [editingFaq, setEditingFaq] = useState<FAQ | null>(null)
-  const [isSavingFaq, setIsSavingFaq] = useState(false)
-  const [quickReplyInput, setQuickReplyInput] = useState("")
-  const [quickReplyResponse, setQuickReplyResponse] = useState("")
-  const [isGeneratingReply, setIsGeneratingReply] = useState(false)
-  const faqCategories = [
-    { value: "pricing", label: "Pricing (ราคา)" },
-    { value: "schedule", label: "Schedule (ตารางเวลา)" },
-    { value: "location", label: "Location (สถานที่)" },
-    { value: "training", label: "Training (การฝึก)" },
-    { value: "booking", label: "Booking (จอง)" },
-    { value: "general", label: "General (ทั่วไป)" },
-  ]
+  // Pending invites state
+  const [pendingInvites, setPendingInvites] = useState<{ id: string; email: string; role: string; created_at: string; expires_at: string }[]>([])
+  const [resendingInvite, setResendingInvite] = useState<string | null>(null)
 
   // Student state
   const [students, setStudents] = useState<Student[]>([])
   const [studentsLoading, setStudentsLoading] = useState(false)
   const [studentTransactions, setStudentTransactions] = useState<CreditTransaction[]>([])
 
-  // OckOck chat state
-  const [ockockMessages, setOckockMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([])
-  const [ockockInput, setOckockInput] = useState("")
-  const [ockockLoading, setOckockLoading] = useState(false)
-
-  const [myProfile, setMyProfile] = useState<TrainerProfile | null>(null)
-  const [myProfileLoading, setMyProfileLoading] = useState(false)
-  const [myProfileSaving, setMyProfileSaving] = useState(false)
-  const [myProfileForm, setMyProfileForm] = useState({
-    display_name: "",
-    title: "",
-    bio: "",
-    specialties: "",
-    photo_url: "",
-    photos: [] as string[],
-    is_available: true,
-    availability_note: "",
-    years_experience: 0,
-    fight_record_wins: 0,
-    fight_record_losses: 0,
-    fight_record_draws: 0,
-    open_to_fights: false,
-    open_to_events: false,
-  })
-  const [newPhotoUrl, setNewPhotoUrl] = useState("")
-
   useEffect(() => {
-    if (activeTab === "profile") {
-      fetchMyProfile()
+    if (activeTab === "trainers") {
+      fetchPendingInvites()
     }
-  }, [activeTab])
-
-  const fetchMyProfile = async () => {
-    setMyProfileLoading(true)
-    try {
-      const response = await fetch("/api/trainer/profile")
-      const data = await response.json()
-      if (data.profile) {
-        setMyProfile(data.profile)
-        setMyProfileForm({
-          display_name: data.profile.display_name || "",
-          title: data.profile.title || "",
-          bio: data.profile.bio || "",
-          specialties: data.profile.specialties?.join(", ") || "",
-          photo_url: data.profile.photo_url || "",
-          photos: data.profile.photos || [],
-          is_available: data.profile.is_available ?? true,
-          availability_note: data.profile.availability_note || "",
-          years_experience: data.profile.years_experience || 0,
-          fight_record_wins: data.profile.fight_record_wins || 0,
-          fight_record_losses: data.profile.fight_record_losses || 0,
-          fight_record_draws: data.profile.fight_record_draws || 0,
-          open_to_fights: data.profile.open_to_fights ?? false,
-          open_to_events: data.profile.open_to_events ?? false,
-        })
-      }
-    } catch (error) {
-      console.error("Error fetching profile:", error)
-    } finally {
-      setMyProfileLoading(false)
-    }
-  }
-
-  const saveMyProfile = async () => {
-    setMyProfileSaving(true)
-    try {
-      const response = await fetch("/api/trainer/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: myProfileForm.display_name,
-          title: myProfileForm.title,
-          bio: myProfileForm.bio,
-          specialties: myProfileForm.specialties
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          photo_url: myProfileForm.photos[0] || myProfileForm.photo_url,
-          photos: myProfileForm.photos,
-          is_available: myProfileForm.is_available,
-          availability_note: myProfileForm.availability_note,
-          years_experience: myProfileForm.years_experience,
-          fight_record_wins: myProfileForm.fight_record_wins,
-          fight_record_losses: myProfileForm.fight_record_losses,
-          fight_record_draws: myProfileForm.fight_record_draws,
-          open_to_fights: myProfileForm.open_to_fights,
-          open_to_events: myProfileForm.open_to_events,
-        }),
-      })
-      if (response.ok) {
-        await fetchMyProfile()
-      }
-    } catch (error) {
-      console.error("Error saving profile:", error)
-    } finally {
-      setMyProfileSaving(false)
-    }
-  }
-
-  const addPhoto = () => {
-    if (newPhotoUrl && myProfileForm.photos.length < 5) {
-      setMyProfileForm({
-        ...myProfileForm,
-        photos: [...myProfileForm.photos, newPhotoUrl],
-      })
-      setNewPhotoUrl("")
-    }
-  }
-
-  const removePhoto = (index: number) => {
-    setMyProfileForm({
-      ...myProfileForm,
-      photos: myProfileForm.photos.filter((_, i) => i !== index),
-    })
-  }
-
-  useEffect(() => {
     if (activeTab === "students" && students.length === 0) {
       fetchStudents()
     }
   }, [activeTab])
 
-  // Load FAQs when Train OckOck tab is active
-  useEffect(() => {
-    if (activeTab === "train-ockock" && faqs.length === 0) {
-      fetchFaqs()
-    }
-  }, [activeTab])
-
-  const fetchFaqs = async () => {
-    setFaqsLoading(true)
+  const fetchPendingInvites = async () => {
     try {
-      const res = await fetch("/api/admin/faqs")
+      const res = await fetch("/api/admin/invites")
       if (res.ok) {
         const data = await res.json()
-        setFaqs(data.faqs || [])
+        setPendingInvites(data.invites || [])
       }
-    } catch (error) {
-      console.error("Failed to fetch FAQs:", error)
+    } catch {
+      // Non-critical
     }
-    setFaqsLoading(false)
   }
 
-  const handleSaveFaq = async () => {
-    if (!newFaqForm.question || !newFaqForm.answer) return
-    setIsSavingFaq(true)
+  const handleResendInvite = async (inviteId: string) => {
+    setResendingInvite(inviteId)
     try {
-      const res = await fetch("/api/admin/faqs", {
-        method: editingFaq ? "PUT" : "POST",
+      const res = await fetch("/api/admin/invites", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingFaq ? { ...newFaqForm, id: editingFaq.id } : newFaqForm),
+        body: JSON.stringify({ invite_id: inviteId }),
       })
       if (res.ok) {
-        setNewFaqForm({ question: "", answer: "", category: "general" })
-        setEditingFaq(null)
-        fetchFaqs()
+        showFeedback("success", "Invite resent")
+        fetchPendingInvites()
+      } else {
+        showFeedback("error", "Failed to resend invite")
       }
-    } catch (error) {
-      console.error("Failed to save FAQ:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't resend invite")
+    } finally {
+      setResendingInvite(null)
     }
-    setIsSavingFaq(false)
   }
 
-  const handleDeleteFaq = async (id: string) => {
-    if (!confirm("Delete this FAQ?")) return
+  const handleCancelInvite = async (inviteId: string) => {
     try {
-      const res = await fetch(`/api/admin/faqs?id=${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/admin/invites?id=${inviteId}`, { method: "DELETE" })
       if (res.ok) {
-        fetchFaqs()
+        setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId))
+        showFeedback("success", "Invite cancelled")
+      } else {
+        showFeedback("error", "Failed to cancel invite")
       }
-    } catch (error) {
-      console.error("Failed to delete FAQ:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't cancel invite")
     }
-  }
-
-  const handleToggleFaq = async (faq: FAQ) => {
-    try {
-      const res = await fetch("/api/admin/faqs", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: faq.id, is_active: !faq.is_active }),
-      })
-      if (res.ok) {
-        fetchFaqs()
-      }
-    } catch (error) {
-      console.error("Failed to toggle FAQ:", error)
-    }
-  }
-
-  const handleQuickReply = async () => {
-    if (!quickReplyInput.trim()) return
-    setIsGeneratingReply(true)
-    setQuickReplyResponse("")
-    try {
-      const res = await fetch("/api/admin/quick-reply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerMessage: quickReplyInput }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setQuickReplyResponse(data.response)
-      }
-    } catch (error) {
-      console.error("Failed to generate reply:", error)
-      setQuickReplyResponse("Sorry, could not generate a response. Please try again.")
-    }
-    setIsGeneratingReply(false)
-  }
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
   }
 
   const fetchStudents = async () => {
@@ -617,8 +381,8 @@ export default function AdminDashboardClient({
         setStudents(data.students || [])
         setStudentTransactions(data.transactions || [])
       }
-    } catch (error) {
-      console.error("Failed to fetch students:", error)
+    } catch {
+      showFeedback("error", "Couldn't load students")
     }
     setStudentsLoading(false)
   }
@@ -748,9 +512,11 @@ export default function AdminDashboardClient({
 
       if (response.ok) {
         setTrainers((prev) => prev.map((t) => (t.id === trainer.id ? { ...t, is_available: !t.is_available } : t)))
+      } else {
+        showFeedback("error", "Failed to update trainer availability")
       }
-    } catch (error) {
-      console.error("Failed to toggle trainer availability:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't update trainer")
     } finally {
       setIsUpdating(null)
     }
@@ -769,9 +535,12 @@ export default function AdminDashboardClient({
 
       if (response.ok) {
         setTrainers((prev) => prev.filter((t) => t.id !== trainerId))
+        showFeedback("success", "Trainer removed")
+      } else {
+        showFeedback("error", "Failed to remove trainer")
       }
-    } catch (error) {
-      console.error("Failed to delete trainer:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't remove trainer")
     } finally {
       setIsUpdating(null)
     }
@@ -808,6 +577,7 @@ export default function AdminDashboardClient({
       setInviteSuccess(`Invite sent to ${inviteEmail}`)
       setInviteEmail("")
       setInviteName("")
+      fetchPendingInvites()
       setTimeout(() => {
         setIsInviteDialogOpen(false)
         setInviteSuccess("")
@@ -928,9 +698,11 @@ export default function AdminDashboardClient({
 
       if (response.ok) {
         setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, is_active: !s.is_active } : s)))
+      } else {
+        showFeedback("error", "Failed to update service")
       }
-    } catch (error) {
-      console.error("Failed to toggle service:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't update service")
     } finally {
       setIsUpdating(null)
     }
@@ -947,12 +719,13 @@ export default function AdminDashboardClient({
       })
 
       if (response.ok) {
-        // Update local state
         setTodaysBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b)))
         setRecentBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b)))
+      } else {
+        showFeedback("error", "Failed to update booking status")
       }
-    } catch (error) {
-      console.error("Failed to update booking:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't update booking")
     } finally {
       setIsUpdating(null)
     }
@@ -971,9 +744,12 @@ export default function AdminDashboardClient({
       if (response.ok) {
         setTodaysBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, payment_status: "paid" } : b)))
         setRecentBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, payment_status: "paid" } : b)))
+        showFeedback("success", "Payment recorded")
+      } else {
+        showFeedback("error", "Failed to record payment")
       }
-    } catch (error) {
-      console.error("Failed to mark as paid:", error)
+    } catch {
+      showFeedback("error", "Network error — couldn't record payment")
     } finally {
       setIsUpdating(null)
     }
@@ -1037,103 +813,6 @@ export default function AdminDashboardClient({
       .reduce((sum, b) => sum + (b.payment_amount_thb || 0), 0),
   }
 
-  // Analytics calculations
-  const calculatePeriodStats = (bookings: AnalyticsBooking[], days: number) => {
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - days)
-    const cutoffStr = cutoff.toISOString().split("T")[0]
-
-    const periodBookings = bookings.filter((b) => b.booking_date >= cutoffStr)
-    const paidBookings = periodBookings.filter((b) => b.payment_status === "paid")
-
-    const cashBookings = paidBookings.filter((b) => b.payment_method === "cash")
-    const cardBookings = paidBookings.filter(
-      (b) => b.payment_method === "stripe" || b.payment_method === "card" || b.payment_currency === "USD",
-    )
-
-    const sum = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_thb || 0), 0)
-    const sumUsd = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_usd || 0), 0)
-
-    return {
-      total: periodBookings.length,
-      paid: paidBookings.length,
-      cashCount: cashBookings.length,
-      cardCount: cardBookings.length,
-      cashRevenue: sum(cashBookings),
-      cardRevenue: sumUsd(cardBookings), // Assuming card payments might be in USD
-    }
-  }
-
-  const weekStats = calculatePeriodStats(analyticsBookings, 7)
-  const monthStats = calculatePeriodStats(analyticsBookings, 30)
-
-  const calculateAnalytics = () => {
-    const today = todayDate // Use todayDate from props
-    const todayDateObj = new Date(today + "T00:00:00")
-
-    // Get start of week (Monday)
-    const startOfWeek = new Date(todayDateObj)
-    const day = startOfWeek.getDay()
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Adjust to start on Monday
-    startOfWeek.setDate(diff)
-    const startOfWeekStr = startOfWeek.toISOString().split("T")[0]
-
-    // Get start of month
-    const startOfMonth = new Date(todayDateObj.getFullYear(), todayDateObj.getMonth(), 1)
-    const startOfMonthStr = startOfMonth.toISOString().split("T")[0]
-
-    // Filter paid bookings
-    const paidBookings = analyticsBookings.filter((b) => b.payment_status === "paid") // Use analyticsBookings prop
-
-    // Today's stats
-    const todayPaid = paidBookings.filter((b) => b.booking_date === today)
-    const todayCash = todayPaid.filter((b) => b.payment_method === "cash")
-    const todayCard = todayPaid.filter((b) => b.payment_method === "stripe" || b.payment_method === "card")
-
-    // This week's stats
-    const weekPaid = paidBookings.filter((b) => b.booking_date >= startOfWeekStr)
-    const weekCash = weekPaid.filter((b) => b.payment_method === "cash")
-    const weekCard = weekPaid.filter((b) => b.payment_method === "stripe" || b.payment_method === "card")
-
-    // This month's stats
-    const monthPaid = paidBookings.filter((b) => b.booking_date >= startOfMonthStr)
-    const monthCash = monthPaid.filter((b) => b.payment_method === "cash")
-    const monthCard = monthPaid.filter((b) => b.payment_method === "stripe" || b.payment_method === "card")
-
-    // Calculate totals
-    const sum = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_thb || 0), 0)
-    const sumUsd = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_usd || 0), 0)
-
-    return {
-      today: {
-        total: sum(todayPaid),
-        cash: sum(todayCash),
-        card: sumUsd(todayCard), // Assuming card payments might be in USD
-        count: todayPaid.length,
-        cashCount: todayCash.length,
-        cardCount: todayCard.length,
-      },
-      week: {
-        total: sum(weekPaid),
-        cash: sum(weekCash),
-        card: sumUsd(weekCard), // Assuming card payments might be in USD
-        count: weekPaid.length,
-        cashCount: weekCash.length,
-        cardCount: weekCard.length,
-      },
-      month: {
-        total: sum(monthPaid),
-        cash: sum(monthCash),
-        card: sumUsd(monthCard), // Assuming card payments might be in USD
-        count: monthPaid.length,
-        cashCount: monthCash.length,
-        cardCount: monthCard.length,
-      },
-    }
-  }
-
-  const analytics = calculateAnalytics()
-
   const handleCreateBooking = async () => {
     setBookingError("")
 
@@ -1173,8 +852,7 @@ export default function AdminDashboardClient({
           payment_method: newBookingForm.paymentMethod,
           payment_status: newBookingForm.isPaid ? "paid" : "pending",
           payment_amount_thb: selectedService.price_thb,
-          payment_amount_usd: 0, // Defaulting to 0 for now
-          payment_currency: "THB", // Defaulting to THB for now
+          payment_currency: "THB",
           status: "confirmed",
         }),
       })
@@ -1196,6 +874,7 @@ export default function AdminDashboardClient({
         isPaid: false,
       })
       setIsNewBookingOpen(false)
+      showFeedback("success", "Booking created successfully")
 
       // Refresh data
       router.refresh()
@@ -1204,77 +883,6 @@ export default function AdminDashboardClient({
       setBookingError(error instanceof Error ? error.message : "Failed to create booking")
     } finally {
       setIsCreatingBooking(false)
-    }
-  }
-
-  const handleSaveSettings = async () => {
-    setIsSavingSettings(true)
-    setSettingsSuccess(false)
-    try {
-      const response = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          org_id: membership.org_id, // Add orgId
-          organization: {
-            name: settingsForm.name,
-            description: settingsForm.description,
-            email: settingsForm.email,
-            phone: settingsForm.phone,
-            whatsapp: settingsForm.whatsapp,
-            address: settingsForm.address,
-            city: settingsForm.city,
-            province: settingsForm.province,
-            instagram: settingsForm.instagram,
-            facebook: settingsForm.facebook,
-            website: settingsForm.website,
-          },
-          settings: {
-            booking_advance_days: settingsForm.booking_advance_days,
-            booking_max_days_ahead: settingsForm.booking_max_days_ahead,
-            allow_guest_bookings: settingsForm.allow_guest_bookings,
-            require_payment_upfront: settingsForm.require_payment_upfront,
-            notify_on_booking_email: settingsForm.notify_on_booking_email,
-            notification_email: settingsForm.notification_email || null,
-            show_prices: settingsForm.show_prices,
-            show_trainer_selection: settingsForm.show_trainer_selection,
-          },
-        }),
-      })
-
-      if (response.ok) {
-        setSettingsSuccess(true)
-        setTimeout(() => setSettingsSuccess(false), 3000)
-        router.refresh()
-      }
-    } catch (error) {
-      console.error("Failed to save settings:", error)
-    } finally {
-      setIsSavingSettings(false)
-    }
-  }
-
-  async function handleOckockSend() {
-    if (!ockockInput.trim() || ockockLoading) return
-
-    const userMessage = ockockInput.trim()
-    setOckockMessages((prev) => [...prev, { role: "user", content: userMessage }])
-    setOckockInput("")
-    setOckockLoading(true)
-
-    try {
-      const res = await fetch("/api/admin/ockock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, org_id: membership.org_id }), // Add orgId
-      })
-
-      const data = await res.json()
-      setOckockMessages((prev) => [...prev, { role: "assistant", content: data.response || data.error }])
-    } catch {
-      setOckockMessages((prev) => [...prev, { role: "assistant", content: "Oops! Something went wrong. Try again!" }])
-    } finally {
-      setOckockLoading(false)
     }
   }
 
@@ -1302,6 +910,7 @@ export default function AdminDashboardClient({
       label: "AI Assistant",
       labelTh: "ผู้ช่วย AI",
       items: [
+        { id: "marketing" as const, label: "Marketing", labelTh: "การตลาด", icon: Megaphone },
         { id: "train-ockock" as const, label: "Train OckOck", labelTh: "สอน OckOck", icon: BookOpen },
         { id: "ockock" as const, label: "OckOck", labelTh: "OckOck", icon: null, isOckOck: true },
       ],
@@ -1335,9 +944,12 @@ export default function AdminDashboardClient({
           <div className="text-center">
             <h1 className="text-lg font-bold text-orange-500">{organization.name}</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <Button variant="ghost" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -1373,7 +985,7 @@ export default function AdminDashboardClient({
                           : "text-neutral-300 hover:bg-neutral-800"
                       }`}
                     >
-                      {item.isOckOck ? (
+                      {item.icon === null ? (
                         <OckOckAvatar size={20} />
                       ) : item.icon ? (
                         <item.icon className="w-5 h-5" />
@@ -1401,16 +1013,20 @@ export default function AdminDashboardClient({
         {/* Sidebar Header */}
         <div className="p-4 border-b border-neutral-800">
           {!sidebarCollapsed && (
-            <div>
-              <h2 className="font-bold text-orange-500 truncate">{organization.name}</h2>
-              <p className="text-xs text-neutral-400">Admin Dashboard</p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="font-bold text-orange-500 truncate">{organization.name}</h2>
+                <p className="text-xs text-neutral-400">Admin Dashboard</p>
+              </div>
+              <NotificationBell />
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold text-sm">
                 {organization.name.charAt(0)}
               </div>
+              <NotificationBell />
             </div>
           )}
         </div>
@@ -1435,7 +1051,7 @@ export default function AdminDashboardClient({
                       : "text-neutral-300 hover:bg-neutral-800"
                   } ${sidebarCollapsed ? "justify-center" : ""}`}
                 >
-                  {item.isOckOck ? (
+                  {item.icon === null ? (
                     <OckOckAvatar size={20} />
                   ) : item.icon ? (
                     <item.icon className="w-5 h-5 shrink-0" />
@@ -1498,13 +1114,13 @@ export default function AdminDashboardClient({
             <span className="text-xs text-white font-medium">OckOck</span>
           </button>
           <button
-            onClick={() => setActiveTab("reports")}
+            onClick={() => setActiveTab("marketing")}
             className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg ${
-              activeTab === "reports" ? "text-orange-500" : "text-neutral-400"
+              activeTab === "marketing" ? "text-orange-500" : "text-neutral-400"
             }`}
           >
-            <BarChart3 className="w-5 h-5" />
-            <span className="text-xs">Reports</span>
+            <Megaphone className="w-5 h-5" />
+            <span className="text-xs">Marketing</span>
           </button>
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -1536,232 +1152,20 @@ export default function AdminDashboardClient({
             </Card>
           </div>
 
-          {activeTab === "profile" && (
-          <Card className="bg-neutral-900/50 border-neutral-800">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <User className="w-5 h-5" /> My Profile (โปรไฟล์ของฉัน)
-              </CardTitle>
-              <CardDescription>Update your trainer profile (อัพเดทโปรไฟล์ครูมวย)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {myProfileLoading ? (
-                <div className="text-center py-8 text-neutral-400">Loading... (กำลังโหลด...)</div>
-              ) : !myProfile ? (
-                <div className="text-center py-8 text-neutral-400">
-                  No trainer profile found. Contact admin to set up your profile.
-                  <br />
-                  (ไม่พบโปรไฟล์ครูมวย กรุณาติดต่อผู้ดูแล)
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Photos Section */}
-                  <div>
-                    <Label className="text-white mb-2 block">Photos (รูปภาพ) - Max 5</Label>
-                    <div className="flex flex-wrap gap-3 mb-3">
-                      {myProfileForm.photos.map((photo, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={photo || "/placeholder.svg"}
-                            alt={`Photo ${index + 1}`}
-                            className="w-24 h-24 object-cover rounded-lg border border-neutral-700"
-                          />
-                          <button
-                            onClick={() => removePhoto(index)}
-                            className="absolute -top-2 -right-2 bg-red-600 rounded-full p-1"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {myProfileForm.photos.length < 5 && (
-                        <div className="w-24 h-24 border-2 border-dashed border-neutral-700 rounded-lg flex items-center justify-center">
-                          <Camera className="w-8 h-8 text-neutral-600" />
-                        </div>
-                      )}
-                    </div>
-                    {myProfileForm.photos.length < 5 && (
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Paste image URL (วาง URL รูปภาพ)"
-                          value={newPhotoUrl}
-                          onChange={(e) => setNewPhotoUrl(e.target.value)}
-                          className="bg-neutral-800 border-neutral-700 text-white"
-                        />
-                        <Button onClick={addPhoto} variant="outline" className="border-neutral-700 bg-transparent">
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+          {activeTab === "profile" && <ProfileTab />}
 
-                  {/* Basic Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-white">Display Name (ชื่อที่แสดง)</Label>
-                      <Input
-                        value={myProfileForm.display_name}
-                        onChange={(e) => setMyProfileForm({ ...myProfileForm, display_name: e.target.value })}
-                        className="bg-neutral-800 border-neutral-700 text-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-white">Title (ตำแหน่ง)</Label>
-                      <Input
-                        value={myProfileForm.title}
-                        onChange={(e) => setMyProfileForm({ ...myProfileForm, title: e.target.value })}
-                        placeholder="e.g. Head Trainer, Boxing Coach"
-                        className="bg-neutral-800 border-neutral-700 text-white"
-                      />
-                    </div>
-                  </div>
+          {/* Action Feedback Banner */}
+          {actionFeedback && (
+            <div className={`fixed top-4 right-4 z-[100] max-w-sm rounded-lg px-4 py-3 text-sm shadow-lg animate-in fade-in slide-in-from-top-2 ${
+              actionFeedback.type === "success"
+                ? "bg-emerald-500/90 text-white"
+                : "bg-red-500/90 text-white"
+            }`}>
+              {actionFeedback.message}
+            </div>
+          )}
 
-                  <div>
-                    <Label className="text-white">Bio (ประวัติ)</Label>
-                    <Textarea
-                      value={myProfileForm.bio}
-                      onChange={(e) => setMyProfileForm({ ...myProfileForm, bio: e.target.value })}
-                      placeholder="Tell students about yourself... (เล่าเกี่ยวกับตัวคุณ...)"
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                      rows={4}
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-white">Specialties (ความเชี่ยวชาญ)</Label>
-                    <Input
-                      value={myProfileForm.specialties}
-                      onChange={(e) => setMyProfileForm({ ...myProfileForm, specialties: e.target.value })}
-                      placeholder="Clinch, Elbows, Pad Work (comma separated)"
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-
-                  {/* Experience & Record */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label className="text-white">Years Exp. (ปีประสบการณ์)</Label>
-                      <Input
-                        type="number"
-                        value={myProfileForm.years_experience}
-                        onChange={(e) =>
-                          setMyProfileForm({ ...myProfileForm, years_experience: Number.parseInt(e.target.value) || 0 })
-                        }
-                        className="bg-neutral-800 border-neutral-700 text-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-white">Wins (ชนะ)</Label>
-                      <Input
-                        type="number"
-                        value={myProfileForm.fight_record_wins}
-                        onChange={(e) =>
-                          setMyProfileForm({
-                            ...myProfileForm,
-                            fight_record_wins: Number.parseInt(e.target.value) || 0,
-                          })
-                        }
-                        className="bg-neutral-800 border-neutral-700 text-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-white">Losses (แพ้)</Label>
-                      <Input
-                        type="number"
-                        value={myProfileForm.fight_record_losses}
-                        onChange={(e) =>
-                          setMyProfileForm({
-                            ...myProfileForm,
-                            fight_record_losses: Number.parseInt(e.target.value) || 0,
-                          })
-                        }
-                        className="bg-neutral-800 border-neutral-700 text-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-white">Draws (เสมอ)</Label>
-                      <Input
-                        type="number"
-                        value={myProfileForm.fight_record_draws}
-                        onChange={(e) =>
-                          setMyProfileForm({
-                            ...myProfileForm,
-                            fight_record_draws: Number.parseInt(e.target.value) || 0,
-                          })
-                        }
-                        className="bg-neutral-800 border-neutral-700 text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Availability */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() =>
-                          setMyProfileForm({ ...myProfileForm, is_available: !myProfileForm.is_available })
-                        }
-                        className={`p-2 rounded ${myProfileForm.is_available ? "bg-green-600" : "bg-neutral-700"}`}
-                      >
-                        {myProfileForm.is_available ? (
-                          <ToggleRight className="w-5 h-5" />
-                        ) : (
-                          <ToggleLeft className="w-5 h-5" />
-                        )}
-                      </button>
-                      <span className="text-white">
-                        {myProfileForm.is_available ? "Available (พร้อมสอน)" : "Not Available (ไม่ว่าง)"}
-                      </span>
-                    </div>
-                    <Input
-                      value={myProfileForm.availability_note}
-                      onChange={(e) => setMyProfileForm({ ...myProfileForm, availability_note: e.target.value })}
-                      placeholder="Availability note (e.g. Back next week)"
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-
-                  {/* Ock Ock Options */}
-                  <div className="space-y-3">
-                    <Label className="text-white">Ock Ock Options (ตัวเลือก Ock Ock)</Label>
-                    <div className="flex flex-wrap gap-4">
-                      <label className="flex items-center gap-2 text-white">
-                        <input
-                          type="checkbox"
-                          checked={myProfileForm.open_to_fights}
-                          onChange={(e) => setMyProfileForm({ ...myProfileForm, open_to_fights: e.target.checked })}
-                          className="rounded"
-                        />
-                        Open to Fights (รับชก)
-                      </label>
-                      <label className="flex items-center gap-2 text-white">
-                        <input
-                          type="checkbox"
-                          checked={myProfileForm.open_to_events}
-                          onChange={(e) => setMyProfileForm({ ...myProfileForm, open_to_events: e.target.checked })}
-                          className="rounded"
-                        />
-                        Open to Events (รับงาน)
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Save Button */}
-                  <Button
-                    onClick={saveMyProfile}
-                    disabled={myProfileSaving}
-                    className="w-full bg-orange-600 hover:bg-orange-700"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {myProfileSaving ? "Saving... (กำลังบันทึก...)" : "Save Profile (บันทึกโปรไฟล์)"}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-          {/* Today's Bookings Tab - Add Thai translations to buttons */}
+          {/* Today's Bookings Tab */}
           {activeTab === "today" && (
           <Card className="bg-neutral-900/50 border-neutral-800">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -1863,6 +1267,7 @@ export default function AdminDashboardClient({
                           id="date"
                           type="date"
                           value={newBookingForm.bookingDate}
+                          min={getTodayInPaiTimezone()}
                           onChange={(e) => setNewBookingForm((prev) => ({ ...prev, bookingDate: e.target.value }))}
                           className="bg-neutral-800 border-neutral-700 text-white"
                         />
@@ -2033,8 +1438,18 @@ export default function AdminDashboardClient({
           {activeTab === "recent" && (
           <Card className="bg-neutral-900/50 border-neutral-800">
             <CardHeader>
-              <CardTitle className="text-white">Recent Bookings</CardTitle>
-              <CardDescription>Last 7 days</CardDescription>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-white">Recent Bookings</CardTitle>
+                  <CardDescription>Last 7 days</CardDescription>
+                </div>
+                <Input
+                  placeholder="Search by name or service..."
+                  value={recentSearch}
+                  onChange={(e) => setRecentSearch(e.target.value)}
+                  className="bg-neutral-800 border-neutral-700 text-white md:max-w-[260px]"
+                />
+              </div>
             </CardHeader>
             <CardContent>
               {recentBookings.length === 0 ? (
@@ -2044,7 +1459,16 @@ export default function AdminDashboardClient({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentBookings.map((booking) => (
+                  {recentBookings
+                    .filter((booking) => {
+                      if (!recentSearch.trim()) return true
+                      const q = recentSearch.toLowerCase()
+                      return (
+                        (booking.guest_name || "").toLowerCase().includes(q) ||
+                        (booking.services?.name || "").toLowerCase().includes(q)
+                      )
+                    })
+                    .map((booking) => (
                     <div
                       key={booking.id}
                       className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-neutral-800/50 border border-neutral-700 gap-4"
@@ -2080,249 +1504,10 @@ export default function AdminDashboardClient({
         )}
 
           {activeTab === "reports" && (
-          <div className="space-y-6">
-            {/* Revenue Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Today */}
-              <Card className="bg-neutral-900/50 border-neutral-800">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-white">Today</CardTitle>
-                  <CardDescription>{weekStats.total} bookings</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-3xl font-bold text-amber-400">฿{weekStats.cashRevenue.toLocaleString()}</div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Banknote className="h-4 w-4 text-green-400" />
-                        <span className="text-sm text-neutral-400">Cash</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-green-400 font-medium">฿{weekStats.cashRevenue.toLocaleString()}</span>
-                        <span className="text-xs text-neutral-500 ml-2">({weekStats.cashCount})</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm text-neutral-400">Card</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-blue-400 font-medium">$ {weekStats.cardRevenue.toLocaleString()}</span>
-                        <span className="text-xs text-neutral-500 ml-2">({weekStats.cardCount})</span>
-                      </div>
-                    </div>
-                  </div>
-                  {weekStats.paid > 0 && (
-                    <div className="pt-2 border-t border-neutral-800">
-                      <div className="flex h-2 rounded-full overflow-hidden bg-neutral-800">
-                        <div
-                          className="bg-green-500"
-                          style={{
-                            width: `${(weekStats.cashRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100}%`,
-                          }}
-                        />
-                        <div
-                          className="bg-blue-500"
-                          style={{
-                            width: `${(weekStats.cardRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-neutral-500 mt-1">
-                        <span>
-                          {weekStats.paid > 0
-                            ? Math.round(
-                                (weekStats.cashRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100,
-                              )
-                            : 0}
-                          % cash
-                        </span>
-                        <span>
-                          {weekStats.paid > 0
-                            ? Math.round(
-                                (weekStats.cardRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100,
-                              )
-                            : 0}
-                          % card
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            <ReportsTab analyticsBookings={analyticsBookings} todayDate={todayDate} />
+          )}
 
-              {/* This Week */}
-              <Card className="bg-neutral-900/50 border-neutral-800">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-white">This Week</CardTitle>
-                  <CardDescription>{weekStats.total} bookings</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-3xl font-bold text-amber-400">฿{weekStats.cashRevenue.toLocaleString()}</div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Banknote className="h-4 w-4 text-green-400" />
-                        <span className="text-sm text-neutral-400">Cash</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-green-400 font-medium">฿{weekStats.cashRevenue.toLocaleString()}</span>
-                        <span className="text-xs text-neutral-500 ml-2">({weekStats.cashCount})</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm text-neutral-400">Card</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-blue-400 font-medium">$ {weekStats.cardRevenue.toLocaleString()}</span>
-                        <span className="text-xs text-neutral-500 ml-2">({weekStats.cardCount})</span>
-                      </div>
-                    </div>
-                  </div>
-                  {weekStats.paid > 0 && (
-                    <div className="pt-2 border-t border-neutral-800">
-                      <div className="flex h-2 rounded-full overflow-hidden bg-neutral-800">
-                        <div
-                          className="bg-green-500"
-                          style={{
-                            width: `${(weekStats.cashRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100}%`,
-                          }}
-                        />
-                        <div
-                          className="bg-blue-500"
-                          style={{
-                            width: `${(weekStats.cardRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-neutral-500 mt-1">
-                        <span>
-                          {weekStats.paid > 0
-                            ? Math.round(
-                                (weekStats.cashRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100,
-                              )
-                            : 0}
-                          % cash
-                        </span>
-                        <span>
-                          {weekStats.paid > 0
-                            ? Math.round(
-                                (weekStats.cardRevenue / (weekStats.cashRevenue + weekStats.cardRevenue)) * 100,
-                              )
-                            : 0}
-                          % card
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* This Month */}
-              <Card className="bg-neutral-900/50 border-neutral-800">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-white">This Month</CardTitle>
-                  <CardDescription>{monthStats.total} bookings</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-3xl font-bold text-amber-400">฿{monthStats.cashRevenue.toLocaleString()}</div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Banknote className="h-4 w-4 text-green-400" />
-                        <span className="text-sm text-neutral-400">Cash</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-green-400 font-medium">฿{monthStats.cashRevenue.toLocaleString()}</span>
-                        <span className="text-xs text-neutral-500 ml-2">({monthStats.cashCount})</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm text-neutral-400">Card</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-blue-400 font-medium">$ {monthStats.cardRevenue.toLocaleString()}</span>
-                        <span className="text-xs text-neutral-500 ml-2">({monthStats.cardCount})</span>
-                      </div>
-                    </div>
-                  </div>
-                  {monthStats.paid > 0 && (
-                    <div className="pt-2 border-t border-neutral-800">
-                      <div className="flex h-2 rounded-full overflow-hidden bg-neutral-800">
-                        <div
-                          className="bg-green-500"
-                          style={{
-                            width: `${(monthStats.cashRevenue / (monthStats.cashRevenue + monthStats.cardRevenue)) * 100}%`,
-                          }}
-                        />
-                        <div
-                          className="bg-blue-500"
-                          style={{
-                            width: `${(monthStats.cardRevenue / (monthStats.cashRevenue + monthStats.cardRevenue)) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-neutral-500 mt-1">
-                        <span>
-                          {monthStats.paid > 0
-                            ? Math.round(
-                                (monthStats.cashRevenue / (monthStats.cashRevenue + monthStats.cardRevenue)) * 100,
-                              )
-                            : 0}
-                          % cash
-                        </span>
-                        <span>
-                          {monthStats.paid > 0
-                            ? Math.round(
-                                (monthStats.cardRevenue / (monthStats.cashRevenue + monthStats.cardRevenue)) * 100,
-                              )
-                            : 0}
-                          % card
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Summary */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-amber-400" />
-                  Payment Summary
-                </CardTitle>
-                <CardDescription>Last 30 days overview</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-lg bg-neutral-800/50 border border-neutral-700">
-                    <p className="text-sm text-neutral-400">Total Revenue</p>
-                    <p className="text-2xl font-bold text-amber-400">฿{monthStats.cashRevenue.toLocaleString()}</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-neutral-800/50 border border-neutral-700">
-                    <p className="text-sm text-neutral-400">Total Bookings</p>
-                    <p className="text-2xl font-bold text-white">{monthStats.total}</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-neutral-800/50 border border-neutral-700">
-                    <p className="text-sm text-neutral-400">Cash Payments</p>
-                    <p className="text-2xl font-bold text-green-400">{monthStats.cashCount}</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-neutral-800/50 border border-neutral-700">
-                    <p className="text-sm text-neutral-400">Card Payments</p>
-                    <p className="text-2xl font-bold text-blue-400">{monthStats.cardCount}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+          {/* OLD reports removed - keeping marker for reference */}
 
           {/* Services tab with add/edit/toggle functionality */}
           {activeTab === "services" && (
@@ -2857,8 +2042,60 @@ export default function AdminDashboardClient({
           </Card>
         )}
 
-          {/* Trainer Add/Edit Dialog */}
-          {/* The dialog for adding/editing trainers is already present in the original code, no changes needed here */}
+          {activeTab === "trainers" && pendingInvites.length > 0 && (
+            <Card className="bg-neutral-900/50 border-neutral-800 mt-4">
+              <CardHeader>
+                <CardTitle className="text-sm text-neutral-400">Pending Invites</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {pendingInvites.map((inv) => {
+                    const isExpired = new Date(inv.expires_at) < new Date()
+                    return (
+                      <div
+                        key={inv.id}
+                        className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-800/30 px-4 py-3"
+                      >
+                        <div>
+                          <p className="text-sm text-white">{inv.email}</p>
+                          <p className="text-xs text-neutral-500">
+                            {isExpired ? (
+                              <span className="text-red-400">Expired</span>
+                            ) : (
+                              <>Sent {new Date(inv.created_at).toLocaleDateString()}</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleResendInvite(inv.id)}
+                            disabled={resendingInvite === inv.id}
+                            className="border-neutral-700 hover:bg-neutral-800 text-xs"
+                          >
+                            {resendingInvite === inv.id ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>{isExpired ? "Resend" : "Resend"}</>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCancelInvite(inv.id)}
+                            className="border-red-700/50 text-red-400 hover:bg-red-900/30 text-xs"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {activeTab === "students" && (
           <StudentsTab
@@ -2919,7 +2156,7 @@ export default function AdminDashboardClient({
             }}
             onUseCredit={async (studentId, creditId) => {
               try {
-                await fetch(`/api/admin/students/${studentId}/credits`, {
+                const res = await fetch(`/api/admin/students/${studentId}/credits`, {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -2929,9 +2166,15 @@ export default function AdminDashboardClient({
                     description: "Session used",
                   }),
                 })
-                fetchStudents()
-              } catch (error) {
-                console.error("Failed to use credit:", error)
+                if (res.ok) {
+                  showFeedback("success", "Credit used")
+                  fetchStudents()
+                } else {
+                  const data = await res.json().catch(() => null)
+                  showFeedback("error", data?.error || "Failed to use credit")
+                }
+              } catch {
+                showFeedback("error", "Network error — couldn't deduct credit")
               }
             }}
           />
@@ -2939,682 +2182,18 @@ export default function AdminDashboardClient({
 
 
           {activeTab === "settings" && (
-          <div className="space-y-6">
-            {/* Gym Information */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white">Gym Information</CardTitle>
-                <CardDescription>Basic details about your gym</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Gym Name</Label>
-                    <Input
-                      value={settingsForm.name}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, name: e.target.value }))}
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Email</Label>
-                    <Input
-                      type="email"
-                      value={settingsForm.email}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, email: e.target.value }))}
-                      placeholder="gym@example.com"
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Phone</Label>
-                    <Input
-                      value={settingsForm.phone}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, phone: e.target.value }))}
-                      placeholder="+66..."
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">WhatsApp</Label>
-                    <Input
-                      value={settingsForm.whatsapp}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, whatsapp: e.target.value }))}
-                      placeholder="+66..."
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                </div>
+            <SettingsTab
+              organization={organization}
+              orgSettings={initialOrgSettings}
+              orgId={membership.org_id}
+            />
+          )}
 
-                <div className="space-y-2">
-                  <Label className="text-neutral-200">Description</Label>
-                  <Textarea
-                    value={settingsForm.description}
-                    onChange={(e) => setSettingsForm((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="A brief description of your gym..."
-                    className="bg-neutral-800 border-neutral-700 text-white min-h-[80px]"
-                  />
-                </div>
+          {activeTab === "marketing" && <MarketingTab orgId={membership.org_id} />}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Address</Label>
-                    <Input
-                      value={settingsForm.address}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, address: e.target.value }))}
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">City</Label>
-                    <Input
-                      value={settingsForm.city}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, city: e.target.value }))}
-                      placeholder="Pai"
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Province</Label>
-                    <Input
-                      value={settingsForm.province}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, province: e.target.value }))}
-                      placeholder="Mae Hong Son"
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {activeTab === "train-ockock" && <TrainOckockTab />}
 
-            {/* Social Links */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white">Social Links</CardTitle>
-                <CardDescription>Your gym's social media profiles</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Instagram</Label>
-                    <Input
-                      value={settingsForm.instagram}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, instagram: e.target.value }))}
-                      placeholder="https://instagram.com/..."
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Facebook</Label>
-                    <Input
-                      value={settingsForm.facebook}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, facebook: e.target.value }))}
-                      placeholder="https://facebook.com/..."
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Website</Label>
-                    <Input
-                      value={settingsForm.website}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, website: e.target.value }))}
-                      placeholder="https://..."
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Booking Settings */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white">Booking Settings</CardTitle>
-                <CardDescription>Configure how customers can book with you</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Advance booking required (days)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={settingsForm.booking_advance_days}
-                      onChange={(e) =>
-                        setSettingsForm((prev) => ({
-                          ...prev,
-                          booking_advance_days: Number.parseInt(e.target.value) || 0,
-                        }))
-                      }
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                    <p className="text-xs text-neutral-500">0 = same day booking allowed</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Max days ahead to book</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={settingsForm.booking_max_days_ahead}
-                      onChange={(e) =>
-                        setSettingsForm((prev) => ({
-                          ...prev,
-                          booking_max_days_ahead: Number.parseInt(e.target.value) || 60,
-                        }))
-                      }
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="allowGuestBookings"
-                      checked={settingsForm.allow_guest_bookings}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, allow_guest_bookings: e.target.checked }))}
-                      className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
-                    />
-                    <Label htmlFor="allowGuestBookings" className="text-neutral-200">
-                      Allow guest bookings (no account required)
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="requirePayment"
-                      checked={settingsForm.require_payment_upfront}
-                      onChange={(e) =>
-                        setSettingsForm((prev) => ({ ...prev, require_payment_upfront: e.target.checked }))
-                      }
-                      className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
-                    />
-                    <Label htmlFor="requirePayment" className="text-neutral-200">
-                      Require payment upfront
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="showPrices"
-                      checked={settingsForm.show_prices}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, show_prices: e.target.checked }))}
-                      className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
-                    />
-                    <Label htmlFor="showPrices" className="text-neutral-200">
-                      Show prices on public site
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="showTrainers"
-                      checked={settingsForm.show_trainer_selection}
-                      onChange={(e) =>
-                        setSettingsForm((prev) => ({ ...prev, show_trainer_selection: e.target.checked }))
-                      }
-                      className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
-                    />
-                    <Label htmlFor="showTrainers" className="text-neutral-200">
-                      Allow trainer selection when booking
-                    </Label>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Notification Settings */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white">Notifications</CardTitle>
-                <CardDescription>How you want to be notified about bookings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="emailNotifications"
-                    checked={settingsForm.notify_on_booking_email}
-                    onChange={(e) =>
-                      setSettingsForm((prev) => ({ ...prev, notify_on_booking_email: e.target.checked }))
-                    }
-                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
-                  />
-                  <Label htmlFor="emailNotifications" className="text-neutral-200">
-                    Email notifications for new bookings
-                  </Label>
-                </div>
-
-                {settingsForm.notify_on_booking_email && (
-                  <div className="space-y-2 pl-7">
-                    <Label className="text-neutral-200">Notification email address</Label>
-                    <Input
-                      type="email"
-                      value={settingsForm.notification_email}
-                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, notification_email: e.target.value }))}
-                      placeholder="staff@yourgym.com"
-                      className="bg-neutral-800 border-neutral-700 text-white max-w-md"
-                    />
-                    <p className="text-xs text-neutral-500">Leave empty to use the gym email above</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Save Button */}
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={handleSaveSettings}
-                disabled={isSavingSettings}
-                className="bg-orange-600 hover:bg-orange-700"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isSavingSettings ? "Saving..." : "Save Settings"}
-              </Button>
-              {settingsSuccess && <span className="text-green-400 text-sm">Settings saved successfully!</span>}
-            </div>
-          </div>
-        )}
-
-          {/* Train OckOck tab content */}
-          {activeTab === "train-ockock" && (
-          <div className="space-y-6">
-            {/* Header with OckOck branding */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <OckOckAvatar size={64} />
-                  <div>
-                    <h2 className="text-2xl font-bold text-white">Train Your Water Buffalo</h2>
-                    <p className="text-neutral-400">Teach OckOck how to answer customer questions</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="h-2 bg-neutral-700 rounded-full w-48">
-                        <div 
-                          className="h-2 bg-orange-500 rounded-full transition-all" 
-                          style={{ width: `${Math.min((faqs.length / 20) * 100, 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-sm text-neutral-400">
-                        {faqs.length} answers learned
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Reply Box */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" /> Quick Reply (ตอบด่วน)
-                </CardTitle>
-                <CardDescription>Paste a customer message and OckOck will generate a response</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-neutral-200">Customer Message</Label>
-                  <Textarea
-                    value={quickReplyInput}
-                    onChange={(e) => setQuickReplyInput(e.target.value)}
-                    placeholder="Paste the customer's message here... (e.g., 'How much for private session?')"
-                    className="bg-neutral-800 border-neutral-700 text-white min-h-[80px]"
-                  />
-                </div>
-                <Button 
-                  onClick={handleQuickReply} 
-                  disabled={isGeneratingReply || !quickReplyInput.trim()}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  {isGeneratingReply ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" /> Generate Reply
-                    </>
-                  )}
-                </Button>
-                
-                {quickReplyResponse && (
-                  <div className="mt-4 p-4 bg-neutral-800 rounded-lg border border-neutral-700">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-3">
-                        <OckOckAvatar size={32} />
-                        <div>
-                          <p className="text-sm text-neutral-400 mb-1">OckOck suggests:</p>
-                          <p className="text-white whitespace-pre-wrap">{quickReplyResponse}</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(quickReplyResponse)}
-                        className="border-neutral-600 bg-transparent shrink-0"
-                      >
-                        <Copy className="w-4 h-4 mr-1" /> Copy
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Add New FAQ */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Plus className="w-5 h-5" /> {editingFaq ? "Edit Answer" : "Teach OckOck Something New"}
-                </CardTitle>
-                <CardDescription>
-                  {editingFaq ? "Update this Q&A pair" : "Add a question and answer for OckOck to learn"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-3 space-y-2">
-                    <Label className="text-neutral-200">When someone asks:</Label>
-                    <Input
-                      value={newFaqForm.question}
-                      onChange={(e) => setNewFaqForm(prev => ({ ...prev, question: e.target.value }))}
-                      placeholder="e.g., How much for a private session?"
-                      className="bg-neutral-800 border-neutral-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-neutral-200">Category</Label>
-                    <Select 
-                      value={newFaqForm.category} 
-                      onValueChange={(v) => setNewFaqForm(prev => ({ ...prev, category: v }))}
-                    >
-                      <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {faqCategories.map(cat => (
-                          <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-neutral-200">OckOck should say:</Label>
-                  <Textarea
-                    value={newFaqForm.answer}
-                    onChange={(e) => setNewFaqForm(prev => ({ ...prev, answer: e.target.value }))}
-                    placeholder="e.g., Private sessions are 800 baht for 1 hour with a trainer. Morning slots available 8-11am!"
-                    className="bg-neutral-800 border-neutral-700 text-white min-h-[80px]"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleSaveFaq} 
-                    disabled={isSavingFaq || !newFaqForm.question || !newFaqForm.answer}
-                    className="bg-orange-600 hover:bg-orange-700"
-                  >
-                    {isSavingFaq ? "Saving..." : editingFaq ? "Update" : "Teach OckOck"}
-                  </Button>
-                  {editingFaq && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditingFaq(null)
-                        setNewFaqForm({ question: "", answer: "", category: "general" })
-                      }}
-                      className="border-neutral-700 bg-transparent"
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Add Common Questions */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <CardTitle className="text-white text-lg">Quick Add Common Questions</CardTitle>
-                <CardDescription>Click to add pre-made questions (customize the answers)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { q: "How much for a private session?", cat: "pricing" },
-                    { q: "What time are morning classes?", cat: "schedule" },
-                    { q: "Is it good for beginners?", cat: "training" },
-                    { q: "Where are you located?", cat: "location" },
-                    { q: "How do I book?", cat: "booking" },
-                    { q: "Do you have group classes?", cat: "training" },
-                    { q: "What should I bring?", cat: "general" },
-                    { q: "Do you offer accommodation?", cat: "general" },
-                  ].map((item, i) => (
-                    <Button
-                      key={i}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setNewFaqForm(prev => ({ ...prev, question: item.q, category: item.cat }))}
-                      className="border-neutral-700 bg-transparent text-neutral-300 hover:text-white"
-                    >
-                      <Plus className="w-3 h-3 mr-1" /> {item.q}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Existing FAQs */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <BookOpen className="w-5 h-5" /> What OckOck Knows ({faqs.length})
-                    </CardTitle>
-                    <CardDescription>All the Q&A pairs OckOck has learned</CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchFaqs}
-                    disabled={faqsLoading}
-                    className="border-neutral-700 bg-transparent"
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${faqsLoading ? "animate-spin" : ""}`} />
-                    Refresh
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {faqsLoading ? (
-                  <div className="text-center py-8 text-neutral-400">Loading...</div>
-                ) : faqs.length === 0 ? (
-                  <div className="text-center py-8 text-neutral-400">
-                    <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>OckOck hasn't learned anything yet.</p>
-                    <p className="text-sm">Add your first Q&A above!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {faqCategories.map(cat => {
-                      const categoryFaqs = faqs.filter(f => f.category === cat.value)
-                      if (categoryFaqs.length === 0) return null
-                      return (
-                        <div key={cat.value} className="space-y-2">
-                          <h4 className="text-sm font-medium text-neutral-400 uppercase tracking-wide">
-                            {cat.label} ({categoryFaqs.length})
-                          </h4>
-                          {categoryFaqs.map(faq => (
-                            <div 
-                              key={faq.id} 
-                              className={`p-3 rounded-lg border ${faq.is_active ? "bg-neutral-800/50 border-neutral-700" : "bg-neutral-900 border-neutral-800 opacity-60"}`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-white">Q: {faq.question}</p>
-                                  <p className="text-neutral-400 mt-1">A: {faq.answer}</p>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleToggleFaq(faq)}
-                                    className="h-8 w-8 p-0"
-                                    title={faq.is_active ? "Disable" : "Enable"}
-                                  >
-                                    {faq.is_active ? (
-                                      <ToggleRight className="w-4 h-4 text-green-500" />
-                                    ) : (
-                                      <ToggleLeft className="w-4 h-4 text-neutral-500" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditingFaq(faq)
-                                      setNewFaqForm({ question: faq.question, answer: faq.answer, category: faq.category })
-                                    }}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteFaq(faq.id)}
-                                    className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-          {/* OckOck tab content */}
-          {activeTab === "ockock" && (
-          <Card className="bg-neutral-900 border-neutral-800">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <OckOckAvatar size={48} />
-                <div>
-                  <CardTitle className="text-white">OckOck</CardTitle>
-                  <CardDescription>Your gym business assistant</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Chat messages */}
-              <div className="h-[400px] overflow-y-auto mb-4 space-y-4 p-4 bg-neutral-800 rounded-lg">
-                {ockockMessages.length === 0 ? (
-                  <div className="text-center text-neutral-400 py-8">
-                    <OckOckAvatar size={64} />
-                    <p className="mt-4 font-medium">Hey boss! OckOck here! 🦬</p>
-                    <p className="text-sm mt-2">
-                      Ask me about today's bookings, revenue, students, or anything about the gym!
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2 mt-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-neutral-600 text-xs bg-transparent"
-                        onClick={() => {
-                          setOckockInput("How's business today?")
-                          setTimeout(() => handleOckockSend(), 100)
-                        }}
-                      >
-                        How's business today?
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-neutral-600 text-xs bg-transparent"
-                        onClick={() => {
-                          setOckockInput("Who paid cash this week?")
-                          setTimeout(() => handleOckockSend(), 100)
-                        }}
-                      >
-                        Cash this week?
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-neutral-600 text-xs bg-transparent"
-                        onClick={() => {
-                          setOckockInput("Any students with low credits?")
-                          setTimeout(() => handleOckockSend(), 100)
-                        }}
-                      >
-                        Low credit students?
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  ockockMessages.map((msg, i) => (
-                    <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      {msg.role === "assistant" && <OckOckAvatar size={32} />}
-                      <div
-                        className={`max-w-[80%] p-3 rounded-lg ${
-                          msg.role === "user" ? "bg-orange-600 text-white" : "bg-neutral-700 text-white"
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-                {ockockLoading && (
-                  <div className="flex gap-3">
-                    <OckOckAvatar size={32} />
-                    <div className="bg-neutral-700 p-3 rounded-lg">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" />
-                        <span
-                          className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.1s" }}
-                        />
-                        <span
-                          className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Input */}
-              <div className="flex gap-2">
-                <Input
-                  value={ockockInput}
-                  onChange={(e) => setOckockInput(e.target.value)}
-                  placeholder="Ask OckOck anything about your gym..."
-                  className="bg-neutral-800 border-neutral-700 text-white"
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleOckockSend()}
-                />
-                <Button
-                  onClick={handleOckockSend}
-                  disabled={ockockLoading || !ockockInput.trim()}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {activeTab === "ockock" && <OckockChatTab orgId={membership.org_id} />}
         </div>
       </main>
     </div>

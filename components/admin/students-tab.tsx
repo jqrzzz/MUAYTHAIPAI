@@ -26,13 +26,14 @@ interface Student {
   credits?: StudentCredit[]
 }
 
-interface CreditTransaction {
+export interface CreditTransaction {
   id: string
   amount: number
-  description: string
+  description: string | null
   created_at: string
   payment_amount_thb: number | null
   users?: { full_name: string | null; display_name: string | null }
+  [key: string]: unknown
 }
 
 interface StudentsTabProps {

@@ -21,9 +21,11 @@ export default async function GymsPage() {
       city,
       province,
       logo_url,
-      cover_image_url
+      cover_image_url,
+      verified
     `)
     .eq("status", "active")
+    .order("verified", { ascending: false })
     .order("name")
 
   // Check if user is logged in

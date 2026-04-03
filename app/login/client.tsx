@@ -44,9 +44,8 @@ export default function LoginClient() {
 
   const handleStudentSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement student authentication for online courses
-    console.log("Student sign in:", studentEmail)
-    alert("Online course access coming soon! Check back later.")
+    // Redirect to student login which handles auth, then they can access /courses
+    window.location.href = `/student/login?redirect=/courses`
   }
 
   const handleOnlinePaymentSubmit = (e: React.FormEvent, paymentMethod: string) => {
