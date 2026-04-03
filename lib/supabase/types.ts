@@ -1,7 +1,7 @@
 // Database types for Supabase
 // These match the schema defined in the SQL migrations
 
-export type UserRole = "owner" | "admin" | "trainer" | "student"
+export type UserRole = "owner" | "admin" | "trainer" | "student" | "promoter" | "fighter"
 export type OrgStatus = "active" | "suspended" | "pending"
 export type MemberStatus = "active" | "suspended" | "pending"
 export type ServiceCategory = "training" | "certificate" | "membership" | "accommodation"
@@ -215,6 +215,80 @@ export interface ActivityLog {
   ip_address: string | null
   user_agent: string | null
   created_at: string
+}
+
+// ============================================
+// OckOck (Fight Platform) Types
+// ============================================
+
+export type FighterStatus = "active" | "inactive" | "retired" | "suspended"
+export type FighterStance = "orthodox" | "southpaw" | "switch"
+export type EventType = "fight_night" | "tournament" | "exhibition" | "training_camp"
+export type EventStatus = "draft" | "announced" | "ticket_sales" | "sold_out" | "live" | "completed" | "cancelled"
+export type BoutStatus = "scheduled" | "confirmed" | "live" | "completed" | "cancelled" | "no_contest"
+export type BoutMethod = "KO" | "TKO" | "decision" | "unanimous_decision" | "split_decision" | "submission" | "DQ" | "draw" | "no_contest"
+
+export interface Fighter {
+  id: string
+  user_id: string
+  gym_id: string | null
+  ring_name: string | null
+  weight_class: string | null
+  stance: FighterStance | null
+  wins: number
+  losses: number
+  draws: number
+  no_contests: number
+  status: FighterStatus
+  open_to_fights: boolean
+  open_to_events: boolean
+  bio: string | null
+  photo_url: string | null
+  photos: string[]
+  trainer_profile_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Event {
+  id: string
+  org_id: string
+  name: string
+  slug: string | null
+  description: string | null
+  event_type: EventType
+  event_date: string
+  start_time: string | null
+  venue_name: string | null
+  venue_address: string | null
+  venue_city: string | null
+  venue_country: string
+  status: EventStatus
+  max_capacity: number | null
+  ticket_price_thb: number | null
+  ticket_price_usd: number | null
+  poster_url: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface EventBout {
+  id: string
+  event_id: string
+  fighter_red_id: string | null
+  fighter_blue_id: string | null
+  weight_class: string | null
+  rounds: number
+  bout_order: number
+  is_main_event: boolean
+  status: BoutStatus
+  winner_id: string | null
+  method: BoutMethod | null
+  round_ended: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
 }
 
 // Wisarut Family Gym ID (hardcoded for now, will be dynamic later)
