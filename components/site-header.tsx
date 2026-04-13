@@ -14,7 +14,6 @@ export function SiteHeader({ hideSoundButton = false }: SiteHeaderProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [muted, setMuted] = useState(true) // Assuming default muted state
-  const [isUserActive, setIsUserActive] = useState(true) // Controls header opacity
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -27,35 +26,8 @@ export function SiteHeader({ hideSoundButton = false }: SiteHeaderProps) {
     checkMobile()
     window.addEventListener("resize", checkMobile)
 
-    let activityTimer: NodeJS.Timeout
-
-    const handleUserActivity = () => {
-      setIsUserActive(true)
-      if (activityTimer) {
-        clearTimeout(activityTimer)
-      }
-      activityTimer = setTimeout(() => {
-        setIsUserActive(false)
-      }, 4000)
-    }
-
-    const events = ["mousemove", "scroll", "touchstart", "touchmove", "keydown"]
-    events.forEach((event) => {
-      window.addEventListener(event, handleUserActivity, { passive: true })
-    })
-
-    activityTimer = setTimeout(() => {
-      setIsUserActive(false)
-    }, 4000)
-
     return () => {
       window.removeEventListener("resize", checkMobile)
-      events.forEach((event) => {
-        window.removeEventListener(event, handleUserActivity)
-      })
-      if (activityTimer) {
-        clearTimeout(activityTimer)
-      }
     }
   }, [])
 
@@ -77,10 +49,7 @@ export function SiteHeader({ hideSoundButton = false }: SiteHeaderProps) {
       <motion.div
         className={`fixed ${isMobile ? "top-2 left-2" : "top-4 left-4"} z-50 flex gap-2`}
         initial={{ opacity: 0, y: -20 }}
-        animate={{
-          opacity: isMobile && !isUserActive ? 0.7 : 1,
-          y: 0,
-        }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
         <a
@@ -145,10 +114,7 @@ export function SiteHeader({ hideSoundButton = false }: SiteHeaderProps) {
       <motion.div
         className={`fixed ${isMobile ? "top-2 right-2" : "top-4 right-4"} z-50 flex gap-2`}
         initial={{ opacity: 0, y: -20 }}
-        animate={{
-          opacity: isMobile && !isUserActive ? 0.7 : 1,
-          y: 0,
-        }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
         <button
