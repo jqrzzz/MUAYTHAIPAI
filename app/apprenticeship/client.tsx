@@ -13,7 +13,6 @@ export default function ApprenticeshipClient() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [muted, setMuted] = useState(true)
-  const [isUserActive, setIsUserActive] = useState(true)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showContent, setShowContent] = useState(false)
 
@@ -24,35 +23,8 @@ export default function ApprenticeshipClient() {
       setShowContent(true)
     }, 2000)
 
-    let activityTimer: NodeJS.Timeout
-
-    const handleUserActivity = () => {
-      setIsUserActive(true)
-      if (activityTimer) {
-        clearTimeout(activityTimer)
-      }
-      activityTimer = setTimeout(() => {
-        setIsUserActive(false)
-      }, 4000)
-    }
-
-    const events = ["mousemove", "scroll", "touchstart", "touchmove", "keydown"]
-    events.forEach((event) => {
-      window.addEventListener(event, handleUserActivity, { passive: true })
-    })
-
-    activityTimer = setTimeout(() => {
-      setIsUserActive(false)
-    }, 4000)
-
     return () => {
       clearTimeout(splashTimer)
-      events.forEach((event) => {
-        window.removeEventListener(event, handleUserActivity)
-      })
-      if (activityTimer) {
-        clearTimeout(activityTimer)
-      }
     }
   }, [])
 
@@ -179,7 +151,7 @@ export default function ApprenticeshipClient() {
               <motion.div
                 className="flex gap-2"
                 initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: isUserActive ? 1 : 0.7, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
                 <Link
@@ -198,7 +170,7 @@ export default function ApprenticeshipClient() {
               <motion.div
                 className="absolute top-4 right-4 z-50"
                 initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: isUserActive ? 1 : 0.7, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
                 <button
