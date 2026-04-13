@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: "Muay Thai Blog | Training Tips & Stories from Pai",
     description:
       "Authentic Muay Thai wisdom, training insights, and cultural stories from our family gym in Pai, Thailand.",
-    url: "https://www.muaythaipai.com/blog",
+    url: "https://muaythaipai.com/blog",
   },
 }
 

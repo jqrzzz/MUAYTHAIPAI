@@ -9,7 +9,7 @@ export const metadata = {
   openGraph: {
     title: "Muay Thai Fighters | Champions from Muay Thai Pai",
     description: "Meet our active and retired Muay Thai fighters from the Wisarut family gym in Pai, Thailand.",
-    url: "https://www.muaythaipai.com/fighters",
+    url: "https://muaythaipai.com/fighters",
   },
 }
 

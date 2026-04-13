@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: "Muay Thai Classes & Schedule | Training Programs in Pai",
     description:
       "Flexible training schedule with morning and afternoon Muay Thai sessions. Private and group classes available.",
-    url: "https://www.muaythaipai.com/classes",
+    url: "https://muaythaipai.com/classes",
   },
 }
 

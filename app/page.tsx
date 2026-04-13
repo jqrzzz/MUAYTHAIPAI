@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: "Muay Thai Pai | Traditional Thai Boxing Training in Pai, Thailand",
     description:
       "Train authentic Muay Thai with Kru Wisarut at Muay Thai Pai. Third-generation family gym featured in National Geographic.",
-    url: "https://www.muaythaipai.com",
+    url: "https://muaythaipai.com",
     siteName: "Muay Thai Pai",
     images: [
       {
