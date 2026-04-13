@@ -92,13 +92,7 @@ export default function ClassesClientPage() {
   if (!mounted) return null
 
   return (
-    <div
-      className={`min-h-screen overflow-hidden relative transition-all duration-500 ${
-        theme === "dark"
-          ? "bg-gradient-to-b from-black via-neutral-900 to-black"
-          : "bg-gradient-to-b from-neutral-100 via-white to-neutral-50"
-      }`}
-    >
+    <div className="min-h-screen overflow-hidden relative transition-all duration-500 bg-gradient-to-b from-neutral-100 via-white to-neutral-50 dark:from-black dark:via-neutral-900 dark:to-black">
       {/* Dynamic Gradient Overlay */}
       <DynamicGradient />
 
@@ -118,11 +112,7 @@ export default function ClassesClientPage() {
           >
             <div className="text-center">
               <motion.h1
-                className={`text-4xl md:text-5xl font-black mb-2 ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-amber-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent"
-                    : "bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent"
-                }`}
+                className="text-4xl md:text-5xl font-black mb-2 bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent dark:from-amber-300 dark:via-orange-400 dark:to-yellow-500"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
@@ -130,9 +120,7 @@ export default function ClassesClientPage() {
                 Classes
               </motion.h1>
               <motion.p
-                className={`text-lg font-bold tracking-widest ${
-                  theme === "dark" ? "text-amber-200/90" : "text-amber-800/90"
-                }`}
+                className="text-lg font-bold tracking-widest text-amber-800/90 dark:text-amber-200/90"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4, duration: 0.6 }}
@@ -140,9 +128,7 @@ export default function ClassesClientPage() {
                 MUAY THAI PAI
               </motion.p>
               <motion.p
-                className={`text-sm font-semibold tracking-wider ${
-                  theme === "dark" ? "text-amber-300/70" : "text-amber-700/70"
-                }`}
+                className="text-sm font-semibold tracking-wider text-amber-700/70 dark:text-amber-300/70"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
@@ -171,58 +157,42 @@ export default function ClassesClientPage() {
               >
                 <Link
                   href="/"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    theme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
+                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
                   aria-label="Back to home"
                 >
-                  <ArrowLeft className={`w-5 h-5 ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`} />
+                  <ArrowLeft className="w-5 h-5 text-orange-600 dark:text-amber-400" />
                 </Link>
                 <a
                   href={SOCIAL_LINKS.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    theme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
+                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
                   aria-label="Instagram"
                 >
                   <InstagramIcon
-                    className={`w-5 h-5 ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+                    className="w-5 h-5 text-orange-600 dark:text-amber-400"
                   />
                 </a>
                 <a
                   href={SOCIAL_LINKS.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    theme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
+                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
                   aria-label="Facebook"
                 >
                   <FacebookIcon
-                    className={`w-5 h-5 ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+                    className="w-5 h-5 text-orange-600 dark:text-amber-400"
                   />
                 </a>
                 <a
                   href="https://tiktok.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    theme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
+                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
                   aria-label="TikTok"
                 >
                   <TikTokIcon
-                    className={`w-5 h-5 ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+                    className="w-5 h-5 text-orange-600 dark:text-amber-400"
                   />
                 </a>
               </motion.div>
@@ -236,11 +206,7 @@ export default function ClassesClientPage() {
               >
                 <button
                   onClick={toggleTheme}
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    theme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
+                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
                   aria-label="Toggle theme"
                 >
                   {theme === "dark" ? (
@@ -265,9 +231,7 @@ export default function ClassesClientPage() {
                   className={`relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg transition-all duration-300 cursor-default ${
                     expandedSection === "group"
                       ? "border-orange-700/50"
-                      : theme === "dark"
-                        ? "bg-orange-950/30 border-orange-500/20"
-                        : "bg-orange-100/60 border-orange-600/30"
+                      : "bg-orange-100/60 border-orange-600/30 dark:bg-orange-950/30 dark:border-orange-500/20"
                   }`}
                   whileHover={{ scale: expandedSection === "group" ? 1 : 1.02 }}
                   animate={{
@@ -301,33 +265,25 @@ export default function ClassesClientPage() {
                       <h3
                         className={`text-2xl font-bold ${
                           expandedSection === "group"
-                            ? theme === "dark"
-                              ? "bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent"
-                              : "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent"
-                            : theme === "dark"
-                              ? "text-amber-700"
-                              : "text-amber-900"
+                            ? "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent dark:from-amber-700 dark:to-orange-700"
+                            : "text-amber-900 dark:text-amber-700"
                         }`}
                       >
                         GROUP
                       </h3>
-                      <p className={`mt-1 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`}>330 THB</p>
+                      <p className="mt-1 text-amber-900 dark:text-amber-700">330 THB</p>
                     </div>
                     <div
                       className={`rounded-full p-2 ${
                         expandedSection === "group"
-                          ? theme === "dark"
-                            ? "bg-orange-500/20"
-                            : "bg-orange-500/10"
-                          : theme === "dark"
-                            ? "bg-white/10"
-                            : "bg-black/5"
+                          ? "bg-orange-500/10 dark:bg-orange-500/20"
+                          : "bg-black/5 dark:bg-white/10"
                       }`}
                     >
                       {expandedSection === "group" ? (
-                        <ChevronUp className={`w-6 h-6 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`} />
+                        <ChevronUp className="w-6 h-6 text-amber-900 dark:text-amber-700" />
                       ) : (
-                        <ChevronDown className={`w-6 h-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`} />
+                        <ChevronDown className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                       )}
                     </div>
                   </div>
@@ -375,7 +331,7 @@ export default function ClassesClientPage() {
                           />
                           {/* Mini Slideshow for Group */}
                           <MiniSlideshow images={groupImages} />
-                          <div className={`space-y-4 text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
                             <div>
                               <p className="font-semibold text-base mb-1">Schedule:</p>
                               <p className="ml-2">• Morning: 8:00-9:45am (Mon-Sat)</p>
@@ -387,7 +343,7 @@ export default function ClassesClientPage() {
                               <p className="ml-2">• Professional instruction</p>
                               <p className="ml-2">• Access to gym facilities</p>
                             </div>
-                            <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
                               Train in our{" "}
                               <Link href="/gym" className="text-primary underline-offset-4 hover:underline">
                                 fully-equipped gym
@@ -401,11 +357,7 @@ export default function ClassesClientPage() {
                                   e.stopPropagation()
                                   setExpandedSection(null)
                                 }}
-                                className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs ${
-                                  theme === "dark"
-                                    ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                                    : "bg-black/5 text-gray-600 hover:bg-black/10"
-                                }`}
+                                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                               >
                                 <ChevronUp className="w-3 h-3" />
                                 <span>Close</span>
@@ -430,9 +382,7 @@ export default function ClassesClientPage() {
                   className={`relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg transition-all duration-300 cursor-default ${
                     expandedSection === "private"
                       ? "border-orange-700/50"
-                      : theme === "dark"
-                        ? "bg-orange-950/30 border-orange-500/20"
-                        : "bg-orange-100/60 border-orange-600/30"
+                      : "bg-orange-100/60 border-orange-600/30 dark:bg-orange-950/30 dark:border-orange-500/20"
                   }`}
                   whileHover={{ scale: expandedSection === "private" ? 1 : 1.02 }}
                   animate={{
@@ -466,35 +416,27 @@ export default function ClassesClientPage() {
                       <h3
                         className={`text-2xl font-bold ${
                           expandedSection === "private"
-                            ? theme === "dark"
-                              ? "bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent"
-                              : "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent"
-                            : theme === "dark"
-                              ? "text-amber-700"
-                              : "text-amber-900"
+                            ? "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent dark:from-amber-700 dark:to-orange-700"
+                            : "text-amber-900 dark:text-amber-700"
                         }`}
                       >
                         PRIVATE
                       </h3>
-                      <p className={`mt-1 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`}>
+                      <p className="mt-1 text-amber-900 dark:text-amber-700">
                         600 THB - 900 THB<span className="text-sm">/hour</span>
                       </p>
                     </div>
                     <div
                       className={`rounded-full p-2 ${
                         expandedSection === "private"
-                          ? theme === "dark"
-                            ? "bg-orange-500/20"
-                            : "bg-orange-500/10"
-                          : theme === "dark"
-                            ? "bg-white/10"
-                            : "bg-black/5"
+                          ? "bg-orange-500/10 dark:bg-orange-500/20"
+                          : "bg-black/5 dark:bg-white/10"
                       }`}
                     >
                       {expandedSection === "private" ? (
-                        <ChevronUp className={`w-6 h-6 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`} />
+                        <ChevronUp className="w-6 h-6 text-amber-900 dark:text-amber-700" />
                       ) : (
-                        <ChevronDown className={`w-6 h-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`} />
+                        <ChevronDown className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                       )}
                     </div>
                   </div>
@@ -542,7 +484,7 @@ export default function ClassesClientPage() {
                           />
                           {/* Mini Slideshow for Private */}
                           <MiniSlideshow images={privateImages} />
-                          <div className={`space-y-4 text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
                             <div>
                               <p className="font-semibold text-base mb-1">Schedule:</p>
                               <p className="ml-2">• Available: 7:00am-6:00pm</p>
@@ -562,11 +504,7 @@ export default function ClassesClientPage() {
                                   e.stopPropagation()
                                   setExpandedSection(null)
                                 }}
-                                className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs ${
-                                  theme === "dark"
-                                    ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                                    : "bg-black/5 text-gray-600 hover:bg-black/10"
-                                }`}
+                                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                               >
                                 <ChevronUp className="w-3 h-3" />
                                 <span>Close</span>
@@ -591,9 +529,7 @@ export default function ClassesClientPage() {
                   className={`relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg transition-all duration-300 cursor-default ${
                     expandedSection === "membership"
                       ? "border-orange-700/50"
-                      : theme === "dark"
-                        ? "bg-orange-950/30 border-orange-500/20"
-                        : "bg-orange-100/60 border-orange-600/30"
+                      : "bg-orange-100/60 border-orange-600/30 dark:bg-orange-950/30 dark:border-orange-500/20"
                   }`}
                   whileHover={{ scale: expandedSection === "membership" ? 1 : 1.02 }}
                   animate={{
@@ -627,35 +563,27 @@ export default function ClassesClientPage() {
                       <h3
                         className={`text-2xl font-bold ${
                           expandedSection === "membership"
-                            ? theme === "dark"
-                              ? "bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent"
-                              : "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent"
-                            : theme === "dark"
-                              ? "text-amber-700"
-                              : "text-amber-900"
+                            ? "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent dark:from-amber-700 dark:to-orange-700"
+                            : "text-amber-900 dark:text-amber-700"
                         }`}
                       >
                         MEMBERSHIP
                       </h3>
-                      <p className={`mt-1 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`}>
+                      <p className="mt-1 text-amber-900 dark:text-amber-700">
                         7,700 THB<span className="text-sm">/month</span>
                       </p>
                     </div>
                     <div
                       className={`rounded-full p-2 ${
                         expandedSection === "membership"
-                          ? theme === "dark"
-                            ? "bg-orange-500/20"
-                            : "bg-orange-500/10"
-                          : theme === "dark"
-                            ? "bg-white/10"
-                            : "bg-black/5"
+                          ? "bg-orange-500/10 dark:bg-orange-500/20"
+                          : "bg-black/5 dark:bg-white/10"
                       }`}
                     >
                       {expandedSection === "membership" ? (
-                        <ChevronUp className={`w-6 h-6 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`} />
+                        <ChevronUp className="w-6 h-6 text-amber-900 dark:text-amber-700" />
                       ) : (
-                        <ChevronDown className={`w-6 h-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`} />
+                        <ChevronDown className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                       )}
                     </div>
                   </div>
@@ -703,7 +631,7 @@ export default function ClassesClientPage() {
                           />
                           {/* Mini Slideshow for Membership */}
                           <MiniSlideshow images={membershipImages} />
-                          <div className={`space-y-4 text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
                             <div>
                               <p className="font-semibold text-base mb-1">Benefits:</p>
                               <p className="ml-2">• Unlimited group sessions</p>
@@ -717,7 +645,7 @@ export default function ClassesClientPage() {
                               <p className="ml-2">• Personalized progress tracking</p>
                               <p className="ml-2">• Community events</p>
                             </div>
-                            <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
                               Looking for accommodation? Check our{" "}
                               <Link href="/train-and-stay" className="text-primary underline-offset-4 hover:underline">
                                 Train & Stay packages
@@ -735,11 +663,7 @@ export default function ClassesClientPage() {
                                   e.stopPropagation()
                                   setExpandedSection(null)
                                 }}
-                                className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs ${
-                                  theme === "dark"
-                                    ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                                    : "bg-black/5 text-gray-600 hover:bg-black/10"
-                                }`}
+                                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                               >
                                 <ChevronUp className="w-3 h-3" />
                                 <span>Close</span>
@@ -764,9 +688,7 @@ export default function ClassesClientPage() {
                   className={`relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg transition-all duration-300 cursor-default ${
                     expandedSection === "kids"
                       ? "border-red-500/30"
-                      : theme === "dark"
-                        ? "bg-orange-950/30 border-orange-500/20"
-                        : "bg-orange-100/60 border-orange-600/30"
+                      : "bg-orange-100/60 border-orange-600/30 dark:bg-orange-950/30 dark:border-orange-500/20"
                   }`}
                   whileHover={{ scale: expandedSection === "kids" ? 1 : 1.02 }}
                   animate={{
@@ -800,35 +722,27 @@ export default function ClassesClientPage() {
                       <h3
                         className={`text-2xl font-bold ${
                           expandedSection === "kids"
-                            ? theme === "dark"
-                              ? "bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent"
-                              : "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent"
-                            : theme === "dark"
-                              ? "text-amber-700"
-                              : "text-amber-900"
+                            ? "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent dark:from-amber-700 dark:to-orange-700"
+                            : "text-amber-900 dark:text-amber-700"
                         }`}
                       >
                         MUAY THAI FOR KIDS
                       </h3>
-                      <p className={`mt-1 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`}>
+                      <p className="mt-1 text-amber-900 dark:text-amber-700">
                         500 THB<span className="text-sm">/session</span>
                       </p>
                     </div>
                     <div
                       className={`rounded-full p-2 ${
                         expandedSection === "kids"
-                          ? theme === "dark"
-                            ? "bg-red-500/20"
-                            : "bg-red-500/10"
-                          : theme === "dark"
-                            ? "bg-white/10"
-                            : "bg-black/5"
+                          ? "bg-red-500/10 dark:bg-red-500/20"
+                          : "bg-black/5 dark:bg-white/10"
                       }`}
                     >
                       {expandedSection === "kids" ? (
-                        <ChevronUp className={`w-6 h-6 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`} />
+                        <ChevronUp className="w-6 h-6 text-amber-900 dark:text-amber-700" />
                       ) : (
-                        <ChevronDown className={`w-6 h-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`} />
+                        <ChevronDown className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                       )}
                     </div>
                   </div>
@@ -876,7 +790,7 @@ export default function ClassesClientPage() {
                           />
                           {/* Mini Slideshow for Kids */}
                           <MiniSlideshow images={kidsImages} />
-                          <div className={`space-y-4 text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
                             <div>
                               <p className="font-semibold text-base mb-1">Ages:</p>
                               <p className="ml-2">• 6-12 years old</p>
@@ -900,11 +814,7 @@ export default function ClassesClientPage() {
                                   e.stopPropagation()
                                   setExpandedSection(null)
                                 }}
-                                className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs ${
-                                  theme === "dark"
-                                    ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                                    : "bg-black/5 text-gray-600 hover:bg-black/10"
-                                }`}
+                                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                               >
                                 <ChevronUp className="w-3 h-3" />
                                 <span>Close</span>
@@ -929,9 +839,7 @@ export default function ClassesClientPage() {
                   className={`relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg transition-all duration-300 cursor-default ${
                     expandedSection === "online"
                       ? "border-amber-700/50"
-                      : theme === "dark"
-                        ? "bg-orange-950/30 border-orange-500/20"
-                        : "bg-orange-100/60 border-orange-600/30"
+                      : "bg-orange-100/60 border-orange-600/30 dark:bg-orange-950/30 dark:border-orange-500/20"
                   }`}
                   whileHover={{ scale: expandedSection === "online" ? 1 : 1.02 }}
                   animate={{
@@ -965,35 +873,27 @@ export default function ClassesClientPage() {
                       <h3
                         className={`text-2xl font-bold ${
                           expandedSection === "online"
-                            ? theme === "dark"
-                              ? "bg-gradient-to-r from-amber-700 to-yellow-700 bg-clip-text text-transparent"
-                              : "bg-gradient-to-r from-amber-900 to-yellow-900 bg-clip-text text-transparent"
-                            : theme === "dark"
-                              ? "text-amber-700"
-                              : "text-amber-900"
+                            ? "bg-gradient-to-r from-amber-900 to-yellow-900 bg-clip-text text-transparent dark:from-amber-700 dark:to-yellow-700"
+                            : "text-amber-900 dark:text-amber-700"
                         }`}
                       >
                         ONLINE
                       </h3>
-                      <p className={`mt-1 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`}>
+                      <p className="mt-1 text-amber-900 dark:text-amber-700">
                         330 THB<span className="text-sm">/month</span>
                       </p>
                     </div>
                     <div
                       className={`rounded-full p-2 ${
                         expandedSection === "online"
-                          ? theme === "dark"
-                            ? "bg-amber-500/20"
-                            : "bg-amber-500/10"
-                          : theme === "dark"
-                            ? "bg-white/10"
-                            : "bg-black/5"
+                          ? "bg-amber-500/10 dark:bg-amber-500/20"
+                          : "bg-black/5 dark:bg-white/10"
                       }`}
                     >
                       {expandedSection === "online" ? (
-                        <ChevronUp className={`w-6 h-6 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`} />
+                        <ChevronUp className="w-6 h-6 text-amber-900 dark:text-amber-700" />
                       ) : (
-                        <ChevronDown className={`w-6 h-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`} />
+                        <ChevronDown className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                       )}
                     </div>
                   </div>
@@ -1041,7 +941,7 @@ export default function ClassesClientPage() {
                           />
                           {/* Mini Slideshow for Online */}
                           <MiniSlideshow images={onlineImages} />
-                          <div className={`space-y-4 text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                          <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
                             <p className="text-center text-xs italic text-gray-400">Coming soon</p>
                             <div>
                               <p className="font-semibold text-base mb-1">What's Included:</p>
@@ -1057,11 +957,7 @@ export default function ClassesClientPage() {
                                   e.stopPropagation()
                                   setExpandedSection(null)
                                 }}
-                                className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs ${
-                                  theme === "dark"
-                                    ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                                    : "bg-black/5 text-gray-600 hover:bg-black/10"
-                                }`}
+                                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                               >
                                 <ChevronUp className="w-3 h-3" />
                                 <span>Close</span>
@@ -1229,9 +1125,7 @@ export default function ClassesClientPage() {
 
             {/* Bottom Navigation */}
             <motion.div
-              className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t ${
-                theme === "dark" ? "bg-black/80 border-white/10" : "bg-white/90 border-gray-200"
-              }`}
+              className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t bg-white/90 border-gray-200 dark:bg-black/80 dark:border-white/10"
               initial={{ y: 100 }}
               animate={{ y: 0 }}
               transition={{ delay: 1.9, duration: 0.8 }}
@@ -1249,7 +1143,7 @@ export default function ClassesClientPage() {
                       key={item.label}
                       onClick={toggleMoreMenu}
                       className={`flex flex-col items-center gap-1 ${
-                        item.active ? "text-orange-500" : theme === "dark" ? "text-gray-400" : "text-gray-500"
+                        item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
                       }`}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
@@ -1262,7 +1156,7 @@ export default function ClassesClientPage() {
                       key={item.label}
                       href={item.href}
                       className={`flex flex-col items-center gap-1 ${
-                        item.active ? "text-orange-500" : theme === "dark" ? "text-gray-400" : "text-gray-500"
+                        item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
                       }`}
                     >
                       {React.createElement(item.icon, { className: "w-5 h-5" })}

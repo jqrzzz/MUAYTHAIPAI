@@ -63,13 +63,7 @@ export default function GymPageClient() {
   if (!mounted) return null
 
   return (
-    <div
-      className={`min-h-screen overflow-hidden relative transition-all duration-500 ${
-        theme === "dark"
-          ? "bg-gradient-to-b from-black via-neutral-900 to-black"
-          : "bg-gradient-to-b from-neutral-100 via-white to-neutral-50"
-      }`}
-    >
+    <div className="min-h-screen overflow-hidden relative transition-all duration-500 bg-gradient-to-b from-neutral-100 via-white to-neutral-50 dark:from-black dark:via-neutral-900 dark:to-black">
       <DynamicGradient />
       <SacredBackground />
 

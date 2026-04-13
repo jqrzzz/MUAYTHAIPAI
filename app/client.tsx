@@ -169,13 +169,7 @@ export function ClientPage(): ReactElement {
   }
 
   return (
-    <div
-      className={`overflow-x-hidden relative transition-all duration-500 ${
-        theme === "dark"
-          ? "bg-gradient-to-b from-black via-neutral-900 to-black"
-          : "bg-gradient-to-b from-neutral-100 via-white to-neutral-50"
-      }`}
-    >
+    <div className="overflow-x-hidden relative transition-all duration-500 bg-gradient-to-b from-neutral-100 via-white to-neutral-50 dark:from-black dark:via-neutral-900 dark:to-black">
       {/* Video Section - Optimized for all devices */}
       <div className="relative w-full h-screen">
         {/* Video poster/placeholder while loading */}
@@ -270,11 +264,7 @@ export function ClientPage(): ReactElement {
 
                 {/* Main Content Container - Dark Glassmorphic Effect with Jade Green accent */}
                 <div
-                  className={`relative p-4 md:p-10 rounded-3xl text-center scale-[0.85] ${
-                    theme === "dark"
-                      ? "bg-neutral-900/70 border border-emerald-700/30"
-                      : "bg-neutral-800/60 border border-emerald-600/40"
-                  } backdrop-blur-2xl shadow-2xl`}
+                  className="relative p-4 md:p-10 rounded-3xl text-center scale-[0.85] bg-neutral-800/60 border border-emerald-600/40 dark:bg-neutral-900/70 dark:border-emerald-700/30 backdrop-blur-2xl shadow-2xl"
                   style={{
                     boxShadow:
                       theme === "dark"
@@ -370,28 +360,16 @@ export function ClientPage(): ReactElement {
         {/* Responsive overlay for better mobile visibility */}
         <div
           className={`absolute inset-0 ${
-            theme === "dark"
-              ? isMobile
-                ? "bg-black/15"
-                : isTablet
-                  ? "bg-black/25"
-                  : "bg-black/40"
-              : isMobile
-                ? "bg-black/10"
-                : isTablet
-                  ? "bg-black/20"
-                  : "bg-black/30"
+            isMobile
+              ? "bg-black/10 dark:bg-black/15"
+              : isTablet
+                ? "bg-black/20 dark:bg-black/25"
+                : "bg-black/30 dark:bg-black/40"
           }`}
         />
 
         {/* Dynamic Gradient Overlay */}
-        <div
-          className={`absolute inset-0 z-10 ${
-            theme === "dark"
-              ? "bg-gradient-to-br from-orange-600/25 via-transparent to-amber-600/20"
-              : "bg-gradient-to-br from-orange-700/30 via-transparent to-orange-600/25"
-          }`}
-        />
+        <div className="absolute inset-0 z-10 bg-gradient-to-br from-orange-700/30 via-transparent to-orange-600/25 dark:from-orange-600/25 dark:to-amber-600/20" />
 
         {/* Top Navigation with Social Icons - Responsive sizing */}
         <motion.div
@@ -408,17 +386,13 @@ export function ClientPage(): ReactElement {
             rel="noopener noreferrer"
             className={`backdrop-blur-md rounded-full ${
               isMobile ? "p-2" : isTablet ? "p-2.5" : "p-3"
-            } border transition-colors ${
-              theme === "dark"
-                ? "bg-white/10 border-white/20 hover:bg-white/20"
-                : "bg-black/10 border-black/20 hover:bg-black/20"
-            }`}
+            } border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20`}
             aria-label="Follow us on Instagram"
           >
             <InstagramIcon
               className={`${
                 isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"
-              } ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+              } text-orange-600 dark:text-amber-400`}
             />
           </a>
           <a
@@ -427,17 +401,13 @@ export function ClientPage(): ReactElement {
             rel="noopener noreferrer"
             className={`backdrop-blur-md rounded-full ${
               isMobile ? "p-2" : isTablet ? "p-2.5" : "p-3"
-            } border transition-colors ${
-              theme === "dark"
-                ? "bg-white/10 border-white/20 hover:bg-white/20"
-                : "bg-black/10 border-black/20 hover:bg-black/20"
-            }`}
+            } border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20`}
             aria-label="Follow us on Facebook"
           >
             <FacebookIcon
               className={`${
                 isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"
-              } ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+              } text-orange-600 dark:text-amber-400`}
             />
           </a>
           <a
@@ -446,17 +416,13 @@ export function ClientPage(): ReactElement {
             rel="noopener noreferrer"
             className={`backdrop-blur-md rounded-full ${
               isMobile ? "p-2" : isTablet ? "p-2.5" : "p-3"
-            } border transition-colors ${
-              theme === "dark"
-                ? "bg-white/10 border-white/20 hover:bg-white/20"
-                : "bg-black/10 border-black/20 hover:bg-black/20"
-            }`}
+            } border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20`}
             aria-label="Follow us on TikTok"
           >
             <TikTokIcon
               className={`${
                 isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"
-              } ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+              } text-orange-600 dark:text-amber-400`}
             />
           </a>
           <a
@@ -465,17 +431,13 @@ export function ClientPage(): ReactElement {
             rel="noopener noreferrer"
             className={`backdrop-blur-md rounded-full ${
               isMobile ? "p-2" : isTablet ? "p-2.5" : "p-3"
-            } border transition-colors ${
-              theme === "dark"
-                ? "bg-white/10 border-white/20 hover:bg-white/20"
-                : "bg-black/10 border-black/20 hover:bg-black/20"
-            }`}
+            } border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20`}
             aria-label="Find us on Google Maps"
           >
             <MapPin
               className={`${
                 isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"
-              } ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+              } text-orange-600 dark:text-amber-400`}
             />
           </a>
           <a
@@ -484,17 +446,13 @@ export function ClientPage(): ReactElement {
             rel="noopener noreferrer"
             className={`backdrop-blur-md rounded-full ${
               isMobile ? "p-2" : isTablet ? "p-2.5" : "p-3"
-            } border transition-colors ${
-              theme === "dark"
-                ? "bg-white/10 border-white/20 hover:bg-white/20"
-                : "bg-black/10 border-black/20 hover:bg-black/20"
-            }`}
+            } border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20`}
             aria-label="Read our TripAdvisor reviews"
           >
             <Star
               className={`${
                 isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"
-              } ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+              } text-orange-600 dark:text-amber-400`}
             />
           </a>
         </motion.div>
@@ -512,26 +470,18 @@ export function ClientPage(): ReactElement {
             rel="noopener noreferrer"
             className={`block backdrop-blur-xl rounded-lg ${
               isMobile ? "px-3 py-2" : isTablet ? "px-3.5 py-2.5" : "px-4 py-3"
-            } border transition-all duration-300 hover:scale-105 shadow-lg ${
-              theme === "dark"
-                ? "bg-black/20 border-white/20 hover:bg-black/30"
-                : "bg-white/30 border-gray-200/40 hover:bg-white/40"
-            }`}
+            } border transition-all duration-300 hover:scale-105 shadow-lg bg-white/30 border-gray-200/40 hover:bg-white/40 dark:bg-black/20 dark:border-white/20 dark:hover:bg-black/30`}
           >
             <div className="flex flex-row items-center gap-3">
               <img
                 src="/images/natgeo-logo.png"
                 alt="National Geographic"
-                className={`${isMobile ? "h-5" : isTablet ? "h-6" : "h-7"} w-auto ${
-                  theme === "dark"
-                    ? "drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]"
-                    : "drop-shadow-[0_0_6px_rgba(217,119,6,0.4)]"
-                }`}
+                className={`${isMobile ? "h-5" : isTablet ? "h-6" : "h-7"} w-auto drop-shadow-[0_0_6px_rgba(217,119,6,0.4)] dark:drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]`}
               />
               <span
                 className={`${
                   isMobile ? "text-xs" : isTablet ? "text-sm" : "text-sm"
-                } font-semibold whitespace-nowrap ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                } font-semibold whitespace-nowrap text-gray-900 dark:text-white`}
               >
                 Watch Full Episode
               </span>
@@ -552,11 +502,7 @@ export function ClientPage(): ReactElement {
             onClick={toggleTheme}
             className={`backdrop-blur-md rounded-full ${
               isMobile ? "p-2" : isTablet ? "p-2.5" : "p-3"
-            } border transition-colors ${
-              theme === "dark"
-                ? "bg-white/10 border-white/20 hover:bg-white/20"
-                : "bg-black/10 border-black/20 hover:bg-black/20"
-            }`}
+            } border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20`}
             aria-label="Toggle dark/light theme"
           >
             {theme === "dark" ? (
@@ -569,20 +515,16 @@ export function ClientPage(): ReactElement {
             onClick={toggleMute}
             className={`backdrop-blur-md rounded-full ${
               isMobile ? "p-2" : isTablet ? "p-2.5" : "p-3"
-            } border transition-colors ${
-              theme === "dark"
-                ? "bg-white/10 border-white/20 hover:bg-white/20"
-                : "bg-black/10 border-black/20 hover:bg-black/20"
-            }`}
+            } border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20`}
             aria-label={muted ? "Unmute video" : "Mute video"}
           >
             {muted ? (
               <VolumeX
-                className={`${isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"} ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+                className={`${isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"} text-orange-600 dark:text-amber-400`}
               />
             ) : (
               <Volume2
-                className={`${isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"} ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+                className={`${isMobile ? "w-4 h-4" : isTablet ? "w-4.5 h-4.5" : "w-5 h-5"} text-orange-600 dark:text-amber-400`}
               />
             )}
           </button>
@@ -634,11 +576,7 @@ export function ClientPage(): ReactElement {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 1, duration: 0.5 }}
             onClick={() => setShowFamilyOverlay(true)}
-            className={`fixed bottom-24 left-4 z-40 backdrop-blur-md rounded-full px-4 py-3 border shadow-lg transition-all duration-300 min-h-[48px] ${
-              theme === "dark"
-                ? "bg-orange-500/90 border-orange-400/50 text-white"
-                : "bg-orange-500/90 border-orange-400/50 text-white"
-            }`}
+            className="fixed bottom-24 left-4 z-40 backdrop-blur-md rounded-full px-4 py-3 border shadow-lg transition-all duration-300 min-h-[48px] bg-orange-500/90 border-orange-400/50 text-white"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label="View family members"
@@ -654,11 +592,7 @@ export function ClientPage(): ReactElement {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 1, duration: 0.5 }}
             onClick={() => setShowFamilyOverlay(true)}
-            className={`fixed bottom-28 left-6 z-40 backdrop-blur-md rounded-full px-5 py-3.5 border shadow-lg transition-all duration-300 min-h-[52px] ${
-              theme === "dark"
-                ? "bg-orange-500/90 border-orange-400/50 text-white"
-                : "bg-orange-500/90 border-orange-400/50 text-white"
-            }`}
+            className="fixed bottom-28 left-6 z-40 backdrop-blur-md rounded-full px-5 py-3.5 border shadow-lg transition-all duration-300 min-h-[52px] bg-orange-500/90 border-orange-400/50 text-white"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label="View family members"
@@ -679,7 +613,7 @@ export function ClientPage(): ReactElement {
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-            className={`flex flex-col items-center gap-2 ${theme === "dark" ? "text-white/60" : "text-black/60"}`}
+            className="flex flex-col items-center gap-2 text-black/60 dark:text-white/60"
           >
             <span className={`${isMobile ? "text-sm" : "text-base"} font-medium`}>Scroll to explore</span>
             <ChevronDown className={`${isMobile ? "w-5 h-5" : "w-6 h-6"}`} />
@@ -704,23 +638,19 @@ export function ClientPage(): ReactElement {
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className={`absolute inset-x-0 bottom-0 rounded-t-3xl ${
                 isMobile ? "p-6" : "p-8"
-              } max-h-[85vh] overflow-y-auto ${theme === "dark" ? "bg-neutral-900" : "bg-white"}`}
+              } max-h-[85vh] overflow-y-auto bg-white dark:bg-neutral-900`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <h2
-                  className={`${isMobile ? "text-2xl" : "text-3xl"} font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}
+                  className={`${isMobile ? "text-2xl" : "text-3xl"} font-bold text-gray-800 dark:text-white`}
                 >
                   Meet Our Family
                 </h2>
                 <button
                   onClick={() => setShowFamilyOverlay(false)}
-                  className={`rounded-full p-2 transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center ${
-                    theme === "dark"
-                      ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                      : "bg-black/5 text-gray-600 hover:bg-black/10"
-                  }`}
+                  className="rounded-full p-2 transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                   aria-label="Close family overlay"
                 >
                   <X className="w-6 h-6" />
@@ -737,12 +667,8 @@ export function ClientPage(): ReactElement {
                     transition={{ delay: index * 0.1 }}
                     className={`${isMobile ? "p-4" : "p-5"} rounded-2xl cursor-pointer transition-all duration-300 min-h-[120px] ${
                       selectedMember === member.id
-                        ? theme === "dark"
-                          ? "bg-orange-500/20 border-2 border-orange-400"
-                          : "bg-orange-50 border-2 border-orange-400"
-                        : theme === "dark"
-                          ? "bg-white/5 hover:bg-white/10"
-                          : "bg-gray-50 hover:bg-gray-100"
+                        ? "bg-orange-50 border-2 border-orange-400 dark:bg-orange-500/20"
+                        : "bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10"
                     }`}
                     onClick={() => handleProfileClick(member.id)}
                     whileHover={{ scale: 1.02 }}
@@ -776,9 +702,7 @@ export function ClientPage(): ReactElement {
                         </div>
                       </div>
                       <h4
-                        className={`font-semibold ${isMobile ? "text-sm" : "text-base"} mb-1 ${
-                          theme === "dark" ? "text-white" : "text-gray-800"
-                        } ${selectedMember === member.id ? "text-orange-500" : ""}`}
+                        className={`font-semibold ${isMobile ? "text-sm" : "text-base"} mb-1 text-gray-800 dark:text-white ${selectedMember === member.id ? "text-orange-500" : ""}`}
                       >
                         {member.name}
                       </h4>
@@ -798,7 +722,7 @@ export function ClientPage(): ReactElement {
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.3 }}
-                    className={`mt-6 ${isMobile ? "p-4" : "p-6"} rounded-2xl ${theme === "dark" ? "bg-white/5" : "bg-gray-50"}`}
+                    className={`mt-6 ${isMobile ? "p-4" : "p-6"} rounded-2xl bg-gray-50 dark:bg-white/5`}
                   >
                     {(() => {
                       const member = familyMembers.find((m) => m.id === selectedMember)
@@ -807,7 +731,7 @@ export function ClientPage(): ReactElement {
                       return (
                         <div>
                           <h3
-                            className={`${isMobile ? "text-lg" : "text-xl"} font-bold mb-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}
+                            className={`${isMobile ? "text-lg" : "text-xl"} font-bold mb-2 text-gray-800 dark:text-white`}
                           >
                             {member.name}
                           </h3>
@@ -815,9 +739,7 @@ export function ClientPage(): ReactElement {
                             {member.role}
                           </p>
                           <p
-                            className={`${isMobile ? "text-sm" : "text-base"} leading-relaxed ${
-                              theme === "dark" ? "text-gray-300" : "text-gray-600"
-                            }`}
+                            className={`${isMobile ? "text-sm" : "text-base"} leading-relaxed text-gray-600 dark:text-gray-300`}
                           >
                             {member.description}
                           </p>
@@ -847,14 +769,10 @@ export function ClientPage(): ReactElement {
             <div className="flex flex-col items-center mb-3">
               <button
                 onClick={handlePrevDesktopSlide}
-                className={`backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] ${
-                  theme === "dark"
-                    ? "bg-white/10 border-white/20 hover:bg-white/20"
-                    : "bg-black/10 border-black/20 hover:bg-black/20"
-                }`}
+                className="backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
                 aria-label="Previous family members"
               >
-                <ChevronUp className={`w-5 h-5 ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`} />
+                <ChevronUp className="w-5 h-5 text-orange-600 dark:text-amber-400" />
               </button>
             </div>
           )}
@@ -897,9 +815,7 @@ export function ClientPage(): ReactElement {
                       className={`relative w-full h-full rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center border-2 z-10 ${
                         selectedMember === member.id
                           ? "border-orange-400 shadow-lg shadow-orange-400/50"
-                          : theme === "dark"
-                            ? "border-white/20"
-                            : "border-gray-300"
+                          : "border-gray-300 dark:border-white/20"
                       }`}
                     >
                       {member.image ? (
@@ -915,9 +831,7 @@ export function ClientPage(): ReactElement {
                   </div>
                   <div className="space-y-1">
                     <h4
-                      className={`font-semibold text-xs ${
-                        theme === "dark" ? "text-white" : "text-gray-800"
-                      } ${selectedMember === member.id ? "text-orange-400" : ""}`}
+                      className={`font-semibold text-xs text-gray-800 dark:text-white ${selectedMember === member.id ? "text-orange-400" : ""}`}
                     >
                       {member.name}
                     </h4>
@@ -931,14 +845,10 @@ export function ClientPage(): ReactElement {
             <div className="flex flex-col items-center mt-3">
               <button
                 onClick={handleNextDesktopSlide}
-                className={`backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] ${
-                  theme === "dark"
-                    ? "bg-white/10 border-white/20 hover:bg-white/20"
-                    : "bg-black/10 border-black/20 hover:bg-black/20"
-                }`}
+                className="backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
                 aria-label="Next family members"
               >
-                <ChevronDown className={`w-5 h-5 ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`} />
+                <ChevronDown className="w-5 h-5 text-orange-600 dark:text-amber-400" />
               </button>
             </div>
           )}
@@ -946,13 +856,9 @@ export function ClientPage(): ReactElement {
       )}
 
       {/* Content Section */}
-      <div
-        className={`py-16 ${
-          theme === "dark" ? "bg-gradient-to-b from-black/95 to-black" : "bg-gradient-to-b from-white/95 to-white"
-        }`}
-      >
+      <div className="py-16 bg-gradient-to-b from-white/95 to-white dark:from-black/95 dark:to-black">
         <div className={`max-w-4xl mx-auto ${isMobile ? "px-4" : isTablet ? "px-6" : "px-4"} text-center space-y-12`}>
-          <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             <p className="mb-2">Explore more:</p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link href="/classes" className="text-primary underline-offset-4 hover:underline">
@@ -976,9 +882,7 @@ export function ClientPage(): ReactElement {
       <AnimatePresence>
         {selectedMember && !isMobile && !isTablet && (
           <motion.div
-            className={`fixed right-28 top-1/4 -translate-y-1/2 z-50 w-[400px] backdrop-blur-md rounded-2xl p-6 border ${
-              theme === "dark" ? "bg-white/5 border-white/10" : "bg-white/40 border-gray-300"
-            }`}
+            className="fixed right-28 top-1/4 -translate-y-1/2 z-50 w-[400px] backdrop-blur-md rounded-2xl p-6 border bg-white/40 border-gray-300 dark:bg-white/5 dark:border-white/10"
           >
             {(() => {
               const member = familyMembers.find((m) => m.id === selectedMember)
@@ -988,11 +892,7 @@ export function ClientPage(): ReactElement {
                 <>
                   <button
                     onClick={closeProfile}
-                    className={`absolute top-3 right-3 rounded-full p-1 transition-colors min-h-[32px] min-w-[32px] ${
-                      theme === "dark"
-                        ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                        : "bg-black/5 text-gray-600 hover:bg-black/10"
-                    }`}
+                    className="absolute top-3 right-3 rounded-full p-1 transition-colors min-h-[32px] min-w-[32px] bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                     aria-label="Close profile"
                   >
                     <X className="w-4 h-4" />
@@ -1027,39 +927,39 @@ export function ClientPage(): ReactElement {
                       </div>
                     </div>
                     <div className="flex-1">
-                      <h3 className={`text-xl font-bold mb-1 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                      <h3 className="text-xl font-bold mb-1 text-gray-800 dark:text-white">
                         {member.name}
                       </h3>
                       <p className="text-orange-500 font-semibold mb-2">{member.role}</p>
                       <p
-                        className={`leading-relaxed mb-3 text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}
+                        className="leading-relaxed mb-3 text-sm text-gray-600 dark:text-gray-300"
                       >
                         {member.description}
                       </p>
                       <div className="flex gap-3">
                         <button
-                          className={`flex items-center gap-2 text-sm hover:text-orange-400 transition-colors min-h-[32px] ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                          className="flex items-center gap-2 text-sm hover:text-orange-400 transition-colors min-h-[32px] text-gray-500 dark:text-gray-400"
                           aria-label="Like this profile"
                         >
                           <Heart className="w-4 h-4" />
                           <span>3,847</span>
                         </button>
                         <button
-                          className={`flex items-center gap-2 text-sm hover:text-orange-400 transition-colors min-h-[32px] ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                          className="flex items-center gap-2 text-sm hover:text-orange-400 transition-colors min-h-[32px] text-gray-500 dark:text-gray-400"
                           aria-label="Send message"
                         >
                           <MessageCircle className="w-4 h-4" />
                           <span>Message</span>
                         </button>
                         <button
-                          className={`flex items-center gap-2 text-sm hover:text-orange-400 transition-colors min-h-[32px] ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                          className="flex items-center gap-2 text-sm hover:text-orange-400 transition-colors min-h-[32px] text-gray-500 dark:text-gray-400"
                           aria-label="Share profile"
                         >
                           <Share2 className="w-4 h-4" />
                           <span>Share</span>
                         </button>
                       </div>
-                      <p className={`text-xs mt-2 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+                      <p className="text-xs mt-2 text-gray-400 dark:text-gray-500">
                         Click {member.name} again to close
                       </p>
                     </div>
@@ -1076,9 +976,7 @@ export function ClientPage(): ReactElement {
 
       {/* Bottom Navigation - Responsive */}
       <motion.div
-        className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t ${
-          theme === "dark" ? "bg-black/80 border-white/10" : "bg-white/90 border-gray-200"
-        }`}
+        className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t bg-white/90 border-gray-200 dark:bg-black/80 dark:border-white/10"
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         transition={{ delay: 1, duration: 0.8 }}
@@ -1096,7 +994,7 @@ export function ClientPage(): ReactElement {
                 key={item.label}
                 onClick={toggleMoreMenu}
                 className={`flex flex-col items-center gap-1 min-h-[48px] min-w-[48px] justify-center ${
-                  item.active ? "text-orange-500" : theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
                 }`}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -1114,7 +1012,7 @@ export function ClientPage(): ReactElement {
                 key={item.label}
                 href={item.href}
                 className={`flex flex-col items-center gap-1 min-h-[48px] min-w-[48px] justify-center ${
-                  item.active ? "text-orange-500" : theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
                 }`}
                 aria-label={`Go to ${item.label} page`}
               >
