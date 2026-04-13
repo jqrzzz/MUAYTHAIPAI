@@ -108,7 +108,7 @@ function EventCard({ event }: { event: FightEvent }) {
 
   return (
     <Link
-      href={`/ock/fights/${event.id}`}
+      href={`/ockock/fights/${event.id}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition-all hover:border-amber-500/20 hover:bg-white/[0.05] sm:flex-row"
     >
       {/* Date Block */}

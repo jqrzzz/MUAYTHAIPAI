@@ -3,21 +3,16 @@ import { createClient } from "@/lib/supabase/server"
 import EventEditorClient from "../editor-client"
 
 export const metadata = {
-  title: "Edit Event | Promoter Dashboard",
+  title: "Create Event | Promoter Dashboard",
   robots: "noindex, nofollow",
 }
 
-export default async function EditEventPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
+export default async function NewEventPage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect(`/admin/login?redirect=/ock/promoter/events/${id}`)
+    redirect("/admin/login?redirect=/ockock/promoter/events/new")
   }
 
   const { data: membership } = await supabase
@@ -32,5 +27,5 @@ export default async function EditEventPage({
     redirect("/admin/login?error=no_promoter_access")
   }
 
-  return <EventEditorClient mode="edit" eventId={id} />
+  return <EventEditorClient mode="create" />
 }

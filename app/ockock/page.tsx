@@ -3,19 +3,19 @@ import { Swords, Users, MapPin, Ticket } from "lucide-react"
 
 const features = [
   {
-    href: "/ock/fights",
+    href: "/ockock/fights",
     icon: Swords,
     title: "Fight Events",
     description: "Browse upcoming Muay Thai fight nights across Thailand. See the fight cards, venues, and dates.",
   },
   {
-    href: "/ock/fighters",
+    href: "/ockock/fighters",
     icon: Users,
     title: "Fighters",
     description: "Discover fighters from gyms across Thailand. View records, weight classes, and stats.",
   },
   {
-    href: "/ock/fights",
+    href: "/ockock/fights",
     icon: Ticket,
     title: "Buy Tickets",
     description: "Get ringside, VIP, or general admission tickets to live Muay Thai events.",
@@ -60,14 +60,14 @@ export default function OckLandingPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/ock/fights"
+              href="/ockock/fights"
               className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-amber-400"
             >
               <Swords className="h-5 w-5" />
               Browse Fights
             </Link>
             <Link
-              href="/ock/fighters"
+              href="/ockock/fighters"
               className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/10"
             >
               <Users className="h-5 w-5" />

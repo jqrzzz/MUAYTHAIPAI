@@ -5,20 +5,20 @@ import { usePathname } from "next/navigation"
 import { Swords, Users, Home, LayoutDashboard } from "lucide-react"
 
 const navItems = [
-  { href: "/ock", label: "Home", icon: Home },
-  { href: "/ock/fights", label: "Fights", icon: Swords },
-  { href: "/ock/fighters", label: "Fighters", icon: Users },
-  { href: "/ock/promoter", label: "Promoter", icon: LayoutDashboard },
+  { href: "/ockock", label: "Home", icon: Home },
+  { href: "/ockock/fights", label: "Fights", icon: Swords },
+  { href: "/ockock/fighters", label: "Fighters", icon: Users },
+  { href: "/ockock/promoter", label: "Promoter", icon: LayoutDashboard },
 ]
 
-export function OckHeader() {
+export function OckockHeader() {
   const pathname = usePathname()
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0f]/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/ock" className="flex items-center gap-2">
+        <Link href="/ockock" className="flex items-center gap-2">
           <span className="text-2xl">🐃</span>
           <span className="text-xl font-bold text-white">
             Ock<span className="text-amber-400">Ock</span>
@@ -29,8 +29,8 @@ export function OckHeader() {
         <nav className="flex items-center gap-1">
           {navItems.map((item) => {
             const isActive =
-              item.href === "/ock"
-                ? pathname === "/ock"
+              item.href === "/ockock"
+                ? pathname === "/ockock"
                 : pathname.startsWith(item.href)
             return (
               <Link

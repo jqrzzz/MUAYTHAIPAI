@@ -182,7 +182,7 @@ export default function EventEditorClient({
           throw new Error(data.error || "Failed to create event")
         }
         const data = await res.json()
-        router.push(`/ock/promoter/events/${data.event.id}`)
+        router.push(`/ockock/promoter/events/${data.event.id}`)
       } else {
         const res = await fetch(`/api/promoter/events/${eventId}`, {
           method: "PATCH",
@@ -374,7 +374,7 @@ export default function EventEditorClient({
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Back */}
       <Link
-        href="/ock/promoter"
+        href="/ockock/promoter"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -390,7 +390,7 @@ export default function EventEditorClient({
           <div className="flex items-center gap-2">
             {eventStatus === "published" && (
               <Link
-                href={`/ock/fights/${eventId}`}
+                href={`/ockock/fights/${eventId}`}
                 className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >
                 <Eye className="h-3.5 w-3.5" />

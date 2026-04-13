@@ -78,7 +78,7 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
           <p className="mt-1 text-sm text-neutral-400">{orgName}</p>
         </div>
         <Link
-          href="/ock/promoter/events/new"
+          href="/ockock/promoter/events/new"
           className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-amber-400"
         >
           <Plus className="h-4 w-4" />
@@ -126,7 +126,7 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
             Create your first fight event to get started
           </p>
           <Link
-            href="/ock/promoter/events/new"
+            href="/ockock/promoter/events/new"
             className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-black hover:bg-amber-400"
           >
             <Plus className="h-4 w-4" />
@@ -251,7 +251,7 @@ function EventRow({ event }: { event: PromoterEvent }) {
       {/* Actions */}
       <div className="flex items-center gap-2">
         <Link
-          href={`/ock/promoter/events/${event.id}`}
+          href={`/ockock/promoter/events/${event.id}`}
           className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
           title="Edit event"
         >
@@ -259,7 +259,7 @@ function EventRow({ event }: { event: PromoterEvent }) {
         </Link>
         {event.status === "published" && (
           <Link
-            href={`/ock/fights/${event.id}`}
+            href={`/ockock/fights/${event.id}`}
             className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
             title="View public page"
           >

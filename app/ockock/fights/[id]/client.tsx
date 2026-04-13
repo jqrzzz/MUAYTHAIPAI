@@ -114,7 +114,7 @@ export default function FightDetailClient() {
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">
         <p className="mb-4 text-lg text-neutral-400">Event not found</p>
         <Link
-          href="/ock/fights"
+          href="/ockock/fights"
           className="text-amber-400 hover:text-amber-300"
         >
           Back to events
@@ -146,7 +146,7 @@ export default function FightDetailClient() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       {/* Back */}
       <Link
-        href="/ock/fights"
+        href="/ockock/fights"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />

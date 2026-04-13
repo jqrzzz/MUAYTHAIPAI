@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Loader2, Search, Filter, X } from "lucide-react"
-import { FighterCard } from "@/components/ock/fighter-card"
+import { FighterCard } from "@/components/ockock/fighter-card"
 
 interface Fighter {
   id: string
@@ -317,7 +317,7 @@ export default function FightersClient() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((fighter) => (
-            <Link href={`/ock/fighters/${fighter.id}`} key={fighter.id}>
+            <Link href={`/ockock/fighters/${fighter.id}`} key={fighter.id}>
               <FighterCard fighter={fighter} />
             </Link>
           ))}
