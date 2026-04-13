@@ -2,25 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  ArrowLeft,
-  Moon,
-  Sun,
-  ChevronDown,
-  ChevronUp,
-  Heart,
-  MessageCircle,
-  BoxIcon as Boxing,
-  Dumbbell,
-  Menu,
-} from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import { useTheme } from "next-themes"
-import Link from "next/link"
-import { MoreMenu } from "@/components/more-menu"
 import Image from "next/image"
 import { ContinueLearning } from "@/components/blog/continue-learning"
-import { SOCIAL_LINKS } from "@/lib/socials"
-import { InstagramIcon, FacebookIcon } from "@/components/social-icons"
+import {
+  PageBackground,
+  MarketingTopNav,
+  MarketingBottomNav,
+  SplashScreen,
+  useSplash,
+} from "@/components/marketing"
 
 const certificates = [
   {
@@ -135,11 +127,10 @@ const certificates = [
 ]
 
 export default function CertificateProgramsClient() {
-  const [showContent, setShowContent] = useState(false)
-  const { theme, setTheme } = useTheme()
+  const showContent = useSplash()
+  const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
 
   const [expandedBooking, setExpandedBooking] = useState<string | null>(null)
   const [bookingData, setBookingData] = useState({
@@ -154,16 +145,10 @@ export default function CertificateProgramsClient() {
 
   useEffect(() => {
     setMounted(true)
-    const timer = setTimeout(() => {
-      setShowContent(true)
-    }, 2000)
-    return () => clearTimeout(timer)
   }, [])
 
   const resolvedTheme = mounted ? theme : "dark"
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
   const toggleSection = (sectionId: string) => setExpandedSection(expandedSection === sectionId ? null : sectionId)
-  const toggleMoreMenu = () => setShowMoreMenu(!showMoreMenu)
 
   const toggleBooking = (certId: string) => {
     setExpandedBooking(expandedBooking === certId ? null : certId)
@@ -191,22 +176,7 @@ export default function CertificateProgramsClient() {
   if (!mounted) return null
 
   return (
-    <div
-      className={`min-h-screen overflow-hidden relative transition-all duration-500 ${
-        resolvedTheme === "dark"
-          ? "bg-gradient-to-b from-black via-neutral-900 to-black"
-          : "bg-gradient-to-b from-neutral-100 via-white to-neutral-50"
-      }`}
-    >
-      {/* Dynamic Gradient Overlay */}
-      <div
-        className={`absolute inset-0 z-10 ${
-          resolvedTheme === "dark"
-            ? "bg-gradient-to-br from-orange-600/25 via-transparent to-amber-600/20"
-            : "bg-gradient-to-br from-orange-500/20 via-transparent to-orange-400/15"
-        }`}
-      />
-
+    <PageBackground>
       {/* Subtle Sacred Background */}
       <div className="absolute inset-0 z-5 opacity-10">
         <div
@@ -227,11 +197,7 @@ export default function CertificateProgramsClient() {
         {[...Array(5)].map((_, i) => (
           <motion.div
             key={i}
-            className={`absolute top-0 w-20 h-screen bg-gradient-to-b ${
-              resolvedTheme === "dark"
-                ? "from-amber-500/5 via-orange-500/3 to-transparent"
-                : "from-amber-500/10 via-orange-500/5 to-transparent"
-            }`}
+            className="absolute top-0 w-20 h-screen bg-gradient-to-b from-amber-500/10 via-orange-500/5 to-transparent dark:from-amber-500/5 dark:via-orange-500/3"
             animate={{
               opacity: [0.3, 0.7, 0.3],
               scale: [1, 1.05, 1],
@@ -251,49 +217,7 @@ export default function CertificateProgramsClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <motion.div
-            key="certs-splash"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative z-20 flex items-center justify-center min-h-screen"
-          >
-            <div className="text-center">
-              <motion.h1
-                className={`text-4xl md:text-5xl font-black mb-2 ${
-                  resolvedTheme === "dark"
-                    ? "bg-gradient-to-r from-amber-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent"
-                    : "bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent"
-                }`}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-              >
-                Certificate Programs
-              </motion.h1>
-              <motion.p
-                className={`text-lg font-bold tracking-widest ${
-                  resolvedTheme === "dark" ? "text-amber-200/90" : "text-amber-800/90"
-                }`}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-              >
-                FORGE YOUR PATH
-              </motion.p>
-              <motion.p
-                className={`text-sm font-semibold tracking-wider ${
-                  resolvedTheme === "dark" ? "text-amber-300/70" : "text-amber-700/70"
-                }`}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.6, duration: 0.6 }}
-              >
-                MUAY THAI PAI - WISARUT FAMILY
-              </motion.p>
-            </div>
-          </motion.div>
+          <SplashScreen key="certs-splash" title="Certificate Programs" subtitle="FORGE YOUR PATH" />
         ) : (
           <motion.div
             key="certs-content"
@@ -302,89 +226,12 @@ export default function CertificateProgramsClient() {
             transition={{ duration: 1, ease: "easeOut" }}
             className="relative z-20 min-h-screen"
           >
-            {/* Top Navigation */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4">
-              <motion.div
-                className="flex gap-2"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Link
-                  href="/"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    resolvedTheme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
-                  aria-label="Back to home"
-                >
-                  <ArrowLeft className={`w-5 h-5 ${resolvedTheme === "dark" ? "text-amber-400" : "text-orange-600"}`} />
-                </Link>
-                <a
-                  href={SOCIAL_LINKS.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    resolvedTheme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
-                  aria-label="Instagram"
-                >
-                  <InstagramIcon
-                    className={`w-5 h-5 ${resolvedTheme === "dark" ? "text-amber-400" : "text-orange-600"}`}
-                  />
-                </a>
-                <a
-                  href={SOCIAL_LINKS.facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    resolvedTheme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
-                  aria-label="Facebook"
-                >
-                  <FacebookIcon
-                    className={`w-5 h-5 ${resolvedTheme === "dark" ? "text-amber-400" : "text-orange-600"}`}
-                  />
-                </a>
-              </motion.div>
-
-              <motion.div
-                className="absolute top-4 right-4 z-50"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <button
-                  onClick={toggleTheme}
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    resolvedTheme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/10 border-black/20 hover:bg-black/20"
-                  }`}
-                  aria-label="Toggle theme"
-                >
-                  {resolvedTheme === "dark" ? (
-                    <Sun className="w-5 h-5 text-amber-400" />
-                  ) : (
-                    <Moon className="w-5 h-5 text-orange-600" />
-                  )}
-                </button>
-              </motion.div>
-            </div>
+            <MarketingTopNav />
 
             {/* Page Title */}
             <motion.h1 className={`sr-only`}>Certificate Programs - Muay Thai Pai</motion.h1>
             <motion.h2
-              className={`text-3xl md:text-4xl font-black text-center pt-24 pb-4 ${
-                resolvedTheme === "dark"
-                  ? "bg-gradient-to-r from-amber-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent"
-                  : "bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent"
-              }`}
+              className="text-3xl md:text-4xl font-black text-center pt-24 pb-4 bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent dark:from-amber-300 dark:via-orange-400 dark:to-yellow-500"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.6 }}
@@ -400,7 +247,7 @@ export default function CertificateProgramsClient() {
               transition={{ delay: 1, duration: 0.6 }}
             >
               <p
-                className={`text-base md:text-lg leading-relaxed ${resolvedTheme === "dark" ? "text-gray-300" : "text-gray-700"}`}
+                className="text-base md:text-lg leading-relaxed text-gray-700 dark:text-gray-300"
               >
                 Learn authentic Muay Thai in Thailand. Train with experienced fighters, earn recognized certifications,
                 and take home skills that last a lifetime.
@@ -408,11 +255,7 @@ export default function CertificateProgramsClient() {
             </motion.section>
 
             <motion.h3
-              className={`text-2xl md:text-3xl font-bold text-center mb-8 ${
-                resolvedTheme === "dark"
-                  ? "bg-gradient-to-r from-amber-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent"
-                  : "bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent"
-              }`}
+              className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent dark:from-amber-300 dark:via-orange-400 dark:to-yellow-500"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.2, duration: 0.6 }}
@@ -428,9 +271,7 @@ export default function CertificateProgramsClient() {
                   className={`w-full max-w-sm backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg cursor-pointer transition-all duration-300 ${
                     expandedSection === cert.id
                       ? "border-orange-700/50"
-                      : resolvedTheme === "dark"
-                        ? "bg-orange-950/30 border-orange-500/20"
-                        : "bg-orange-100/60 border-orange-600/30"
+                      : "bg-orange-100/60 border-orange-600/30 dark:bg-orange-950/30 dark:border-orange-500/20"
                   }`}
                   onClick={() => toggleSection(cert.id)}
                   whileHover={{ scale: expandedSection === cert.id ? 1 : 1.02 }}
@@ -443,9 +284,7 @@ export default function CertificateProgramsClient() {
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                     <div
-                      className={`absolute inset-0 bg-gradient-to-t from-black/60 via-orange-900/20 to-black/60 backdrop-blur-[1px] ${
-                        resolvedTheme === "dark" ? "bg-black/40" : "bg-black/20"
-                      }`}
+                      className="absolute inset-0 bg-gradient-to-t from-black/60 via-orange-900/20 to-black/60 backdrop-blur-[1px] bg-black/20 dark:bg-black/40"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <h4 className="text-3xl font-black text-white drop-shadow-lg">{cert.name}</h4>
@@ -453,28 +292,24 @@ export default function CertificateProgramsClient() {
                   </div>
                   <div className="p-6 flex flex-col items-center text-center">
                     <p
-                      className={`text-center text-sm ${resolvedTheme === "dark" ? "text-gray-300" : "text-gray-700"}`}
+                      className="text-center text-sm text-gray-700 dark:text-gray-300"
                     >
                       {cert.shortDescription}
                     </p>
                     <div
                       className={`rounded-full p-2 mt-4 ${
                         expandedSection === cert.id
-                          ? resolvedTheme === "dark"
-                            ? "bg-orange-500/20"
-                            : "bg-orange-500/10"
-                          : resolvedTheme === "dark"
-                            ? "bg-white/10"
-                            : "bg-black/5"
+                          ? "bg-orange-500/10 dark:bg-orange-500/20"
+                          : "bg-black/5 dark:bg-white/10"
                       }`}
                     >
                       {expandedSection === cert.id ? (
                         <ChevronUp
-                          className={`w-6 h-6 ${resolvedTheme === "dark" ? "text-amber-400" : "text-orange-600"}`}
+                          className="w-6 h-6 text-orange-600 dark:text-amber-400"
                         />
                       ) : (
                         <ChevronDown
-                          className={`w-6 h-6 ${resolvedTheme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+                          className="w-6 h-6 text-gray-600 dark:text-gray-400"
                         />
                       )}
                     </div>
@@ -522,7 +357,7 @@ export default function CertificateProgramsClient() {
                             className="h-px w-full bg-gradient-to-r from-transparent via-orange-500/30 to-transparent mb-6"
                           />
                           <div
-                            className={`space-y-4 text-sm ${resolvedTheme === "dark" ? "text-gray-300" : "text-gray-700"}`}
+                            className="space-y-4 text-sm text-gray-700 dark:text-gray-300"
                           >
                             <div>
                               <p className="font-semibold text-base mb-1">Theme:</p>
@@ -558,11 +393,7 @@ export default function CertificateProgramsClient() {
                                 e.stopPropagation()
                                 toggleBooking(cert.id)
                               }}
-                              className={`w-full py-3 rounded-xl font-bold text-white mt-6 ${
-                                resolvedTheme === "dark"
-                                  ? "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500"
-                                  : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                              }`}
+                              className="w-full py-3 rounded-xl font-bold text-white mt-6 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-orange-600 dark:to-amber-600 dark:hover:from-orange-500 dark:hover:to-amber-500"
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                             >
@@ -606,18 +437,18 @@ export default function CertificateProgramsClient() {
                                           </svg>
                                         </motion.div>
                                         <h5
-                                          className={`text-xl font-bold mb-2 ${resolvedTheme === "dark" ? "text-white" : "text-gray-900"}`}
+                                          className="text-xl font-bold mb-2 text-gray-900 dark:text-white"
                                         >
                                           Booking Confirmed!
                                         </h5>
-                                        <p className={resolvedTheme === "dark" ? "text-gray-300" : "text-gray-600"}>
+                                        <p className="text-gray-600 dark:text-gray-300">
                                           Welcome to the Path of {cert.name}. We'll contact you within 24 hours.
                                         </p>
                                       </div>
                                     ) : (
                                       <div className="space-y-4">
                                         <h5
-                                          className={`font-bold text-lg ${resolvedTheme === "dark" ? "text-white" : "text-gray-900"}`}
+                                          className="font-bold text-lg text-gray-900 dark:text-white"
                                         >
                                           Book Your {cert.name} Certification
                                         </h5>
@@ -629,11 +460,7 @@ export default function CertificateProgramsClient() {
                                             value={bookingData.name}
                                             onClick={(e) => e.stopPropagation()}
                                             onChange={(e) => handleInputChange("name", e.target.value)}
-                                            className={`w-full p-3 rounded-lg border ${
-                                              resolvedTheme === "dark"
-                                                ? "bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                                                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                                            }`}
+                                            className="w-full p-3 rounded-lg border bg-white border-gray-300 text-gray-900 placeholder-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                                           />
                                           <input
                                             type="email"
@@ -641,11 +468,7 @@ export default function CertificateProgramsClient() {
                                             value={bookingData.email}
                                             onClick={(e) => e.stopPropagation()}
                                             onChange={(e) => handleInputChange("email", e.target.value)}
-                                            className={`w-full p-3 rounded-lg border ${
-                                              resolvedTheme === "dark"
-                                                ? "bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                                                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                                            }`}
+                                            className="w-full p-3 rounded-lg border bg-white border-gray-300 text-gray-900 placeholder-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                                           />
                                         </div>
 
@@ -656,11 +479,7 @@ export default function CertificateProgramsClient() {
                                               handlePayment("card", cert.id)
                                             }}
                                             disabled={isProcessingPayment}
-                                            className={`w-full py-3 rounded-lg font-semibold text-white ${
-                                              resolvedTheme === "dark"
-                                                ? "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500"
-                                                : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                                            } disabled:opacity-50`}
+                                            className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-orange-600 dark:to-amber-600 dark:hover:from-orange-500 dark:hover:to-amber-500 disabled:opacity-50"
                                             whileHover={{ scale: isProcessingPayment ? 1 : 1.02 }}
                                             whileTap={{ scale: isProcessingPayment ? 1 : 0.98 }}
                                           >
@@ -682,11 +501,7 @@ export default function CertificateProgramsClient() {
                                   e.stopPropagation()
                                   setExpandedSection(null)
                                 }}
-                                className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs ${
-                                  resolvedTheme === "dark"
-                                    ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                                    : "bg-black/5 text-gray-600 hover:bg-black/10"
-                                }`}
+                                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                               >
                                 <ChevronUp className="w-3 h-3" />
                                 <span>Close</span>
@@ -704,49 +519,7 @@ export default function CertificateProgramsClient() {
             {/* Continue Learning Section */}
             <ContinueLearning currentPage="certificate-programs" />
 
-            {/* Bottom Navigation */}
-            <motion.div
-              className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t ${
-                resolvedTheme === "dark" ? "bg-black/80 border-white/10" : "bg-white/90 border-gray-200"
-              }`}
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              transition={{ delay: 1.1, duration: 0.8 }}
-            >
-              <div className="flex justify-around py-3 px-4">
-                {[
-                  { icon: Heart, label: "Family", href: "/" },
-                  { icon: Boxing, label: "Classes", href: "/classes" },
-                  { icon: Dumbbell, label: "Gym", href: "/gym" },
-                  { icon: MessageCircle, label: "Contact", href: "/contact" },
-                  { icon: Menu, label: "More", isButton: true },
-                ].map((item) =>
-                  item.isButton ? (
-                    <motion.button
-                      key={item.label}
-                      onClick={toggleMoreMenu}
-                      className={resolvedTheme === "dark" ? "text-gray-400" : "text-gray-500"}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <item.icon className="w-5 h-5" />
-                        <span className="text-xs font-medium">{item.label}</span>
-                      </div>
-                    </motion.button>
-                  ) : (
-                    <Link
-                      key={item.label}
-                      href={item.href!}
-                      className={`flex flex-col items-center gap-1 ${resolvedTheme === "dark" ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span className="text-xs font-medium">{item.label}</span>
-                    </Link>
-                  ),
-                )}
-              </div>
-            </motion.div>
+            <MarketingBottomNav />
           </motion.div>
         )}
       </AnimatePresence>
@@ -779,8 +552,6 @@ export default function CertificateProgramsClient() {
           ))}
         </div>
       )}
-
-      <MoreMenu isOpen={showMoreMenu} onClose={() => setShowMoreMenu(false)} />
-    </div>
+    </PageBackground>
   )
 }

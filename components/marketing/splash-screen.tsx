@@ -6,17 +6,17 @@ import { motion } from "framer-motion"
 interface SplashScreenProps {
   title: string
   subtitle: string
-  motionKey?: string
 }
 
 /**
  * Branded intro splash shown for ~2s before the page content fades in.
- * Pair with `useSplash()` and `<AnimatePresence>` in the page.
+ * Pair with `useSplash()` and wrap in `<AnimatePresence mode="wait">`. The
+ * caller is responsible for the `key` prop so AnimatePresence can track
+ * mount/unmount.
  */
-export function SplashScreen({ title, subtitle, motionKey = "splash" }: SplashScreenProps) {
+export function SplashScreen({ title, subtitle }: SplashScreenProps) {
   return (
     <motion.div
-      key={motionKey}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}

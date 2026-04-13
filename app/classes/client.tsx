@@ -1,46 +1,31 @@
 "use client"
 import { useState, useEffect } from "react"
-import React from "react"
 
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  ArrowLeft,
-  Moon,
-  Sun,
-  ChevronDown,
-  ChevronUp,
-  Heart,
-  MessageCircle,
-  BoxIcon as Boxing,
-  Dumbbell,
-  Menu,
-} from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
-import { MoreMenu } from "@/components/more-menu"
-import { SacredBackground, DynamicGradient } from "@/components/sacred-background"
+import { SacredBackground } from "@/components/sacred-background"
 import { MiniSlideshow } from "@/components/mini-slideshow"
 import { BookingSection } from "@/components/booking-section"
-import { SOCIAL_LINKS } from "@/lib/socials"
-import { InstagramIcon, FacebookIcon, TikTokIcon } from "@/components/social-icons"
 import { ContinueLearning } from "@/components/blog/continue-learning"
+import {
+  PageBackground,
+  MarketingTopNav,
+  MarketingBottomNav,
+  SplashScreen,
+  useSplash,
+} from "@/components/marketing"
 
 export default function ClassesClientPage() {
-  const [showContent, setShowContent] = useState(false)
-  const { theme, setTheme } = useTheme()
+  const showContent = useSplash()
+  const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    const timer = setTimeout(() => {
-      setShowContent(true)
-    }, 2000)
-    return () => clearTimeout(timer)
   }, [])
-
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
   const toggleSection = (section: string) => {
     if (expandedSection === section) {
@@ -49,8 +34,6 @@ export default function ClassesClientPage() {
       setExpandedSection(section)
     }
   }
-
-  const toggleMoreMenu = () => setShowMoreMenu(!showMoreMenu)
 
   // Define images for each section
   const groupImages = [
@@ -92,51 +75,13 @@ export default function ClassesClientPage() {
   if (!mounted) return null
 
   return (
-    <div className="min-h-screen overflow-hidden relative transition-all duration-500 bg-gradient-to-b from-neutral-100 via-white to-neutral-50 dark:from-black dark:via-neutral-900 dark:to-black">
-      {/* Dynamic Gradient Overlay */}
-      <DynamicGradient />
-
+    <PageBackground>
       {/* Subtle Sacred Background */}
       <SacredBackground />
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          // Simple Transition Splash
-          <motion.div
-            key="classes-splash"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative z-20 flex items-center justify-center min-h-screen"
-          >
-            <div className="text-center">
-              <motion.h1
-                className="text-4xl md:text-5xl font-black mb-2 bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent dark:from-amber-300 dark:via-orange-400 dark:to-yellow-500"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-              >
-                Classes
-              </motion.h1>
-              <motion.p
-                className="text-lg font-bold tracking-widest text-amber-800/90 dark:text-amber-200/90"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-              >
-                MUAY THAI PAI
-              </motion.p>
-              <motion.p
-                className="text-sm font-semibold tracking-wider text-amber-700/70 dark:text-amber-300/70"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.6, duration: 0.6 }}
-              >
-                WISARUT FAMILY
-              </motion.p>
-            </div>
-          </motion.div>
+          <SplashScreen key="classes-splash" title="Classes" subtitle="MUAY THAI PAI" />
         ) : (
           // Classes Content
           <motion.div
@@ -146,77 +91,7 @@ export default function ClassesClientPage() {
             transition={{ duration: 1, ease: "easeOut" }}
             className="relative z-20 min-h-screen"
           >
-            {/* Top Navigation */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex justify-between p-4">
-              {/* Top Left Navigation: Back Button & Social Icons */}
-              <motion.div
-                className="flex gap-2"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Link
-                  href="/"
-                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
-                  aria-label="Back to home"
-                >
-                  <ArrowLeft className="w-5 h-5 text-orange-600 dark:text-amber-400" />
-                </Link>
-                <a
-                  href={SOCIAL_LINKS.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
-                  aria-label="Instagram"
-                >
-                  <InstagramIcon
-                    className="w-5 h-5 text-orange-600 dark:text-amber-400"
-                  />
-                </a>
-                <a
-                  href={SOCIAL_LINKS.facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
-                  aria-label="Facebook"
-                >
-                  <FacebookIcon
-                    className="w-5 h-5 text-orange-600 dark:text-amber-400"
-                  />
-                </a>
-                <a
-                  href="https://tiktok.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
-                  aria-label="TikTok"
-                >
-                  <TikTokIcon
-                    className="w-5 h-5 text-orange-600 dark:text-amber-400"
-                  />
-                </a>
-              </motion.div>
-
-              {/* Theme Toggle */}
-              <motion.div
-                className="absolute top-4 right-4 z-50"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <button
-                  onClick={toggleTheme}
-                  className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
-                  aria-label="Toggle theme"
-                >
-                  {theme === "dark" ? (
-                    <Sun className="w-5 h-5 text-amber-400" />
-                  ) : (
-                    <Moon className="w-5 h-5 text-orange-600" />
-                  )}
-                </button>
-              </motion.div>
-            </div>
+            <MarketingTopNav />
 
             {/* Sacred Steps Accordion */}
             <div className="flex flex-col items-center min-h-screen px-4 pt-24 pb-16 gap-6">
@@ -1123,49 +998,7 @@ export default function ClassesClientPage() {
               </motion.div>
             </div>
 
-            {/* Bottom Navigation */}
-            <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t bg-white/90 border-gray-200 dark:bg-black/80 dark:border-white/10"
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              transition={{ delay: 1.9, duration: 0.8 }}
-            >
-              <div className="flex justify-around py-3 px-4">
-                {[
-                  { icon: Heart, label: "Family", href: "/" },
-                  { icon: Boxing, label: "Classes", href: "/classes" },
-                  { icon: Dumbbell, label: "Gym", href: "/gym" },
-                  { icon: MessageCircle, label: "Contact", href: "/contact" },
-                  { icon: Menu, label: "More", isButton: true }, // Added isButton flag
-                ].map((item) =>
-                  item.isButton ? (
-                    <motion.button // Use button for "More"
-                      key={item.label}
-                      onClick={toggleMoreMenu}
-                      className={`flex flex-col items-center gap-1 ${
-                        item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
-                      }`}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      {React.createElement(item.icon, { className: "w-5 h-5" })}
-                      <span className="text-xs font-medium">{item.label}</span>
-                    </motion.button>
-                  ) : (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className={`flex flex-col items-center gap-1 ${
-                        item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
-                      }`}
-                    >
-                      {React.createElement(item.icon, { className: "w-5 h-5" })}
-                      <span className="text-xs font-medium">{item.label}</span>
-                    </Link>
-                  ),
-                )}
-              </div>
-            </motion.div>
+            <MarketingBottomNav active="classes" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1199,15 +1032,12 @@ export default function ClassesClientPage() {
         </div>
       )}
 
-      {/* More Menu Component */}
-      <MoreMenu isOpen={showMoreMenu} onClose={() => setShowMoreMenu(false)} />
-
       {/* Continue Learning Section - Added */}
       {showContent && (
         <div className="relative z-20 py-16 px-4">
           <ContinueLearning />
         </div>
       )}
-    </div>
+    </PageBackground>
   )
 }

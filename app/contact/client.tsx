@@ -1,102 +1,29 @@
 "use client"
 import { useState, useEffect } from "react"
-import type React from "react"
-import { ChevronUp, ChevronDown } from "lucide-react"
-
 import { motion } from "framer-motion"
-import {
-  ArrowLeft,
-  Moon,
-  Sun,
-  Heart,
-  MessageCircle,
-  Mail,
-  MapPin,
-  BoxIcon as Boxing,
-  Dumbbell,
-  Menu,
-  X,
-} from "lucide-react"
-import { useTheme } from "next-themes"
-import Link from "next/link"
-import { MoreMenu } from "@/components/more-menu"
+import { ChevronUp, ChevronDown, Heart, MessageCircle, Mail, MapPin, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BookingSection } from "@/components/booking-section"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon } from "@/components/social-icons"
+import { PageBackground, MarketingTopNav, MarketingBottomNav } from "@/components/marketing"
 
 export default function ContactClient() {
-  const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  })
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showMissionText, setShowMissionText] = useState(false)
   const [showSocialModal, setShowSocialModal] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(null)
-
-  const toggleMoreMenu = () => {
-    setShowMoreMenu(!showMoreMenu)
-  }
 
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setSubmitStatus(null)
-
-    try {
-      const response = await fetch("/api/send-contact-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        setSubmitStatus("success")
-        setFormData({ name: "", email: "", phone: "", message: "" })
-        setTimeout(() => setSubmitStatus(null), 5000)
-      } else {
-        setSubmitStatus("error")
-        setTimeout(() => setSubmitStatus(null), 5000)
-      }
-    } catch (error) {
-      console.error("[v0] Contact form submission error:", error)
-      setSubmitStatus("error")
-      setTimeout(() => setSubmitStatus(null), 5000)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   if (!mounted) {
     return null
   }
 
   return (
-    <div className="min-h-screen overflow-hidden relative transition-all duration-500 bg-gradient-to-b from-neutral-100 via-white to-neutral-50 dark:from-black dark:via-neutral-900 dark:to-black">
+    <PageBackground>
       <h1 className="sr-only">Contact Muay Thai Pai</h1>
-
-      <div className="absolute inset-0 z-10 bg-gradient-to-br from-orange-500/20 via-transparent to-orange-400/15 dark:from-orange-600/25 dark:to-amber-600/20" />
 
       <motion.div
         key="contact-content"
@@ -105,42 +32,7 @@ export default function ContactClient() {
         transition={{ duration: 1, ease: "easeOut" }}
         className="relative z-20 min-h-screen"
       >
-        {/* Top Navigation */}
-        <div className="absolute top-0 left-0 right-0 z-50 flex justify-between p-4">
-          <motion.div
-            className="flex gap-2"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <Link
-              href="/"
-              className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
-              aria-label="Back to home"
-            >
-              <ArrowLeft className="w-5 h-5 text-orange-600 dark:text-amber-400" />
-            </Link>
-          </motion.div>
-
-          <motion.div
-            className="absolute top-4 right-4 z-50"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <button
-              onClick={toggleTheme}
-              className="backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? (
-                <Sun className="w-5 h-5 text-amber-400" />
-              ) : (
-                <Moon className="w-5 h-5 text-orange-600" />
-              )}
-            </button>
-          </motion.div>
-        </div>
+        <MarketingTopNav />
 
         {/* Main Content */}
         <div className="flex flex-col lg:flex-row min-h-screen px-4 py-16 gap-8 max-w-7xl mx-auto">
@@ -256,49 +148,7 @@ export default function ContactClient() {
           </motion.div>
         </div>
 
-        {/* Bottom Navigation */}
-        <motion.div
-          className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t bg-white/90 border-gray-200 dark:bg-black/80 dark:border-white/10"
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 1.1, duration: 0.8 }}
-        >
-          <div className="flex justify-around py-3 px-4">
-            {[
-              { icon: Heart, label: "Family", href: "/" },
-              { icon: Boxing, label: "Classes", href: "/classes" },
-              { icon: Dumbbell, label: "Gym", href: "/gym" },
-              { icon: MessageCircle, label: "Contact", active: true, href: "/contact" },
-              { icon: Menu, label: "More", isButton: true },
-            ].map((item) =>
-              item.isButton ? (
-                <motion.button
-                  key={item.label}
-                  onClick={toggleMoreMenu}
-                  className="text-gray-500 dark:text-gray-400"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-xs font-medium">{item.label}</span>
-                  </div>
-                </motion.button>
-              ) : (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`flex flex-col items-center gap-1 ${
-                    item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </Link>
-              ),
-            )}
-          </div>
-        </motion.div>
+        <MarketingBottomNav active="contact" />
       </motion.div>
 
       {showSocialModal && (
@@ -363,8 +213,6 @@ export default function ContactClient() {
           </motion.div>
         </motion.div>
       )}
-
-      <MoreMenu isOpen={showMoreMenu} onClose={() => setShowMoreMenu(false)} />
-    </div>
+    </PageBackground>
   )
 }

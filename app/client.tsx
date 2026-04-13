@@ -1,6 +1,6 @@
 "use client"
 
-import React, { type ReactElement, useState, useEffect, useRef } from "react"
+import { type ReactElement, useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import {
   Heart,
@@ -15,9 +15,6 @@ import {
   Maximize,
   Minimize,
   X,
-  BoxIcon as Boxing,
-  Dumbbell,
-  Menu,
   ChevronUp,
   MapPin,
   Star,
@@ -25,9 +22,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 import Link from "next/link"
-import { MoreMenu } from "@/components/more-menu"
 import { BookingSection } from "@/components/booking-section"
 import { PlatformCtaSection } from "@/components/platform-cta-section"
+import { MarketingBottomNav } from "@/components/marketing"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon, TikTokIcon } from "@/components/social-icons"
 import { familyMembers } from "@/lib/family-data"
@@ -51,7 +48,6 @@ export function ClientPage(): ReactElement {
   const [currentDesktopSlide, setCurrentDesktopSlide] = useState(0)
   const totalDesktopSlides = Math.ceil(familyMembers.length / 4)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showFamilyOverlay, setShowFamilyOverlay] = useState(false)
   const [showWelcome, setShowWelcome] = useState(true)
   const [showFavicon, setShowFavicon] = useState(true)
@@ -131,11 +127,6 @@ export function ClientPage(): ReactElement {
         })
       }
     }
-  }
-
-  // Toggle More menu
-  const toggleMoreMenu = () => {
-    setShowMoreMenu(!showMoreMenu)
   }
 
   // Function to start video with sound - REQUIRES USER INTERACTION
@@ -974,61 +965,7 @@ export function ClientPage(): ReactElement {
       {/* Platform Network CTA */}
       <PlatformCtaSection />
 
-      {/* Bottom Navigation - Responsive */}
-      <motion.div
-        className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t bg-white/90 border-gray-200 dark:bg-black/80 dark:border-white/10"
-        initial={{ y: 100 }}
-        animate={{ y: 0 }}
-        transition={{ delay: 1, duration: 0.8 }}
-      >
-        <div className={`flex justify-around ${isMobile ? "py-3 px-4" : isTablet ? "py-4 px-6" : "py-3 px-4"}`}>
-          {[
-            { icon: Heart, label: "Home", active: true, href: "/" },
-            { icon: Boxing, label: "Classes", href: "/classes" },
-            { icon: Dumbbell, label: "Gym", href: "/gym" },
-            { icon: MessageCircle, label: "Contact", href: "/contact" },
-            { icon: Menu, label: "More", isButton: true },
-          ].map((item) =>
-            item.isButton ? (
-              <motion.button
-                key={item.label}
-                onClick={toggleMoreMenu}
-                className={`flex flex-col items-center gap-1 min-h-[48px] min-w-[48px] justify-center ${
-                  item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
-                }`}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                aria-label="Open more menu"
-              >
-                {React.createElement(item.icon, {
-                  className: `${isMobile ? "w-5 h-5" : isTablet ? "w-6 h-6" : "w-5 h-5"}`,
-                })}
-                <span className={`${isMobile ? "text-xs" : isTablet ? "text-sm" : "text-xs"} font-medium`}>
-                  {item.label}
-                </span>
-              </motion.button>
-            ) : (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex flex-col items-center gap-1 min-h-[48px] min-w-[48px] justify-center ${
-                  item.active ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
-                }`}
-                aria-label={`Go to ${item.label} page`}
-              >
-                {React.createElement(item.icon, {
-                  className: `${isMobile ? "w-5 h-5" : isTablet ? "w-6 h-6" : "w-5 h-5"}`,
-                })}
-                <span className={`${isMobile ? "text-xs" : isTablet ? "text-sm" : "text-xs"} font-medium`}>
-                  {item.label}
-                </span>
-              </Link>
-            ),
-          )}
-        </div>
-      </motion.div>
-
-      <MoreMenu isOpen={showMoreMenu} onClose={() => setShowMoreMenu(false)} />
+      <MarketingBottomNav active="family" />
     </div>
   )
 }
