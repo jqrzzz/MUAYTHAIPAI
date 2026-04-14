@@ -129,7 +129,7 @@ const certificates = [
 ]
 
 export default function CertificateProgramsClient() {
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
@@ -219,7 +219,7 @@ export default function CertificateProgramsClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="certs-splash" title="Certificate Programs" subtitle="FORGE YOUR PATH" />
+          <SplashScreen key="certs-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="certs-content"

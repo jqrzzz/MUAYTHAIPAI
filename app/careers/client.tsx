@@ -14,7 +14,7 @@ import {
 
 export default function CareersClient() {
   const [mounted, setMounted] = useState(false)
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
 
   useEffect(() => {
     setMounted(true)
@@ -30,7 +30,7 @@ export default function CareersClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="careers-splash" title="Forge Your Legacy" subtitle="MUAY THAI CAREER PATH" />
+          <SplashScreen key="careers-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="careers-content"

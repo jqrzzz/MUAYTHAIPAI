@@ -19,7 +19,7 @@ import {
 } from "@/components/marketing"
 
 export default function ClassesClientPage() {
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
@@ -82,7 +82,7 @@ export default function ClassesClientPage() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="classes-splash" title="Classes" subtitle="MUAY THAI PAI" />
+          <SplashScreen key="classes-splash" onSkip={dismiss} />
         ) : (
           // Classes Content
           <motion.div

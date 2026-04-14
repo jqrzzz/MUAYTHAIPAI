@@ -61,7 +61,7 @@ const paiSlideshowImages = [
 ]
 
 export default function PaiThailandClient() {
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
   const [mounted, setMounted] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
@@ -83,7 +83,7 @@ export default function PaiThailandClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="pai-splash" title="About Pai" subtitle="MUAY THAI PAI" />
+          <SplashScreen key="pai-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="pai-content"

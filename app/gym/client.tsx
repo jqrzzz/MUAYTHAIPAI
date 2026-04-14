@@ -34,7 +34,7 @@ const amenities = [
 
 export default function GymPageClient() {
   const [mounted, setMounted] = useState(false)
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
   const [currentImage, setCurrentImage] = useState(0)
   const [isPaused] = useState(false)
 
@@ -58,7 +58,7 @@ export default function GymPageClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="gym-splash" title="Gym" subtitle="MUAY THAI PAI" />
+          <SplashScreen key="gym-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="gym-content"

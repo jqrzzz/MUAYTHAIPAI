@@ -46,7 +46,7 @@ const visaOptions = [
 ]
 
 export default function EducationVisasClient() {
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
   const [mounted, setMounted] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
@@ -68,7 +68,7 @@ export default function EducationVisasClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="visa-splash" title="Visas" subtitle="MUAY THAI PAI" />
+          <SplashScreen key="visa-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="visa-content"

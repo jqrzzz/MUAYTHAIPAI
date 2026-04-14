@@ -85,7 +85,7 @@ const accommodationOptions = [
 ]
 
 export default function TrainAndStayClient() {
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
   const [mounted, setMounted] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
@@ -109,7 +109,7 @@ export default function TrainAndStayClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="train-stay-splash" title="Train & Stay" subtitle="MUAY THAI PAI" />
+          <SplashScreen key="train-stay-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="train-stay-content"

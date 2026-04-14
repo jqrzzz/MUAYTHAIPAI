@@ -18,7 +18,7 @@ import {
 export default function ApprenticeshipClient() {
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
 
   useEffect(() => {
     setMounted(true)
@@ -72,7 +72,7 @@ export default function ApprenticeshipClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="apprenticeship-splash" title="Forge Your Path" subtitle="MUAY THAI APPRENTICESHIP" />
+          <SplashScreen key="apprenticeship-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="apprenticeship-content"

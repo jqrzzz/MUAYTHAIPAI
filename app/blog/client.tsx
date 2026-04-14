@@ -21,7 +21,7 @@ import {
 
 export default function BlogClient() {
   const [mounted, setMounted] = useState(false)
-  const showContent = useSplash()
+  const { showContent, dismiss } = useSplash()
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredPosts, setFilteredPosts] = useState(blogPosts)
@@ -88,7 +88,7 @@ export default function BlogClient() {
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <SplashScreen key="blog-splash" title="Wisdom & Stories" subtitle="MUAY THAI PAI BLOG" />
+          <SplashScreen key="blog-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="blog-content"
