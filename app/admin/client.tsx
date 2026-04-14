@@ -1942,12 +1942,14 @@ export default function AdminDashboardClient({
                       }`}
                     >
                       <div className="flex items-center gap-4 flex-1">
-                        <div className="w-14 h-14 rounded-full bg-neutral-700 border-2 border-neutral-600 overflow-hidden flex-shrink-0">
+                        <div className="relative w-14 h-14 rounded-full bg-neutral-700 border-2 border-neutral-600 overflow-hidden flex-shrink-0">
                           {trainer.photo_url ? (
-                            <img
+                            <Image
                               src={trainer.photo_url || "/placeholder.svg"}
                               alt={trainer.display_name}
-                              className="w-full h-full object-cover"
+                              fill
+                              sizes="56px"
+                              className="object-cover"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-neutral-500">

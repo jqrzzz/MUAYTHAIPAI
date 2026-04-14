@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Play,
@@ -194,11 +195,14 @@ export default function CourseDetailClient({
           <div className="lg:col-span-2">
             {/* Course Hero */}
             {course.cover_image_url && (
-              <div className="mb-6 overflow-hidden rounded-xl">
-                <img
+              <div className="relative mb-6 w-full aspect-video overflow-hidden rounded-xl">
+                <Image
                   src={course.cover_image_url}
                   alt={course.title}
-                  className="w-full aspect-video object-cover"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 768px"
+                  priority
+                  className="object-cover"
                 />
               </div>
             )}

@@ -3,6 +3,7 @@
 import { getFighterRank, getRankBorderClass } from "@/lib/fighter-ranks"
 import { WinStreakBadge } from "./win-streak-badge"
 import { MapPin } from "lucide-react"
+import Image from "next/image"
 
 interface Fighter {
   id: string
@@ -39,12 +40,14 @@ export function FighterCard({ fighter }: { fighter: Fighter }) {
     <div className="group h-full">
       <div className={`relative overflow-hidden rounded-xl ${rankBorder}`}>
         {/* Photo area with initials fallback */}
-        <div className="aspect-square bg-gradient-to-br from-slate-800 to-slate-700">
+        <div className="relative aspect-square bg-gradient-to-br from-slate-800 to-slate-700">
           {fighter.image ? (
-            <img
+            <Image
               src={fighter.image}
               alt={fighter.name}
-              className="h-full w-full object-cover"
+              fill
+              sizes="(max-width: 640px) 50vw, 300px"
+              className="object-cover"
             />
           ) : (
             <div

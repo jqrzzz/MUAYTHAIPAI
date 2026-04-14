@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Loader2,
   MapPin,
@@ -279,12 +280,14 @@ function FighterCorner({
 
   return (
     <div className="flex flex-1 flex-col items-center text-center">
-      <div className="mb-2 h-14 w-14 overflow-hidden rounded-full bg-neutral-800">
+      <div className="relative mb-2 h-14 w-14 overflow-hidden rounded-full bg-neutral-800">
         {fighter.photo_url ? (
-          <img
+          <Image
             src={fighter.photo_url}
             alt={fighter.display_name}
-            className="h-full w-full object-cover"
+            fill
+            sizes="56px"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xl text-neutral-500">

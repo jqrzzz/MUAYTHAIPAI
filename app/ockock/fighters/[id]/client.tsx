@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Loader2,
@@ -113,13 +114,15 @@ export default function FighterDetailClient() {
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
             <div className="relative">
               <div
-                className={`h-24 w-24 overflow-hidden rounded-full border-4 border-[#0a0a0f] bg-neutral-800 ${rankBorder}`}
+                className={`relative h-24 w-24 overflow-hidden rounded-full border-4 border-[#0a0a0f] bg-neutral-800 ${rankBorder}`}
               >
                 {fighter.image ? (
-                  <img
+                  <Image
                     src={fighter.image}
                     alt={fighter.name}
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-3xl text-neutral-500">

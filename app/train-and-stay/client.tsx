@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Footprints, MapPin, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { SacredBackground } from "@/components/sacred-background"
 import { ContinueLearning } from "@/components/blog/continue-learning"
 import {
@@ -227,11 +228,15 @@ export default function TrainAndStayClient() {
                               <div className="h-px w-full bg-gradient-to-r from-transparent via-orange-500/30 to-transparent mb-6" />
                               <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
                                 {option.imageUrl && (
-                                  <img
-                                    src={option.imageUrl || "/placeholder.svg"}
-                                    alt={option.name}
-                                    className="w-full h-48 object-cover rounded-lg mb-4"
-                                  />
+                                  <div className="relative w-full h-48 mb-4">
+                                    <Image
+                                      src={option.imageUrl || "/placeholder.svg"}
+                                      alt={option.name}
+                                      fill
+                                      sizes="(max-width: 768px) 100vw, 448px"
+                                      className="object-cover rounded-lg"
+                                    />
+                                  </div>
                                 )}
                                 <p className="mt-3 text-base text-gray-600 dark:text-gray-400">
                                   {option.description}

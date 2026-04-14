@@ -2,6 +2,7 @@
 
 import { type ReactElement, useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import {
   Heart,
   MessageCircle,
@@ -464,9 +465,12 @@ export function ClientPage(): ReactElement {
             } border transition-all duration-300 hover:scale-105 shadow-lg bg-white/30 border-gray-200/40 hover:bg-white/40 dark:bg-black/20 dark:border-white/20 dark:hover:bg-black/30`}
           >
             <div className="flex flex-row items-center gap-3">
-              <img
+              <Image
                 src="/images/natgeo-logo.png"
                 alt="National Geographic"
+                width={100}
+                height={67}
+                priority
                 className={`${isMobile ? "h-5" : isTablet ? "h-6" : "h-7"} w-auto drop-shadow-[0_0_6px_rgba(217,119,6,0.4)] dark:drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]`}
               />
               <span
@@ -682,10 +686,12 @@ export function ClientPage(): ReactElement {
                         />
                         <div className="relative w-full h-full rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center z-10 shadow-lg">
                           {member.image ? (
-                            <img
+                            <Image
                               src={member.image || "/placeholder.svg"}
                               alt={`${member.name}'s profile photo`}
-                              className="w-full h-full object-cover rounded-full"
+                              fill
+                              sizes="96px"
+                              className="object-cover rounded-full"
                             />
                           ) : (
                             <User className={`text-white ${isMobile ? "w-8 h-8" : "w-10 h-10"}`} />
@@ -810,10 +816,12 @@ export function ClientPage(): ReactElement {
                       }`}
                     >
                       {member.image ? (
-                        <img
+                        <Image
                           src={member.image || "/placeholder.svg"}
                           alt={`${member.name}'s profile photo`}
-                          className="w-full h-full object-cover rounded-full"
+                          fill
+                          sizes="64px"
+                          className="object-cover rounded-full"
                         />
                       ) : (
                         <User className="text-white w-6 h-6" />
@@ -906,10 +914,12 @@ export function ClientPage(): ReactElement {
                         />
                         <div className="relative w-full h-full rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center z-10 shadow-lg shadow-orange-400/50">
                           {member.image ? (
-                            <img
+                            <Image
                               src={member.image || "/placeholder.svg"}
                               alt={`${member.name}'s profile photo`}
-                              className="w-full h-full object-cover rounded-full"
+                              fill
+                              sizes="96px"
+                              className="object-cover rounded-full"
                             />
                           ) : (
                             <User className="text-white w-10 h-10" />
