@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import { ChevronUp, ChevronDown, Heart, MessageCircle, Mail, MapPin, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BookingSection } from "@/components/booking-section"
-import { SOCIAL_LINKS } from "@/lib/socials"
+import { SOCIAL_LINKS, CONTACT_EMAIL } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon } from "@/components/social-icons"
 import {
   PageBackground,
@@ -106,7 +106,7 @@ export default function ContactClient() {
               </motion.button>
 
               <motion.a
-                href="mailto:help@muaythaipai.com"
+                href={`mailto:${CONTACT_EMAIL}`}
                 className="backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 bg-white/30 border-orange-500/20 hover:border-orange-500/40 dark:bg-black/30"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -119,13 +119,13 @@ export default function ContactClient() {
                     <h3 className="font-bold text-lg text-orange-600 dark:text-amber-400">
                       Email Us
                     </h3>
-                    <p className="text-gray-700 dark:text-gray-300">help@muaythaipai.com</p>
+                    <p className="text-gray-700 dark:text-gray-300">{CONTACT_EMAIL}</p>
                   </div>
                 </div>
               </motion.a>
 
               <motion.a
-                href="https://maps.app.goo.gl/a3beanCSTPSnUKaUA"
+                href={SOCIAL_LINKS.maps}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 bg-white/30 border-orange-500/20 hover:border-orange-500/40 dark:bg-black/30"

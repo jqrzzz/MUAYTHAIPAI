@@ -1,3 +1,5 @@
+export const CONTACT_EMAIL = "help@muaythaipai.com"
+
 export const SOCIAL_LINKS = {
   instagram: "https://www.instagram.com/muaythaipai/",
   facebook: "https://www.facebook.com/wisarut.muaythaipai.3",
