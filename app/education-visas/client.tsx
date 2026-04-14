@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { BookOpen, GraduationCap, ChevronDown, ChevronUp } from "lucide-react"
 import {
@@ -8,6 +8,7 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  useMounted,
   CONTENT_FADE_IN,
   EXPAND_COLLAPSE,
 } from "@/components/marketing"
@@ -47,12 +48,8 @@ const visaOptions = [
 
 export default function EducationVisasClient() {
   const { showContent, dismiss } = useSplash()
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const toggleSection = (sectionId: string) => {
     setExpandedSection(expandedSection === sectionId ? null : sectionId)

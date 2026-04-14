@@ -15,21 +15,18 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  useMounted,
   CONTENT_FADE_IN,
   EXPAND_COLLAPSE,
 } from "@/components/marketing"
 
 export default function BlogClient() {
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const { showContent, dismiss } = useSplash()
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredPosts, setFilteredPosts] = useState(blogPosts)
   const [selectedCategory, setSelectedCategory] = useState<BlogCategory>("All")
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     let posts = selectedCategory === "All" ? blogPosts : getBlogPostsByCategory(selectedCategory)
@@ -165,7 +162,11 @@ export default function BlogClient() {
                       className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-500 dark:text-white dark:placeholder-gray-400"
                       autoFocus
                     />
-                    <button onClick={toggleSearch} className="ml-2 p-1 rounded-full">
+                    <button
+                      onClick={toggleSearch}
+                      aria-label="Close search"
+                      className="ml-2 p-1 rounded-full"
+                    >
                       <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     </button>
                   </motion.div>

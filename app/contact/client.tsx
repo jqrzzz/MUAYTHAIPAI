@@ -1,21 +1,23 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { ChevronUp, ChevronDown, Heart, MessageCircle, Mail, MapPin, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BookingSection } from "@/components/booking-section"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon } from "@/components/social-icons"
-import { PageBackground, MarketingTopNav, MarketingBottomNav, CONTENT_FADE_IN } from "@/components/marketing"
+import {
+  PageBackground,
+  MarketingTopNav,
+  MarketingBottomNav,
+  useMounted,
+  CONTENT_FADE_IN,
+} from "@/components/marketing"
 
 export default function ContactClient() {
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const [showMissionText, setShowMissionText] = useState(false)
   const [showSocialModal, setShowSocialModal] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   if (!mounted) {
     return null
@@ -159,6 +161,9 @@ export default function ContactClient() {
           onClick={() => setShowSocialModal(false)}
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="social-modal-title"
             className="relative max-w-md w-full mx-4 rounded-2xl p-6 bg-white border border-orange-500/20 dark:bg-neutral-900"
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
@@ -166,12 +171,13 @@ export default function ContactClient() {
           >
             <button
               onClick={() => setShowSocialModal(false)}
+              aria-label="Close social links dialog"
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
             >
               <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
 
-            <h3 className="text-2xl font-bold mb-6 text-orange-600 dark:text-amber-400">
+            <h3 id="social-modal-title" className="text-2xl font-bold mb-6 text-orange-600 dark:text-amber-400">
               Message Us On Socials
             </h3>
 

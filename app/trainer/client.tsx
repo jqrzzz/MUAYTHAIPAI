@@ -681,6 +681,7 @@ export default function TrainerDashboardClient({
             </div>
             <button
               onClick={handleSignOut}
+              aria-label="Sign out"
               className="p-2 text-neutral-400 hover:text-white transition-colors"
             >
               <LogOut className="w-5 h-5" />

@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
@@ -9,16 +8,13 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  useMounted,
   CONTENT_FADE_IN,
 } from "@/components/marketing"
 
 export default function CareersClient() {
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const { showContent, dismiss } = useSplash()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   if (!mounted) {
     return null

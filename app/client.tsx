@@ -25,7 +25,7 @@ import { useTheme } from "next-themes"
 import Link from "next/link"
 import { BookingSection } from "@/components/booking-section"
 import { PlatformCtaSection } from "@/components/platform-cta-section"
-import { MarketingBottomNav, EXPAND_COLLAPSE } from "@/components/marketing"
+import { MarketingBottomNav, useMounted, EXPAND_COLLAPSE } from "@/components/marketing"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon, TikTokIcon } from "@/components/social-icons"
 import { familyMembers } from "@/lib/family-data"
@@ -45,7 +45,7 @@ export function ClientPage(): ReactElement {
   const [selectedMember, setSelectedMember] = useState<number | null>(null)
   const [muted, setMuted] = useState(true)
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const [currentDesktopSlide, setCurrentDesktopSlide] = useState(0)
   const totalDesktopSlides = Math.ceil(familyMembers.length / 4)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -60,8 +60,6 @@ export function ClientPage(): ReactElement {
   const [isTablet, setIsTablet] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-
     const checkDeviceSize = () => {
       const width = window.innerWidth
       setIsMobile(width < 768)

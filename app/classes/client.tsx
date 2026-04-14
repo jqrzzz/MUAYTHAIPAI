@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp } from "lucide-react"
@@ -15,18 +15,15 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  useMounted,
   CONTENT_FADE_IN,
 } from "@/components/marketing"
 
 export default function ClassesClientPage() {
   const { showContent, dismiss } = useSplash()
   const { theme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const toggleSection = (section: string) => {
     if (expandedSection === section) {

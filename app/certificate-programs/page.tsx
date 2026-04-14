@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import CertificateProgramsClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
   title: "Muay Thai Certification Programs — Naga to Garuda | MUAYTHAIPAI Network",
@@ -23,5 +24,15 @@ export const metadata: Metadata = {
 }
 
 export default function CertificateProgramsPage() {
-  return <CertificateProgramsClient />
+  return (
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "Certificate Programs", url: "https://muaythaipai.com/certificate-programs" },
+        ]}
+      />
+      <CertificateProgramsClient />
+    </>
+  )
 }

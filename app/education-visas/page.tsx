@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import EducationVisasClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
   title: "Education Visas | Muay Thai Pai",
@@ -22,5 +23,15 @@ export const metadata: Metadata = {
 }
 
 export default function EducationVisasPage() {
-  return <EducationVisasClient />
+  return (
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "Education Visas", url: "https://muaythaipai.com/education-visas" },
+        ]}
+      />
+      <EducationVisasClient />
+    </>
+  )
 }

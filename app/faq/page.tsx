@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import FAQClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 const faqData = [
   {
@@ -92,6 +93,12 @@ export default function FAQPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "FAQ", url: "https://muaythaipai.com/faq" },
+        ]}
+      />
       <FAQClient />
     </>
   )

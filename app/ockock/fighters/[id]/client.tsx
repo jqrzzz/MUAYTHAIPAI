@@ -139,7 +139,10 @@ export default function FighterDetailClient() {
           </div>
 
           {/* Share button */}
-          <button className="absolute right-3 top-3 rounded-full bg-black/30 p-2 text-white/70 backdrop-blur-sm hover:text-white">
+          <button
+            aria-label="Share fighter profile"
+            className="absolute right-3 top-3 rounded-full bg-black/30 p-2 text-white/70 backdrop-blur-sm hover:text-white"
+          >
             <Share2 className="h-4 w-4" />
           </button>
         </div>

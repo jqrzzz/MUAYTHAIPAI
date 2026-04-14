@@ -12,6 +12,7 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  useMounted,
 } from "@/components/marketing"
 
 const gymImages = [
@@ -33,22 +34,17 @@ const amenities = [
 ]
 
 export default function GymPageClient() {
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const { showContent, dismiss } = useSplash()
   const [currentImage, setCurrentImage] = useState(0)
-  const [isPaused] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!showContent || isPaused) return
+    if (!showContent) return
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % gymImages.length)
     }, 5000)
     return () => clearInterval(interval)
-  }, [showContent, isPaused])
+  }, [showContent])
 
   if (!mounted) return null
 

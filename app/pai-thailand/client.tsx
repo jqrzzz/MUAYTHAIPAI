@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp, Utensils, Leaf, Landmark, Mountain } from "lucide-react"
@@ -12,6 +12,7 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  useMounted,
   CONTENT_FADE_IN,
   EXPAND_COLLAPSE,
 } from "@/components/marketing"
@@ -62,12 +63,8 @@ const paiSlideshowImages = [
 
 export default function PaiThailandClient() {
   const { showContent, dismiss } = useSplash()
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const handleToggleSection = (sectionId: string) => {
     setExpandedSection(expandedSection === sectionId ? null : sectionId)

@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Footprints, MapPin, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
@@ -12,6 +12,7 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  useMounted,
   CONTENT_FADE_IN,
   EXPAND_COLLAPSE,
 } from "@/components/marketing"
@@ -86,12 +87,8 @@ const accommodationOptions = [
 
 export default function TrainAndStayClient() {
   const { showContent, dismiss } = useSplash()
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const toggleSection = (sectionId: string) => {
     setExpandedSection(expandedSection === sectionId ? null : sectionId)
