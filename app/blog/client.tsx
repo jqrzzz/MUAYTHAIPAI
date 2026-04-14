@@ -15,6 +15,8 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  CONTENT_FADE_IN,
+  EXPAND_COLLAPSE,
 } from "@/components/marketing"
 
 export default function BlogClient() {
@@ -92,7 +94,7 @@ export default function BlogClient() {
             key="blog-content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
+            transition={CONTENT_FADE_IN}
             className="relative z-20 min-h-screen"
           >
             <MarketingTopNav />
@@ -151,7 +153,7 @@ export default function BlogClient() {
                     initial={{ width: 48, opacity: 0 }}
                     animate={{ width: 280, opacity: 1 }}
                     exit={{ width: 48, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={EXPAND_COLLAPSE}
                     className="backdrop-blur-md rounded-full border flex items-center px-4 py-3 bg-black/10 border-black/20 dark:bg-white/10 dark:border-white/20"
                   >
                     <Search className="w-5 h-5 mr-3 text-orange-600 dark:text-amber-400" />

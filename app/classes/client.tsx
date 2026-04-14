@@ -15,6 +15,7 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  CONTENT_FADE_IN,
 } from "@/components/marketing"
 
 export default function ClassesClientPage() {
@@ -88,7 +89,7 @@ export default function ClassesClientPage() {
             key="classes-content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
+            transition={CONTENT_FADE_IN}
             className="relative z-20 min-h-screen"
           >
             <MarketingTopNav />

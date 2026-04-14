@@ -12,6 +12,8 @@ import {
   MarketingBottomNav,
   SplashScreen,
   useSplash,
+  CONTENT_FADE_IN,
+  EXPAND_COLLAPSE,
 } from "@/components/marketing"
 
 const certificates = [
@@ -223,7 +225,7 @@ export default function CertificateProgramsClient() {
             key="certs-content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
+            transition={CONTENT_FADE_IN}
             className="relative z-20 min-h-screen"
           >
             <MarketingTopNav />
@@ -406,7 +408,7 @@ export default function CertificateProgramsClient() {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.3 }}
+                                  transition={EXPAND_COLLAPSE}
                                   className="overflow-hidden"
                                 >
                                   <motion.div

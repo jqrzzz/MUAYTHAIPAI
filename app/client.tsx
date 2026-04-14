@@ -24,7 +24,7 @@ import { useTheme } from "next-themes"
 import Link from "next/link"
 import { BookingSection } from "@/components/booking-section"
 import { PlatformCtaSection } from "@/components/platform-cta-section"
-import { MarketingBottomNav } from "@/components/marketing"
+import { MarketingBottomNav, EXPAND_COLLAPSE } from "@/components/marketing"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon, TikTokIcon } from "@/components/social-icons"
 import { familyMembers } from "@/lib/family-data"
@@ -526,7 +526,7 @@ export function ClientPage(): ReactElement {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
+            transition={EXPAND_COLLAPSE}
             className={`absolute ${isMobile ? "bottom-20 right-4" : "bottom-24 right-6"} z-30 flex flex-col gap-2`}
           >
             <button
@@ -712,7 +712,7 @@ export function ClientPage(): ReactElement {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={EXPAND_COLLAPSE}
                     className={`mt-6 ${isMobile ? "p-4" : "p-6"} rounded-2xl bg-gray-50 dark:bg-white/5`}
                   >
                     {(() => {

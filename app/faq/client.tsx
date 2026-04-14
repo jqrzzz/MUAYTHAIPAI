@@ -6,6 +6,7 @@ import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooterMenu } from "@/components/site-footer-menu"
 import { ContinueLearning } from "@/components/blog/continue-learning"
+import { EXPAND_COLLAPSE } from "@/components/marketing"
 
 const faqData = [
   {
@@ -244,7 +245,7 @@ export default function FAQClient() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3 }}
+                          transition={EXPAND_COLLAPSE}
                           className="overflow-hidden"
                         >
                           <div className="px-6 pb-4 text-gray-600 dark:text-gray-300">
