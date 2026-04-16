@@ -1,0 +1,268 @@
+/**
+ * Channel-agnostic chat engine.
+ *
+ * Webhook handlers call `handleMessage(normalized, adapter)` fire-and-forget
+ * after returning 200 OK to the channel. This function:
+ *
+ *   1. Dedups on external_message_id
+ *   2. Resolves tenant (org_id) via chat_group_members binding
+ *   3. Upserts the conversation
+ *   4. Persists the inbound message to communication_log
+ *   5. Runs the AI pipeline (stubbed in Phase 8a, Claude in Phase 8b)
+ *   6. Persists the outbound message + sends via adapter
+ *   7. Updates conversation status on escalation
+ *
+ * Contract: MUST NOT throw. Errors are caught, logged, and returned
+ * as `HandleMessageResult.error` so fire-and-forget callers don't
+ * silently drop exceptions.
+ */
+
+import { createClient } from "@supabase/supabase-js"
+import type {
+  ChannelAdapter,
+  HandleMessageResult,
+  IncomingMessage,
+} from "./types"
+
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) {
+    throw new Error(
+      "[chat/engine] Missing Supabase credentials (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)",
+    )
+  }
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+export async function handleMessage(
+  msg: IncomingMessage,
+  adapter: ChannelAdapter,
+): Promise<HandleMessageResult> {
+  const empty: HandleMessageResult = {
+    conversationId: "",
+    messageLogId: "",
+    aiHandled: false,
+    escalated: false,
+  }
+
+  try {
+    const supabase = getServiceClient()
+
+    // 1. Dedup by external_message_id (channels retry on non-200)
+    if (msg.externalMessageId) {
+      const { data: existing } = await supabase
+        .from("communication_log")
+        .select("id, conversation_id")
+        .eq("channel", msg.platform)
+        .eq("external_message_id", msg.externalMessageId)
+        .eq("direction", "inbound")
+        .maybeSingle()
+
+      if (existing) {
+        return {
+          ...empty,
+          conversationId: existing.conversation_id,
+          messageLogId: existing.id,
+          error: "duplicate",
+        }
+      }
+    }
+
+    // 2. Resolve sender → member → group → org
+    const { data: member } = await supabase
+      .from("chat_group_members")
+      .select(
+        "id, group_id, user_id, role, chat_groups!inner(org_id, purpose, is_active)",
+      )
+      .eq("channel", msg.platform)
+      .eq("channel_user_id", msg.externalSenderId)
+      .eq("channel_chat_id", msg.externalChatId)
+      .maybeSingle()
+
+    if (!member) {
+      // No binding yet. Phase 8b will add credential→org fallback for
+      // public inbox channels so anonymous visitors auto-bind on first
+      // contact. Until then, unrecognized senders are logged and dropped.
+      console.warn("[chat/engine] Unrecognized sender", {
+        platform: msg.platform,
+        externalSenderId: msg.externalSenderId,
+        externalChatId: msg.externalChatId,
+      })
+      return { ...empty, error: "unrecognized_sender" }
+    }
+
+    const group = Array.isArray(member.chat_groups)
+      ? member.chat_groups[0]
+      : member.chat_groups
+    if (!group || !group.is_active) {
+      return { ...empty, error: "inactive_group" }
+    }
+
+    const orgId = group.org_id as string
+    const purpose = group.purpose as string
+
+    // 3. Upsert conversation
+    let conversationId: string
+    const { data: existingConvo } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("channel", msg.platform)
+      .eq("external_thread_id", msg.externalChatId)
+      .maybeSingle()
+
+    if (existingConvo) {
+      conversationId = existingConvo.id
+    } else {
+      const { data: newConvo, error: convoErr } = await supabase
+        .from("conversations")
+        .insert({
+          org_id: orgId,
+          group_id: member.group_id,
+          channel: msg.platform,
+          external_thread_id: msg.externalChatId,
+          status: "open",
+          last_message_at: msg.receivedAt,
+          last_message_preview: msg.text.slice(0, 200),
+        })
+        .select("id")
+        .single()
+
+      if (convoErr || !newConvo) {
+        throw new Error(`create conversation failed: ${convoErr?.message}`)
+      }
+      conversationId = newConvo.id
+    }
+
+    // 4. Persist inbound
+    const { data: logRow, error: logErr } = await supabase
+      .from("communication_log")
+      .insert({
+        org_id: orgId,
+        conversation_id: conversationId,
+        channel: msg.platform,
+        direction: "inbound",
+        sender: msg.externalSenderId,
+        body: msg.text,
+        metadata: {
+          raw: msg.rawUpdate,
+          attachments: msg.attachments ?? [],
+          sender_display_name: msg.senderDisplayName,
+          is_direct_message: msg.isDirectMessage,
+        },
+        external_message_id: msg.externalMessageId,
+      })
+      .select("id")
+      .single()
+
+    if (logErr || !logRow) {
+      throw new Error(`log inbound failed: ${logErr?.message}`)
+    }
+
+    const messageLogId = logRow.id
+
+    // Refresh conversation last_message_* (skip for first insert, already set)
+    if (existingConvo) {
+      await supabase
+        .from("conversations")
+        .update({
+          last_message_at: msg.receivedAt,
+          last_message_preview: msg.text.slice(0, 200),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", conversationId)
+    }
+
+    // 5. Run AI (STUB in Phase 8a; Claude tool-loop in Phase 8b)
+    const aiResult = await runAIStub({
+      orgId,
+      conversationId,
+      purpose,
+      userMessage: msg.text,
+      isBoundUser: !!member.user_id,
+    })
+
+    // 6. Persist outbound + send via adapter
+    if (aiResult.replyText) {
+      const { data: outboundRow } = await supabase
+        .from("communication_log")
+        .insert({
+          org_id: orgId,
+          conversation_id: conversationId,
+          channel: msg.platform,
+          direction: "outbound",
+          recipient: msg.externalSenderId,
+          body: aiResult.replyText,
+          metadata: { ai_meta: aiResult.meta ?? {} },
+          handled_by: "ai",
+          needs_review: aiResult.needsReview ?? false,
+        })
+        .select("id")
+        .single()
+
+      const sendResult = await adapter.send(msg.externalChatId, {
+        text: aiResult.replyText,
+        replyToExternalMessageId: msg.externalMessageId,
+      })
+
+      if (sendResult.ok && sendResult.externalMessageId && outboundRow) {
+        await supabase
+          .from("communication_log")
+          .update({ external_message_id: sendResult.externalMessageId })
+          .eq("id", outboundRow.id)
+      } else if (!sendResult.ok) {
+        console.error("[chat/engine] adapter send failed:", sendResult.error)
+      }
+    }
+
+    // 7. Escalation bookkeeping
+    if (aiResult.escalated) {
+      await supabase
+        .from("conversations")
+        .update({ status: "awaiting_human" })
+        .eq("id", conversationId)
+    }
+
+    return {
+      conversationId,
+      messageLogId,
+      aiHandled: !!aiResult.replyText && !aiResult.escalated,
+      escalated: !!aiResult.escalated,
+    }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    console.error("[chat/engine] handleMessage error:", errMsg)
+    return { ...empty, error: errMsg }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AI STUB — Phase 8a scaffolding. Phase 8b replaces this with Anthropic
+// Claude + tool-use loop + prompt caching (see lib/chat/ai.ts, to be added).
+// ---------------------------------------------------------------------------
+
+type AIStubInput = {
+  orgId: string
+  conversationId: string
+  purpose: string
+  userMessage: string
+  isBoundUser: boolean
+}
+
+type AIStubOutput = {
+  replyText?: string
+  escalated?: boolean
+  needsReview?: boolean
+  meta?: Record<string, unknown>
+}
+
+async function runAIStub(input: AIStubInput): Promise<AIStubOutput> {
+  const prefix =
+    input.purpose === "owner_assist" ? "[owner-AI stub]" : "[concierge stub]"
+  return {
+    replyText: `${prefix} Received: "${input.userMessage}"`,
+    meta: { stub: true, phase: "8a" },
+  }
+}
