@@ -11,14 +11,14 @@
  *   "show me this week's bookings"
  *
  * Unlike the concierge, owner AI:
- *   - Is bound to an authenticated user (chat_group_members.user_id is
+ *   - Is bound to an authenticated user (mtp_chat_group_members.user_id is
  *     set, role in ('owner','admin')). The engine enforces this — a
  *     stranger posting into an owner_assist group gets dropped.
  *   - Answers in the operator's language (whatever they type in — Thai
  *     or English for Wisarut), no greeting formality.
  *   - Reads across the inbox, bookings, and (later) revenue / schedule.
  *   - Drafts replies to customers but never sends them autonomously —
- *     sends land in communication_log as draft_status='pending' and
+ *     sends land in mtp_communication_log as draft_status='pending' and
  *     the owner approves via the web inbox (Wave 8d) or a one-tap
  *     confirm deeplink (also 8d).
  *
@@ -40,7 +40,7 @@ export type OwnerAIInput = {
   supabase: SupabaseClient
   orgId: string
   orgName: string
-  /** The owner's users.id (bound via chat_group_members.user_id). */
+  /** The owner's users.id (bound via mtp_chat_group_members.user_id). */
   userId: string
   ownerDisplayName: string | null
   /** This conversation's id (the owner↔AI thread). */
@@ -88,7 +88,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
             .eq("booking_date", todayStart.toISOString().slice(0, 10))
             .order("booking_time", { ascending: true }),
           supabase
-            .from("communication_log")
+            .from("mtp_communication_log")
             .select("id, conversation_id, body, created_at, channel")
             .eq("org_id", orgId)
             .eq("direction", "inbound")
@@ -96,14 +96,14 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
             .order("created_at", { ascending: false })
             .limit(50),
           supabase
-            .from("communication_log")
+            .from("mtp_communication_log")
             .select("id, conversation_id, body, created_at")
             .eq("org_id", orgId)
             .eq("draft_status", "pending")
             .order("created_at", { ascending: false })
             .limit(20),
           supabase
-            .from("conversations")
+            .from("mtp_conversations")
             .select("id, channel, last_message_preview, last_message_at")
             .eq("org_id", orgId)
             .eq("status", "awaiting_human")
@@ -154,9 +154,9 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
       }),
       execute: async ({ limit }) => {
         const { data } = await supabase
-          .from("communication_log")
+          .from("mtp_communication_log")
           .select(
-            "id, conversation_id, body, created_at, conversations(id, channel, last_message_preview)",
+            "id, conversation_id, body, created_at, mtp_conversations(id, channel, last_message_preview)",
           )
           .eq("org_id", orgId)
           .eq("draft_status", "pending")
@@ -175,7 +175,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
       }),
       execute: async ({ conversation_id, limit }) => {
         const { data: convo } = await supabase
-          .from("conversations")
+          .from("mtp_conversations")
           .select("id, channel, status, last_message_at, external_thread_id")
           .eq("id", conversation_id)
           .eq("org_id", orgId)
@@ -183,7 +183,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
         if (!convo) return { error: "not_found" }
 
         const { data: messages } = await supabase
-          .from("communication_log")
+          .from("mtp_communication_log")
           .select("id, direction, body, created_at, handled_by, draft_status")
           .eq("conversation_id", conversation_id)
           .eq("org_id", orgId)
@@ -204,7 +204,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
       }),
       execute: async ({ query, status, limit }) => {
         let q = supabase
-          .from("conversations")
+          .from("mtp_conversations")
           .select("id, channel, status, last_message_preview, last_message_at")
           .eq("org_id", orgId)
           .order("last_message_at", { ascending: false })
@@ -234,7 +234,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
         // Verify the target conversation belongs to this org (defense in
         // depth — the supabase client is service-role).
         const { data: convo } = await supabase
-          .from("conversations")
+          .from("mtp_conversations")
           .select("id, channel")
           .eq("id", conversation_id)
           .eq("org_id", orgId)
@@ -244,7 +244,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
         }
 
         const { data: draft, error } = await supabase
-          .from("communication_log")
+          .from("mtp_communication_log")
           .insert({
             org_id: orgId,
             conversation_id,
@@ -280,7 +280,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
         draft_id: z
           .string()
           .uuid()
-          .describe("Id of the pending draft (communication_log.id)."),
+          .describe("Id of the pending draft (mtp_communication_log.id)."),
         preview: z
           .string()
           .min(1)
@@ -292,7 +292,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
       execute: async ({ draft_id, preview }) => {
         // Confirm the draft exists and is pending for this org.
         const { data: draft } = await supabase
-          .from("communication_log")
+          .from("mtp_communication_log")
           .select("id, org_id, draft_status, direction")
           .eq("id", draft_id)
           .eq("org_id", orgId)

@@ -2,7 +2,7 @@
  * Action-token confirm page.
  *
  * Deeplink target for AI-proposed write actions. The AI (owner or
- * concierge) creates an action_tokens row, then sends the resulting
+ * concierge) creates an mtp_action_tokens row, then sends the resulting
  * `/a/<id>` URL to the user in chat. The user opens the link in a
  * browser, logs in (if not already), sees the frozen preview, and
  * taps Confirm.

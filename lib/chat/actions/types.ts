@@ -31,7 +31,7 @@ export type ActionHandlerResult =
   | { ok: false; error: string }
 
 export type ActionHandler = {
-  /** action_tokens.action_type value. Must be unique. */
+  /** mtp_action_tokens.action_type value. Must be unique. */
   type: string
   /** Human-readable label for audit logs + UI fallback. */
   label: string

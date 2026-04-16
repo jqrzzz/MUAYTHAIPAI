@@ -1,7 +1,7 @@
 /**
  * Action registry.
  *
- * Maps action_tokens.action_type → handler. The POST /api/actions/[token]
+ * Maps mtp_action_tokens.action_type → handler. The POST /api/actions/[token]
  * route consumes the token (atomic) then looks up the handler here and
  * executes with the frozen params.
  *

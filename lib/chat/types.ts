@@ -33,7 +33,7 @@ export type IncomingMessage = {
   isDirectMessage: boolean
   /** Channel-native message ID, used for dedup + reply threading. */
   externalMessageId?: string
-  /** Full original payload. Preserved in communication_log.metadata for debugging. */
+  /** Full original payload. Preserved in mtp_communication_log.metadata for debugging. */
   rawUpdate: unknown
   /** ISO timestamp of when the channel reports the message was sent. */
   receivedAt: string
@@ -124,6 +124,6 @@ export type HandleMessageResult = {
 
 /**
  * Purposes a chat_group can serve. Mirrors the CHECK constraint on
- * chat_groups.purpose in 015-create-chat-comms-tables.sql.
+ * mtp_chat_groups.purpose in 015-create-chat-comms-tables.sql.
  */
 export type ChatGroupPurpose = "public_inbox" | "owner_assist" | "staff"

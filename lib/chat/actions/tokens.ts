@@ -34,7 +34,7 @@ export async function createActionToken(
   const expiresAt = new Date(Date.now() + ttl * 60_000).toISOString()
 
   const { data, error } = await input.supabase
-    .from("action_tokens")
+    .from("mtp_action_tokens")
     .insert({
       org_id: input.orgId,
       user_id: input.userId,
@@ -83,7 +83,7 @@ export async function loadActionToken(
   tokenId: string,
 ): Promise<LoadedActionToken | null> {
   const { data } = await supabase
-    .from("action_tokens")
+    .from("mtp_action_tokens")
     .select(
       "id, org_id, user_id, action_type, params, preview, created_at, expires_at, consumed_at, proposed_by_conversation",
     )
@@ -117,7 +117,7 @@ export async function claimActionToken(params: {
 }): Promise<LoadedActionToken | null> {
   const now = new Date().toISOString()
   const { data } = await params.supabase
-    .from("action_tokens")
+    .from("mtp_action_tokens")
     .update({ consumed_at: now })
     .eq("id", params.tokenId)
     .eq("user_id", params.userId)
@@ -148,7 +148,7 @@ export async function storeActionResult(
   result: Record<string, unknown>,
 ): Promise<void> {
   await supabase
-    .from("action_tokens")
+    .from("mtp_action_tokens")
     .update({ consumed_result: result })
     .eq("id", tokenId)
 }

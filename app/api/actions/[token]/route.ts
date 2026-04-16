@@ -2,7 +2,7 @@
  * POST /api/actions/[token]
  *
  * Consumes an AI-issued action token. The authenticated user MUST
- * match action_tokens.user_id. We use a service-role client ONLY
+ * match mtp_action_tokens.user_id. We use a service-role client ONLY
  * inside the handler to execute the action — all auth checks happen
  * through the SSR client first.
  *
@@ -58,7 +58,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
   }
 
   // 2. Atomically claim the token for this user. Service role for
-  //    unambiguous UPDATE semantics (RLS on action_tokens would also
+  //    unambiguous UPDATE semantics (RLS on mtp_action_tokens would also
   //    let user_id=auth.uid() do it, but service role avoids any
   //    JWT-refresh edge cases during confirmation).
   let service

@@ -5,9 +5,9 @@
  * after returning 200 OK to the channel. This function:
  *
  *   1. Dedups on external_message_id
- *   2. Resolves tenant (org_id) via chat_group_members binding
+ *   2. Resolves tenant (org_id) via mtp_chat_group_members binding
  *   3. Upserts the conversation
- *   4. Persists the inbound message to communication_log
+ *   4. Persists the inbound message to mtp_communication_log
  *   5. Runs the AI pipeline (concierge 8b; owner AI 8c; staff = no AI)
  *   6. Persists the outbound message + sends via adapter
  *   7. Updates conversation status on escalation
@@ -57,7 +57,7 @@ export async function handleMessage(
     // 1. Dedup by external_message_id (channels retry on non-200)
     if (msg.externalMessageId) {
       const { data: existing } = await supabase
-        .from("communication_log")
+        .from("mtp_communication_log")
         .select("id, conversation_id")
         .eq("channel", msg.platform)
         .eq("external_message_id", msg.externalMessageId)
@@ -76,9 +76,9 @@ export async function handleMessage(
 
     // 2. Resolve sender → member → group → org
     const { data: member } = await supabase
-      .from("chat_group_members")
+      .from("mtp_chat_group_members")
       .select(
-        "id, group_id, user_id, role, chat_groups!inner(org_id, purpose, is_active)",
+        "id, group_id, user_id, role, mtp_chat_groups!inner(org_id, purpose, is_active)",
       )
       .eq("channel", msg.platform)
       .eq("channel_user_id", msg.externalSenderId)
@@ -100,9 +100,9 @@ export async function handleMessage(
       return { ...empty, error: "unrecognized_sender" }
     }
 
-    const group = Array.isArray(member.chat_groups)
-      ? member.chat_groups[0]
-      : member.chat_groups
+    const group = Array.isArray(member.mtp_chat_groups)
+      ? member.mtp_chat_groups[0]
+      : member.mtp_chat_groups
     if (!group || !group.is_active) {
       return { ...empty, error: "inactive_group" }
     }
@@ -113,7 +113,7 @@ export async function handleMessage(
     // 3. Upsert conversation
     let conversationId: string
     const { data: existingConvo } = await supabase
-      .from("conversations")
+      .from("mtp_conversations")
       .select("id")
       .eq("channel", msg.platform)
       .eq("external_thread_id", msg.externalChatId)
@@ -123,7 +123,7 @@ export async function handleMessage(
       conversationId = existingConvo.id
     } else {
       const { data: newConvo, error: convoErr } = await supabase
-        .from("conversations")
+        .from("mtp_conversations")
         .insert({
           org_id: orgId,
           group_id: member.group_id,
@@ -144,7 +144,7 @@ export async function handleMessage(
 
     // 4. Persist inbound
     const { data: logRow, error: logErr } = await supabase
-      .from("communication_log")
+      .from("mtp_communication_log")
       .insert({
         org_id: orgId,
         conversation_id: conversationId,
@@ -172,7 +172,7 @@ export async function handleMessage(
     // Refresh conversation last_message_* (skip for first insert, already set)
     if (existingConvo) {
       await supabase
-        .from("conversations")
+        .from("mtp_conversations")
         .update({
           last_message_at: msg.receivedAt,
           last_message_preview: msg.text.slice(0, 200),
@@ -226,7 +226,7 @@ export async function handleMessage(
     // 6. Persist outbound + send via adapter
     if (aiResult.replyText) {
       const { data: outboundRow } = await supabase
-        .from("communication_log")
+        .from("mtp_communication_log")
         .insert({
           org_id: orgId,
           conversation_id: conversationId,
@@ -248,7 +248,7 @@ export async function handleMessage(
 
       if (sendResult.ok && sendResult.externalMessageId && outboundRow) {
         await supabase
-          .from("communication_log")
+          .from("mtp_communication_log")
           .update({ external_message_id: sendResult.externalMessageId })
           .eq("id", outboundRow.id)
       } else if (!sendResult.ok) {
@@ -259,7 +259,7 @@ export async function handleMessage(
     // 7. Escalation bookkeeping
     if (aiResult.escalated) {
       await supabase
-        .from("conversations")
+        .from("mtp_conversations")
         .update({ status: "awaiting_human" })
         .eq("id", conversationId)
     }
@@ -305,7 +305,7 @@ async function runConciergeForConversation(params: {
   const [kb, historyRes] = await Promise.all([
     loadGymKnowledge(supabase, orgId),
     supabase
-      .from("communication_log")
+      .from("mtp_communication_log")
       .select("direction, body, created_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })
@@ -355,7 +355,7 @@ async function runOwnerAIForConversation(params: {
       .eq("id", userId)
       .maybeSingle(),
     supabase
-      .from("communication_log")
+      .from("mtp_communication_log")
       .select("direction, body, created_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })

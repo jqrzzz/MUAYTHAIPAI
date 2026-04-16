@@ -1,7 +1,7 @@
 /**
  * send_pending_draft handler.
  *
- * Takes a pending draft (communication_log row with draft_status='pending')
+ * Takes a pending draft (mtp_communication_log row with draft_status='pending')
  * that the owner AI composed, and sends it for real via the channel
  * adapter.
  *
@@ -9,7 +9,7 @@
  *
  * On success:
  *   - draft row: draft_status='approved', external_message_id populated
- *   - conversations.status may transition open→open (unchanged) or
+ *   - mtp_conversations.status may transition open→open (unchanged) or
  *     awaiting_human→open when a human/AI reply has gone out
  */
 
@@ -46,7 +46,7 @@ export const sendPendingDraftHandler: ActionHandler = {
     // Load the draft. Scope to context.orgId — tokens are org-bound,
     // so the draft must belong to the same org.
     const { data: draft } = await supabase
-      .from("communication_log")
+      .from("mtp_communication_log")
       .select(
         "id, org_id, conversation_id, channel, body, direction, draft_status, recipient",
       )
@@ -67,7 +67,7 @@ export const sendPendingDraftHandler: ActionHandler = {
 
     // Look up the conversation to get the external thread id.
     const { data: convo } = await supabase
-      .from("conversations")
+      .from("mtp_conversations")
       .select("id, channel, external_thread_id")
       .eq("id", draft.conversation_id)
       .eq("org_id", context.orgId)
@@ -97,7 +97,7 @@ export const sendPendingDraftHandler: ActionHandler = {
 
     // Approve + stamp the external message id. Also clear needs_review.
     await supabase
-      .from("communication_log")
+      .from("mtp_communication_log")
       .update({
         draft_status: "approved",
         needs_review: false,
@@ -108,7 +108,7 @@ export const sendPendingDraftHandler: ActionHandler = {
 
     // If the conversation was waiting on a human, mark it open again.
     await supabase
-      .from("conversations")
+      .from("mtp_conversations")
       .update({
         status: "open",
         last_message_at: new Date().toISOString(),
