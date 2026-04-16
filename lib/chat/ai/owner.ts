@@ -29,6 +29,7 @@
 import { generateText, stepCountIs, tool } from "ai"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { z } from "zod"
+import { createActionToken } from "../actions/tokens"
 
 export type OwnerAIHistoryEntry = {
   direction: "inbound" | "outbound"
@@ -271,6 +272,61 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
         }
       },
     }),
+
+    propose_send_draft: tool({
+      description:
+        "Propose sending a pending draft right now. Creates a single-use, time-limited confirmation link the owner can tap from chat to approve and send in one action. The draft does NOT send until the owner taps the link. Use right after draft_reply, or when the owner says 'send draft X' / 'approve the German one'.",
+      inputSchema: z.object({
+        draft_id: z
+          .string()
+          .uuid()
+          .describe("Id of the pending draft (communication_log.id)."),
+        preview: z
+          .string()
+          .min(1)
+          .max(1000)
+          .describe(
+            "Short, human-readable description for the confirm page. Include the recipient's name or channel and a snippet of the reply.",
+          ),
+      }),
+      execute: async ({ draft_id, preview }) => {
+        // Confirm the draft exists and is pending for this org.
+        const { data: draft } = await supabase
+          .from("communication_log")
+          .select("id, org_id, draft_status, direction")
+          .eq("id", draft_id)
+          .eq("org_id", orgId)
+          .maybeSingle()
+        if (!draft) return { ok: false, error: "draft_not_found" }
+        if (draft.direction !== "outbound" || draft.draft_status !== "pending") {
+          return { ok: false, error: "draft_not_pending" }
+        }
+
+        try {
+          const token = await createActionToken({
+            supabase,
+            orgId,
+            userId: input.userId,
+            actionType: "send_pending_draft",
+            params: { draft_id },
+            preview,
+            ttlMinutes: 15,
+            proposedByConversation: ownerConversationId,
+          })
+          return {
+            ok: true,
+            confirm_url: token.deeplinkUrl,
+            expires_at: token.expiresAt,
+            note: "Share the confirm_url with the owner. Tapping it from a logged-in browser will send the draft.",
+          }
+        } catch (err) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          }
+        }
+      },
+    }),
   }
 
   const messages = buildConversationMessages(input)
@@ -325,14 +381,21 @@ Operator-mode, not hospitality. No "Sawadee", no emoji pageantry. Be crisp, usef
 - Inbox summary (today's inquiries, pending drafts, awaiting-human threads)
 - Read a full conversation thread
 - Search recent conversations by text or status
-- Draft a reply to a visitor thread (draft-only — owner approves in the web inbox before it sends)
+- Draft a reply to a visitor thread (draft-only)
+- Propose sending a draft: creates a single-tap confirm link the owner opens in a browser. The draft does not send until they tap the link.
 - Today's bookings
 
 # Safety
-- You never send customer replies directly. draft_reply saves to pending — a human approves.
-- If the owner asks you to do something you can't (refunds, publish content, change schedules, billing), tell them plainly and suggest the web console. Destructive write actions will ship in Wave 8d behind a deeplink-confirm pattern.
+- You never send customer replies directly. draft_reply stages the reply; propose_send_draft mints a confirm link; only the owner's tap actually sends it.
+- If the owner asks you to do something you can't yet (refunds, publishing, billing, schedule changes), tell them plainly and suggest the web console. More propose_* actions will arrive over time; when you're unsure if an action is supported, don't invent one.
 - Do not reveal other gyms' data. All tools are scoped to this org.
 - If you don't know, say so. Don't invent numbers, names, or bookings.
+
+# Sending a drafted reply (common flow)
+1. Owner asks you to draft a reply.
+2. Call draft_reply — get a draft_id back. Show the draft text to the owner.
+3. If the owner says "send it" / "approve" / "ส่งเลย" / thumbs up, call propose_send_draft with that draft_id and a short preview.
+4. Reply with the confirm_url so the owner can tap once in their browser.
 
 # Output style
 - Plain text suitable for a chat bubble.
