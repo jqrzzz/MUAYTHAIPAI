@@ -8,7 +8,7 @@
  *   2. Resolves tenant (org_id) via chat_group_members binding
  *   3. Upserts the conversation
  *   4. Persists the inbound message to communication_log
- *   5. Runs the AI pipeline (concierge live in 8b; owner AI stub → 8c)
+ *   5. Runs the AI pipeline (concierge 8b; owner AI 8c; staff = no AI)
  *   6. Persists the outbound message + sends via adapter
  *   7. Updates conversation status on escalation
  *
@@ -19,6 +19,7 @@
 
 import { createClient } from "@supabase/supabase-js"
 import { runConciergeAI, type ConciergeHistoryEntry } from "./ai/concierge"
+import { runOwnerAI, type OwnerAIHistoryEntry } from "./ai/owner"
 import { loadGymKnowledge } from "./knowledge"
 import type {
   ChannelAdapter,
@@ -181,8 +182,9 @@ export async function handleMessage(
     }
 
     // 5. Run AI
-    //    - public_inbox → concierge (Wave 8b, shipped)
-    //    - owner_assist → owner AI (Wave 8c, still stub)
+    //    - public_inbox → concierge (Wave 8b)
+    //    - owner_assist → owner AI, but only for bound owner/admin
+    //                      members (Wave 8c)
     //    - staff        → no AI (human-only channel)
     let aiResult: AIOutput
     if (purpose === "public_inbox") {
@@ -195,11 +197,27 @@ export async function handleMessage(
         isFirstMessage: !existingConvo,
       })
     } else if (purpose === "owner_assist") {
-      aiResult = await runOwnerAIStub({
-        orgId,
-        conversationId,
-        userMessage: msg.text,
-      })
+      // Safety: owner AI only answers bound owner/admin members.
+      // Strangers posting into an owner_assist group are logged and
+      // dropped — never answered.
+      if (
+        !member.user_id ||
+        !["owner", "admin"].includes(String(member.role))
+      ) {
+        console.warn(
+          "[chat/engine] owner_assist message from non-owner/admin; dropping",
+          { memberRole: member.role, bound: !!member.user_id },
+        )
+        aiResult = {}
+      } else {
+        aiResult = await runOwnerAIForConversation({
+          supabase,
+          orgId,
+          conversationId,
+          userId: member.user_id as string,
+          userMessage: msg.text,
+        })
+      }
     } else {
       // staff channel: no AI, just log the message
       aiResult = {}
@@ -318,16 +336,48 @@ async function runConciergeForConversation(params: {
   })
 }
 
-// Owner AI still stubbed until Wave 8c. Kept in-engine so the routing
-// seam stays honest — we don't want a silent "owner_assist purpose does
-// nothing" when the owner sends a real message.
-async function runOwnerAIStub(input: {
+async function runOwnerAIForConversation(params: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any
   orgId: string
   conversationId: string
+  userId: string
   userMessage: string
 }): Promise<AIOutput> {
-  return {
-    replyText: `[owner-AI stub] Received: "${input.userMessage}" — real owner AI ships in Wave 8c.`,
-    meta: { stub: true, phase: "8b" },
-  }
+  const { supabase, orgId, conversationId, userId, userMessage } = params
+
+  // Look up org name + the owner's display name + recent thread.
+  const [{ data: org }, { data: profile }, historyRes] = await Promise.all([
+    supabase.from("organizations").select("name").eq("id", orgId).maybeSingle(),
+    supabase
+      .from("users")
+      .select("display_name, full_name")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from("communication_log")
+      .select("direction, body, created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
+      .limit(HISTORY_TURN_LIMIT),
+  ])
+
+  const history: OwnerAIHistoryEntry[] = ((historyRes.data ?? []) as Array<{
+    direction: "inbound" | "outbound"
+    body: string
+  }>)
+    .slice()
+    .reverse()
+    .map((r) => ({ direction: r.direction, body: r.body }))
+
+  return runOwnerAI({
+    supabase,
+    orgId,
+    orgName: org?.name ?? "the gym",
+    userId,
+    ownerDisplayName: profile?.display_name ?? profile?.full_name ?? null,
+    ownerConversationId: conversationId,
+    userMessage,
+    history,
+  })
 }

@@ -1,0 +1,361 @@
+/**
+ * Owner AI — the private operator persona.
+ *
+ * Used from owner_assist chat groups (ScootScoot pattern: a LINE group
+ * with the gym owner + the bot). Lets Wisarut (or any gym owner) run
+ * day-to-day operations from chat without learning a new dashboard:
+ *
+ *   "what's on today?"
+ *   "any unread messages?"
+ *   "draft a reply to the German guy asking about private sessions"
+ *   "show me this week's bookings"
+ *
+ * Unlike the concierge, owner AI:
+ *   - Is bound to an authenticated user (chat_group_members.user_id is
+ *     set, role in ('owner','admin')). The engine enforces this — a
+ *     stranger posting into an owner_assist group gets dropped.
+ *   - Answers in the operator's language (whatever they type in — Thai
+ *     or English for Wisarut), no greeting formality.
+ *   - Reads across the inbox, bookings, and (later) revenue / schedule.
+ *   - Drafts replies to customers but never sends them autonomously —
+ *     sends land in communication_log as draft_status='pending' and
+ *     the owner approves via the web inbox (Wave 8d) or a one-tap
+ *     confirm deeplink (also 8d).
+ *
+ * Scope in Wave 8c: read tools + draft_reply. Write actions (send,
+ * refund, publish) ship in 8d behind the action-token deeplink.
+ */
+
+import { generateText, stepCountIs, tool } from "ai"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { z } from "zod"
+
+export type OwnerAIHistoryEntry = {
+  direction: "inbound" | "outbound"
+  body: string
+}
+
+export type OwnerAIInput = {
+  supabase: SupabaseClient
+  orgId: string
+  orgName: string
+  /** The owner's users.id (bound via chat_group_members.user_id). */
+  userId: string
+  ownerDisplayName: string | null
+  /** This conversation's id (the owner↔AI thread). */
+  ownerConversationId: string
+  userMessage: string
+  history: OwnerAIHistoryEntry[]
+}
+
+export type OwnerAIOutput = {
+  replyText?: string
+  escalated?: boolean
+  needsReview?: boolean
+  meta?: Record<string, unknown>
+}
+
+const MODEL = "openai/gpt-4o-mini"
+const MAX_TOOL_STEPS = 6
+const MAX_OUTPUT_TOKENS = 800
+
+export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
+  const { supabase, orgId, orgName, ownerConversationId } = input
+
+  const systemPrompt = buildOwnerSystemPrompt(input)
+
+  const tools = {
+    summarize_today: tool({
+      description:
+        "Get today's operational snapshot for the gym: new inbound inquiries, pending draft replies, today's bookings, unread threads. Use whenever the owner asks 'what's going on', 'what's today', 'status', or similar.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const today = new Date()
+        const todayStart = new Date(today)
+        todayStart.setHours(0, 0, 0, 0)
+
+        const [
+          { data: todayBookings },
+          { data: todayInbound },
+          { data: pendingDrafts },
+          { data: awaitingHuman },
+        ] = await Promise.all([
+          supabase
+            .from("bookings")
+            .select("id, booking_date, booking_time, status, guest_name, services(name)")
+            .eq("org_id", orgId)
+            .eq("booking_date", todayStart.toISOString().slice(0, 10))
+            .order("booking_time", { ascending: true }),
+          supabase
+            .from("communication_log")
+            .select("id, conversation_id, body, created_at, channel")
+            .eq("org_id", orgId)
+            .eq("direction", "inbound")
+            .gte("created_at", todayStart.toISOString())
+            .order("created_at", { ascending: false })
+            .limit(50),
+          supabase
+            .from("communication_log")
+            .select("id, conversation_id, body, created_at")
+            .eq("org_id", orgId)
+            .eq("draft_status", "pending")
+            .order("created_at", { ascending: false })
+            .limit(20),
+          supabase
+            .from("conversations")
+            .select("id, channel, last_message_preview, last_message_at")
+            .eq("org_id", orgId)
+            .eq("status", "awaiting_human")
+            .order("last_message_at", { ascending: false })
+            .limit(20),
+        ])
+
+        return {
+          bookings_today: (todayBookings ?? []).map((b: unknown) => {
+            const row = b as {
+              id: string
+              booking_time: string | null
+              status: string
+              guest_name: string | null
+              services: { name: string }[] | { name: string } | null
+            }
+            const serviceName = Array.isArray(row.services)
+              ? row.services[0]?.name
+              : row.services?.name
+            return {
+              id: row.id,
+              time: row.booking_time,
+              status: row.status,
+              who: row.guest_name ?? "—",
+              service: serviceName ?? "—",
+            }
+          }),
+          inbound_today: (todayInbound ?? []).length,
+          pending_drafts: (pendingDrafts ?? []).length,
+          awaiting_human: (awaitingHuman ?? []).map((c: unknown) => {
+            const row = c as {
+              id: string
+              channel: string
+              last_message_preview: string | null
+              last_message_at: string | null
+            }
+            return row
+          }),
+        }
+      },
+    }),
+
+    list_pending_drafts: tool({
+      description:
+        "List draft replies the concierge has prepared for owner approval. Use when the owner asks 'what's pending', 'anything to approve', or wants to review drafts.",
+      inputSchema: z.object({
+        limit: z.number().min(1).max(20).default(10),
+      }),
+      execute: async ({ limit }) => {
+        const { data } = await supabase
+          .from("communication_log")
+          .select(
+            "id, conversation_id, body, created_at, conversations(id, channel, last_message_preview)",
+          )
+          .eq("org_id", orgId)
+          .eq("draft_status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(limit)
+        return { count: data?.length ?? 0, drafts: data ?? [] }
+      },
+    }),
+
+    get_conversation: tool({
+      description:
+        "Fetch the full message history of one conversation (thread) by id. Use before drafting a reply so you have the full context.",
+      inputSchema: z.object({
+        conversation_id: z.string().uuid(),
+        limit: z.number().min(1).max(100).default(30),
+      }),
+      execute: async ({ conversation_id, limit }) => {
+        const { data: convo } = await supabase
+          .from("conversations")
+          .select("id, channel, status, last_message_at, external_thread_id")
+          .eq("id", conversation_id)
+          .eq("org_id", orgId)
+          .maybeSingle()
+        if (!convo) return { error: "not_found" }
+
+        const { data: messages } = await supabase
+          .from("communication_log")
+          .select("id, direction, body, created_at, handled_by, draft_status")
+          .eq("conversation_id", conversation_id)
+          .eq("org_id", orgId)
+          .order("created_at", { ascending: true })
+          .limit(limit)
+
+        return { conversation: convo, messages: messages ?? [] }
+      },
+    }),
+
+    search_conversations: tool({
+      description:
+        "Search recent conversations by free-text match on last_message_preview, or filter by status.",
+      inputSchema: z.object({
+        query: z.string().optional(),
+        status: z.enum(["open", "awaiting_human", "closed"]).optional(),
+        limit: z.number().min(1).max(20).default(10),
+      }),
+      execute: async ({ query, status, limit }) => {
+        let q = supabase
+          .from("conversations")
+          .select("id, channel, status, last_message_preview, last_message_at")
+          .eq("org_id", orgId)
+          .order("last_message_at", { ascending: false })
+          .limit(limit)
+        if (status) q = q.eq("status", status)
+        if (query) q = q.ilike("last_message_preview", `%${query}%`)
+        const { data } = await q
+        return { count: data?.length ?? 0, conversations: data ?? [] }
+      },
+    }),
+
+    draft_reply: tool({
+      description:
+        "Compose a draft reply to send into another conversation (e.g. a visitor thread). The draft is saved with draft_status='pending' and awaits owner approval in the web inbox — it is NOT sent immediately. Returns the draft id for reference.",
+      inputSchema: z.object({
+        conversation_id: z
+          .string()
+          .uuid()
+          .describe("The target conversation the draft replies to."),
+        body: z
+          .string()
+          .min(1)
+          .max(2000)
+          .describe("The exact reply text to send (in the visitor's language)."),
+      }),
+      execute: async ({ conversation_id, body }) => {
+        // Verify the target conversation belongs to this org (defense in
+        // depth — the supabase client is service-role).
+        const { data: convo } = await supabase
+          .from("conversations")
+          .select("id, channel")
+          .eq("id", conversation_id)
+          .eq("org_id", orgId)
+          .maybeSingle()
+        if (!convo) {
+          return { ok: false, error: "conversation_not_found" }
+        }
+
+        const { data: draft, error } = await supabase
+          .from("communication_log")
+          .insert({
+            org_id: orgId,
+            conversation_id,
+            channel: convo.channel,
+            direction: "outbound",
+            body,
+            metadata: {
+              drafted_by_owner_ai: true,
+              proposed_in_conversation: ownerConversationId,
+            },
+            handled_by: "ai",
+            needs_review: true,
+            draft_status: "pending",
+          })
+          .select("id")
+          .single()
+
+        if (error || !draft) {
+          return { ok: false, error: error?.message ?? "insert_failed" }
+        }
+        return {
+          ok: true,
+          draft_id: draft.id,
+          note: "Saved as pending draft. Owner must approve via the inbox before it sends.",
+        }
+      },
+    }),
+  }
+
+  const messages = buildConversationMessages(input)
+
+  try {
+    const result = await generateText({
+      model: MODEL,
+      system: systemPrompt,
+      messages,
+      tools,
+      stopWhen: stepCountIs(MAX_TOOL_STEPS),
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      temperature: 0.3, // operator mode — keep it crisp
+    })
+
+    const replyText = result.text?.trim()
+    return {
+      replyText: replyText || undefined,
+      meta: {
+        model: MODEL,
+        steps: result.steps?.length ?? 0,
+        usage: result.usage,
+        owner_ai: true,
+      },
+    }
+  } catch (err) {
+    console.error("[chat/owner-ai] AI call failed:", err)
+    return {
+      replyText:
+        "Owner AI is temporarily unavailable (AI gateway error). Your message has been logged; try again in a minute, or check the inbox directly.",
+      needsReview: true,
+      meta: {
+        model: MODEL,
+        error: err instanceof Error ? err.message : String(err),
+        fallback: "owner_unavailable",
+      },
+    }
+  }
+}
+
+function buildOwnerSystemPrompt(input: OwnerAIInput): string {
+  const who = input.ownerDisplayName
+    ? `You are assisting ${input.ownerDisplayName}`
+    : "You are assisting the gym owner"
+
+  return `You are the operator-side AI for ${input.orgName}. ${who}.
+
+# Mode
+Operator-mode, not hospitality. No "Sawadee", no emoji pageantry. Be crisp, useful, and honest. Reply in the owner's language (Thai or English, whichever they used last).
+
+# Capabilities
+- Inbox summary (today's inquiries, pending drafts, awaiting-human threads)
+- Read a full conversation thread
+- Search recent conversations by text or status
+- Draft a reply to a visitor thread (draft-only — owner approves in the web inbox before it sends)
+- Today's bookings
+
+# Safety
+- You never send customer replies directly. draft_reply saves to pending — a human approves.
+- If the owner asks you to do something you can't (refunds, publish content, change schedules, billing), tell them plainly and suggest the web console. Destructive write actions will ship in Wave 8d behind a deeplink-confirm pattern.
+- Do not reveal other gyms' data. All tools are scoped to this org.
+- If you don't know, say so. Don't invent numbers, names, or bookings.
+
+# Output style
+- Plain text suitable for a chat bubble.
+- Short. The owner is on a phone.
+- When you list items, use line breaks, not Markdown tables.
+- When you draft something, quote the draft back to the owner for a final look before they approve in the inbox.`
+}
+
+function buildConversationMessages(
+  input: OwnerAIInput,
+): Array<{ role: "user" | "assistant"; content: string }> {
+  const recent = input.history.slice(-20)
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = []
+  for (const entry of recent) {
+    if (!entry.body) continue
+    messages.push({
+      role: entry.direction === "inbound" ? "user" : "assistant",
+      content: entry.body,
+    })
+  }
+  const last = messages[messages.length - 1]
+  if (!last || last.role !== "user" || last.content !== input.userMessage) {
+    messages.push({ role: "user", content: input.userMessage })
+  }
+  return messages
+}
