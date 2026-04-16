@@ -24,8 +24,14 @@ export const lineAdapter: ChannelAdapter = {
 
   parse(raw: unknown): IncomingMessage[] {
     if (!raw || typeof raw !== "object") return []
-    const payload = raw as { events?: unknown[] }
+    const payload = raw as { events?: unknown[]; destination?: string }
     if (!Array.isArray(payload.events)) return []
+
+    // LINE delivers all events in one webhook for the same destination
+    // (the gym's LINE OA userId). We stamp it on each message so the
+    // engine can resolve an unknown sender → the right chat_group.
+    const receiverAccountId =
+      typeof payload.destination === "string" ? payload.destination : undefined
 
     const messages: IncomingMessage[] = []
 
@@ -100,6 +106,7 @@ export const lineAdapter: ChannelAdapter = {
         attachments: attachments.length > 0 ? attachments : undefined,
         isDirectMessage: isDM,
         externalMessageId: e.message.id,
+        receiverAccountId,
         rawUpdate: event,
         receivedAt: e.timestamp
           ? new Date(e.timestamp).toISOString()

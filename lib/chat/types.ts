@@ -33,6 +33,21 @@ export type IncomingMessage = {
   isDirectMessage: boolean
   /** Channel-native message ID, used for dedup + reply threading. */
   externalMessageId?: string
+  /**
+   * Identifier of OUR receiving account on the channel. Used by the engine
+   * to look up which org/chat_group owns this inbound (via
+   * mtp_chat_group_channels) when the sender isn't yet bound to a member.
+   *   - line      → LINE OA's userId (webhook payload `destination`)
+   *   - telegram  → bot user id (numeric, stringified)
+   *   - whatsapp  → phone_number_id from Cloud API value.metadata
+   *   - ig / fb   → business account / page id
+   *   - test      → whatever the test caller passes
+   * Optional because some adapters can't derive it without extra config
+   * (Telegram without TELEGRAM_BOT_ID env var). When missing, the engine
+   * falls back to single-gym auto-routing if exactly one public_inbox
+   * group for this channel is registered deployment-wide.
+   */
+  receiverAccountId?: string
   /** Full original payload. Preserved in mtp_communication_log.metadata for debugging. */
   rawUpdate: unknown
   /** ISO timestamp of when the channel reports the message was sent. */

@@ -55,6 +55,7 @@ export const testAdapter: ChannelAdapter = {
    *     isDirectMessage?: boolean,
    *     externalMessageId?: string,
    *     senderDisplayName?: string,
+   *     receiverAccountId?: string,  // for testing auto-bind routing
    *   }
    *
    * Or an array of the above for batch-testing.
@@ -86,6 +87,10 @@ export const testAdapter: ChannelAdapter = {
           typeof r.externalMessageId === "string"
             ? r.externalMessageId
             : `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        receiverAccountId:
+          typeof r.receiverAccountId === "string"
+            ? r.receiverAccountId
+            : undefined,
         rawUpdate: r,
         receivedAt: new Date().toISOString(),
       })

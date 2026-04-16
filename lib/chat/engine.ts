@@ -75,29 +75,25 @@ export async function handleMessage(
     }
 
     // 2. Resolve sender → member → group → org
-    const { data: member } = await supabase
-      .from("mtp_chat_group_members")
-      .select(
-        "id, group_id, user_id, role, mtp_chat_groups!inner(org_id, purpose, is_active)",
-      )
-      .eq("channel", msg.platform)
-      .eq("channel_user_id", msg.externalSenderId)
-      .eq("channel_chat_id", msg.externalChatId)
-      .maybeSingle()
+    let member = await resolveMember(supabase, msg)
 
     if (!member) {
-      // No binding yet. Auto-binding anonymous visitors to a gym's
-      // public_inbox group on first contact happens in the webhook
-      // layer (Wave 8e) once we know which group owns which LINE OA
-      // channel credential. Until then, unrecognized senders are
-      // logged and dropped so we never leak one gym's data into
-      // another's conversation.
-      console.warn("[chat/engine] Unrecognized sender", {
-        platform: msg.platform,
-        externalSenderId: msg.externalSenderId,
-        externalChatId: msg.externalChatId,
-      })
-      return { ...empty, error: "unrecognized_sender" }
+      // No existing binding. Try to auto-bind this sender as a visitor
+      // to a gym's public_inbox group, using the channel routing table
+      // (mtp_chat_group_channels). Owner_assist and staff groups are
+      // never auto-bound — strangers posting into those would be a
+      // privacy leak — so we drop unless we resolve to a public_inbox.
+      const bound = await autoBindVisitor(supabase, msg)
+      if (!bound) {
+        console.warn("[chat/engine] Unrecognized sender, no route", {
+          platform: msg.platform,
+          externalSenderId: msg.externalSenderId,
+          externalChatId: msg.externalChatId,
+          receiverAccountId: msg.receiverAccountId,
+        })
+        return { ...empty, error: "unrecognized_sender" }
+      }
+      member = bound
     }
 
     const group = Array.isArray(member.mtp_chat_groups)
@@ -380,4 +376,166 @@ async function runOwnerAIForConversation(params: {
     userMessage,
     history,
   })
+}
+
+// ---------------------------------------------------------------------------
+// Member resolution + auto-bind helpers (Wave 9b)
+// ---------------------------------------------------------------------------
+
+/**
+ * Shape returned by the member lookup. Extracted so the auto-bind path
+ * can return the same shape as the primary lookup without drift.
+ */
+type ResolvedMember = {
+  id: string
+  group_id: string
+  user_id: string | null
+  role: string
+  mtp_chat_groups:
+    | { org_id: string; purpose: string; is_active: boolean }
+    | Array<{ org_id: string; purpose: string; is_active: boolean }>
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveMember(supabase: any, msg: IncomingMessage) {
+  const { data } = await supabase
+    .from("mtp_chat_group_members")
+    .select(
+      "id, group_id, user_id, role, mtp_chat_groups!inner(org_id, purpose, is_active)",
+    )
+    .eq("channel", msg.platform)
+    .eq("channel_user_id", msg.externalSenderId)
+    .eq("channel_chat_id", msg.externalChatId)
+    .maybeSingle()
+  return data as ResolvedMember | null
+}
+
+/**
+ * First-contact routing. Given an unrecognized sender, find the
+ * public_inbox chat_group that owns the channel account they wrote to,
+ * then persist a visitor member row so future messages resolve directly.
+ *
+ * Lookup order:
+ *   1. (channel, receiverAccountId) exact match on mtp_chat_group_channels
+ *   2. Fallback: if receiverAccountId is missing AND exactly one active
+ *      public_inbox channel row exists for this channel deployment-wide,
+ *      use it. This is the single-gym bootstrap path — the moment a
+ *      second gym registers, ambiguity is caught and we drop instead.
+ *
+ * Returns null if:
+ *   - no routing row matches
+ *   - the matched group is not public_inbox
+ *   - the matched group is inactive
+ *   - visitor insert fails
+ */
+async function autoBindVisitor(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  msg: IncomingMessage,
+): Promise<ResolvedMember | null> {
+  // Step 1: find the channel routing row.
+  const channelSelect =
+    "group_id, external_account_id, is_active, mtp_chat_groups!inner(org_id, purpose, is_active)"
+
+  let channelRow:
+    | {
+        group_id: string
+        external_account_id: string
+        is_active: boolean
+        mtp_chat_groups:
+          | { org_id: string; purpose: string; is_active: boolean }
+          | Array<{ org_id: string; purpose: string; is_active: boolean }>
+      }
+    | null = null
+
+  if (msg.receiverAccountId) {
+    const { data } = await supabase
+      .from("mtp_chat_group_channels")
+      .select(channelSelect)
+      .eq("channel", msg.platform)
+      .eq("external_account_id", msg.receiverAccountId)
+      .eq("is_active", true)
+      .maybeSingle()
+    channelRow = data ?? null
+  } else {
+    // Single-gym bootstrap fallback. Only binds when unambiguous.
+    const { data: rows } = await supabase
+      .from("mtp_chat_group_channels")
+      .select(channelSelect)
+      .eq("channel", msg.platform)
+      .eq("is_active", true)
+      .limit(2)
+
+    if (Array.isArray(rows) && rows.length === 1) {
+      // Filter to public_inbox purpose to avoid single-gym bootstrap
+      // silently routing into an owner_assist group.
+      const only = rows[0]
+      const g = Array.isArray(only.mtp_chat_groups)
+        ? only.mtp_chat_groups[0]
+        : only.mtp_chat_groups
+      if (g?.purpose === "public_inbox") {
+        channelRow = only
+      }
+    }
+  }
+
+  if (!channelRow) return null
+
+  const group = Array.isArray(channelRow.mtp_chat_groups)
+    ? channelRow.mtp_chat_groups[0]
+    : channelRow.mtp_chat_groups
+  if (!group || !group.is_active) return null
+  if (group.purpose !== "public_inbox") return null
+
+  // Step 2: insert a visitor member. UNIQUE (channel, channel_user_id,
+  // channel_chat_id) protects against races — if two inbounds arrive
+  // concurrently and both try to insert, the second returns a conflict
+  // and we re-resolve via resolveMember().
+  const { data: inserted, error: insertErr } = await supabase
+    .from("mtp_chat_group_members")
+    .insert({
+      group_id: channelRow.group_id,
+      channel: msg.platform,
+      channel_user_id: msg.externalSenderId,
+      channel_chat_id: msg.externalChatId,
+      user_id: null,
+      role: "visitor",
+      display_name: msg.senderDisplayName ?? null,
+    })
+    .select("id, group_id, user_id, role")
+    .single()
+
+  if (insertErr || !inserted) {
+    // Likely a unique-constraint race. Re-resolve to pick up the row
+    // the other request just inserted.
+    const retry = await resolveMember(supabase, msg)
+    if (retry) return retry
+    console.error("[chat/engine] autoBindVisitor insert failed:", insertErr?.message)
+    return null
+  }
+
+  // Best-effort: bump last_inbound_at on the channel row so the
+  // admin inbox can surface fresh channels. Non-blocking.
+  supabase
+    .from("mtp_chat_group_channels")
+    .update({ last_inbound_at: msg.receivedAt })
+    .eq("channel", msg.platform)
+    .eq("external_account_id", channelRow.external_account_id)
+    .then(
+      () => undefined,
+      (e: unknown) => {
+        console.warn(
+          "[chat/engine] last_inbound_at bump failed:",
+          e instanceof Error ? e.message : String(e),
+        )
+      },
+    )
+
+  return {
+    id: inserted.id,
+    group_id: inserted.group_id,
+    user_id: inserted.user_id,
+    role: inserted.role,
+    mtp_chat_groups: group,
+  }
 }

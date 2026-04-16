@@ -3,10 +3,17 @@
  *
  * Docs: https://core.telegram.org/bots/api
  *
- * Env vars (both optional until a Telegram bot is connected):
+ * Env vars (all optional until a Telegram bot is connected):
  *   TELEGRAM_BOT_TOKEN          — used for sendMessage auth
  *   TELEGRAM_WEBHOOK_SECRET     — echoed back in X-Telegram-Bot-Api-Secret-Token
  *                                 header; set via setWebhook(secret_token=...).
+ *   TELEGRAM_BOT_ID             — numeric bot id (first segment of the bot
+ *                                 token, before the colon). Used as the
+ *                                 adapter's receiverAccountId so the
+ *                                 engine can route unknown senders to
+ *                                 the right gym via mtp_chat_group_channels.
+ *                                 For multi-bot deployments switch to a
+ *                                 per-bot webhook path later.
  *
  * Telegram's signature story is simpler than LINE's: you register a
  * secret string when you call setWebhook, and Telegram sends it back
@@ -120,6 +127,15 @@ export const telegramAdapter: ChannelAdapter = {
       ? new Date(msg.date * 1000).toISOString()
       : new Date().toISOString()
 
+    // Telegram doesn't send a receiver id in the webhook payload itself —
+    // the bot identity is implicit in the fact that Telegram delivered
+    // this update to our webhook URL. For single-bot deployments we read
+    // TELEGRAM_BOT_ID from env and stamp it here so the engine can route
+    // first-contact visitors through mtp_chat_group_channels. Multi-bot
+    // deployments will switch to per-bot webhook paths and derive the id
+    // from the path at the webhook layer.
+    const receiverAccountId = process.env.TELEGRAM_BOT_ID || undefined
+
     return [
       {
         platform: "telegram",
@@ -131,6 +147,7 @@ export const telegramAdapter: ChannelAdapter = {
         isDirectMessage: isDM,
         externalMessageId:
           msg.message_id !== undefined ? String(msg.message_id) : undefined,
+        receiverAccountId,
         rawUpdate: update,
         receivedAt,
       },

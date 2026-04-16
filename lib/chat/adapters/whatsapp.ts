@@ -171,6 +171,7 @@ export const whatsappAdapter: ChannelAdapter = {
             attachments: attachments.length > 0 ? attachments : undefined,
             isDirectMessage: true, // Cloud API does not surface group chats.
             externalMessageId: msg.id ? String(msg.id) : undefined,
+            receiverAccountId: phoneNumberId,
             rawUpdate: {
               entry_id: entry.id,
               phone_number_id: phoneNumberId,
