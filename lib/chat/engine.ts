@@ -8,7 +8,7 @@
  *   2. Resolves tenant (org_id) via chat_group_members binding
  *   3. Upserts the conversation
  *   4. Persists the inbound message to communication_log
- *   5. Runs the AI pipeline (stubbed in Phase 8a, Claude in Phase 8b)
+ *   5. Runs the AI pipeline (concierge live in 8b; owner AI stub → 8c)
  *   6. Persists the outbound message + sends via adapter
  *   7. Updates conversation status on escalation
  *
@@ -18,6 +18,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js"
+import { runConciergeAI, type ConciergeHistoryEntry } from "./ai/concierge"
+import { loadGymKnowledge } from "./knowledge"
 import type {
   ChannelAdapter,
   HandleMessageResult,
@@ -83,9 +85,12 @@ export async function handleMessage(
       .maybeSingle()
 
     if (!member) {
-      // No binding yet. Phase 8b will add credential→org fallback for
-      // public inbox channels so anonymous visitors auto-bind on first
-      // contact. Until then, unrecognized senders are logged and dropped.
+      // No binding yet. Auto-binding anonymous visitors to a gym's
+      // public_inbox group on first contact happens in the webhook
+      // layer (Wave 8e) once we know which group owns which LINE OA
+      // channel credential. Until then, unrecognized senders are
+      // logged and dropped so we never leak one gym's data into
+      // another's conversation.
       console.warn("[chat/engine] Unrecognized sender", {
         platform: msg.platform,
         externalSenderId: msg.externalSenderId,
@@ -175,14 +180,30 @@ export async function handleMessage(
         .eq("id", conversationId)
     }
 
-    // 5. Run AI (STUB in Phase 8a; Claude tool-loop in Phase 8b)
-    const aiResult = await runAIStub({
-      orgId,
-      conversationId,
-      purpose,
-      userMessage: msg.text,
-      isBoundUser: !!member.user_id,
-    })
+    // 5. Run AI
+    //    - public_inbox → concierge (Wave 8b, shipped)
+    //    - owner_assist → owner AI (Wave 8c, still stub)
+    //    - staff        → no AI (human-only channel)
+    let aiResult: AIOutput
+    if (purpose === "public_inbox") {
+      aiResult = await runConciergeForConversation({
+        supabase,
+        orgId,
+        conversationId,
+        userMessage: msg.text,
+        isBoundUser: !!member.user_id,
+        isFirstMessage: !existingConvo,
+      })
+    } else if (purpose === "owner_assist") {
+      aiResult = await runOwnerAIStub({
+        orgId,
+        conversationId,
+        userMessage: msg.text,
+      })
+    } else {
+      // staff channel: no AI, just log the message
+      aiResult = {}
+    }
 
     // 6. Persist outbound + send via adapter
     if (aiResult.replyText) {
@@ -239,30 +260,74 @@ export async function handleMessage(
 }
 
 // ---------------------------------------------------------------------------
-// AI STUB — Phase 8a scaffolding. Phase 8b replaces this with Anthropic
-// Claude + tool-use loop + prompt caching (see lib/chat/ai.ts, to be added).
+// AI routing helpers
 // ---------------------------------------------------------------------------
 
-type AIStubInput = {
-  orgId: string
-  conversationId: string
-  purpose: string
-  userMessage: string
-  isBoundUser: boolean
-}
-
-type AIStubOutput = {
+type AIOutput = {
   replyText?: string
   escalated?: boolean
   needsReview?: boolean
   meta?: Record<string, unknown>
 }
 
-async function runAIStub(input: AIStubInput): Promise<AIStubOutput> {
-  const prefix =
-    input.purpose === "owner_assist" ? "[owner-AI stub]" : "[concierge stub]"
+const HISTORY_TURN_LIMIT = 20
+
+async function runConciergeForConversation(params: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any
+  orgId: string
+  conversationId: string
+  userMessage: string
+  isBoundUser: boolean
+  isFirstMessage: boolean
+}): Promise<AIOutput> {
+  const { supabase, orgId, conversationId, userMessage } = params
+
+  // Load KB + history in parallel.
+  const [kb, historyRes] = await Promise.all([
+    loadGymKnowledge(supabase, orgId),
+    supabase
+      .from("communication_log")
+      .select("direction, body, created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
+      .limit(HISTORY_TURN_LIMIT),
+  ])
+
+  if (!kb) {
+    console.warn("[chat/engine] KB load returned null for org", orgId)
+    return { replyText: undefined }
+  }
+
+  // Reverse so history is oldest → newest. Includes the inbound we
+  // just persisted, which is what the AI needs as the final turn.
+  const history: ConciergeHistoryEntry[] = ((historyRes.data ?? []) as Array<{
+    direction: "inbound" | "outbound"
+    body: string
+  }>)
+    .slice()
+    .reverse()
+    .map((r) => ({ direction: r.direction, body: r.body }))
+
+  return runConciergeAI({
+    kb,
+    userMessage,
+    history,
+    isBoundUser: params.isBoundUser,
+    isFirstMessage: params.isFirstMessage,
+  })
+}
+
+// Owner AI still stubbed until Wave 8c. Kept in-engine so the routing
+// seam stays honest — we don't want a silent "owner_assist purpose does
+// nothing" when the owner sends a real message.
+async function runOwnerAIStub(input: {
+  orgId: string
+  conversationId: string
+  userMessage: string
+}): Promise<AIOutput> {
   return {
-    replyText: `${prefix} Received: "${input.userMessage}"`,
-    meta: { stub: true, phase: "8a" },
+    replyText: `[owner-AI stub] Received: "${input.userMessage}" — real owner AI ships in Wave 8c.`,
+    meta: { stub: true, phase: "8b" },
   }
 }
