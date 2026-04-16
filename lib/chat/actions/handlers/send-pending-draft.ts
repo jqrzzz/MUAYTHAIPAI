@@ -17,15 +17,17 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { lineAdapter } from "../../adapters/line"
 import { telegramAdapter } from "../../adapters/telegram"
 import { testAdapter } from "../../adapters/test"
+import { whatsappAdapter } from "../../adapters/whatsapp"
 import type { ChannelAdapter } from "../../types"
 import type { ActionHandler, ActionHandlerResult } from "../types"
 
 // Adapter registry. Add new channels here as they're implemented.
-// Channels without adapters (whatsapp, ig, fb, web as of wave 8d)
-// will return a clear error so the owner knows why it didn't send.
+// Channels without adapters (ig, fb, web as of wave 9a) will return a
+// clear error so the owner knows why it didn't send.
 const adapters: Partial<Record<string, ChannelAdapter>> = {
   line: lineAdapter,
   telegram: telegramAdapter,
+  whatsapp: whatsappAdapter,
   test: testAdapter,
 }
 
