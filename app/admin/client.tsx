@@ -26,6 +26,7 @@ import TrainOckockTab from "@/components/admin/train-ockock-tab"
 import OckockChatTab from "@/components/admin/ockock-chat-tab"
 import MarketingTab from "@/components/admin/marketing-tab"
 import InboxTab from "@/components/admin/inbox-tab"
+import ChannelsTab from "@/components/admin/channels-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import {
   Calendar,
@@ -56,6 +57,7 @@ import {
   MoreHorizontal,
   Megaphone,
   Inbox,
+  Link2,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -227,7 +229,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "profile" | "train-ockock" | "marketing" | "inbox"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -923,6 +925,7 @@ export default function AdminDashboardClient({
       labelTh: "บัญชี",
       items: [
         { id: "profile" as const, label: "My Profile", labelTh: "โปรไฟล์", icon: User },
+        { id: "channels" as const, label: "Channels", labelTh: "ช่องทาง", icon: Link2 },
         { id: "settings" as const, label: "Settings", labelTh: "ตั้งค่า", icon: Settings },
       ],
     },
@@ -2201,6 +2204,8 @@ export default function AdminDashboardClient({
           {activeTab === "ockock" && <OckockChatTab orgId={membership.org_id} />}
 
           {activeTab === "inbox" && <InboxTab role={membership.role} />}
+
+          {activeTab === "channels" && <ChannelsTab role={membership.role} />}
         </div>
       </main>
     </div>
