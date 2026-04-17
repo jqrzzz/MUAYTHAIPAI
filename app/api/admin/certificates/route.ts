@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { randomBytes } from "crypto"
+import { LEVEL_IDS, getLevelById, getLevelIndex } from "@/lib/certification-levels"
 
 // GET - List certificates issued by this gym
 export async function GET() {
@@ -72,11 +73,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "student_email and level are required" }, { status: 400 })
   }
 
-  const VALID_LEVELS = ["naga", "phayra-nak", "singha", "hanuman", "garuda"]
   const normalizedLevel = level.toLowerCase()
-  if (!VALID_LEVELS.includes(normalizedLevel)) {
+  const levelConfig = getLevelById(normalizedLevel)
+  if (!levelConfig) {
     return NextResponse.json(
-      { error: `Invalid level. Must be one of: ${VALID_LEVELS.join(", ")}` },
+      { error: `Invalid level. Must be one of: ${LEVEL_IDS.join(", ")}` },
       { status: 400 }
     )
   }
@@ -109,22 +110,66 @@ export async function POST(request: Request) {
     )
   }
 
-  // Enforce level progression — require all prior levels before issuing higher ones
-  const levelIndex = VALID_LEVELS.indexOf(normalizedLevel)
+  // Enforce level progression — require all prior levels (checked cross-gym)
+  const levelIndex = getLevelIndex(normalizedLevel)
   if (levelIndex > 0) {
-    const requiredLevels = VALID_LEVELS.slice(0, levelIndex)
+    const requiredLevels = LEVEL_IDS.slice(0, levelIndex)
     const { data: earnedCerts } = await supabase
       .from("certificates")
-      .select("level")
+      .select("level, issued_at")
       .eq("user_id", student.id)
       .eq("status", "active")
       .in("level", requiredLevels)
 
-    const earnedLevels = new Set((earnedCerts ?? []).map((c: { level: string }) => c.level))
-    const missing = requiredLevels.filter((l) => !earnedLevels.has(l))
+    const earnedMap = new Map(
+      (earnedCerts ?? []).map((c: { level: string; issued_at: string }) => [c.level, c.issued_at])
+    )
+    const missing = requiredLevels.filter((l) => !earnedMap.has(l))
     if (missing.length > 0) {
       return NextResponse.json(
         { error: `Student must complete ${missing.map((l) => l.replace(/-/g, " ")).join(", ")} first` },
+        { status: 400 }
+      )
+    }
+
+    // Enforce minimum time since previous level
+    const prevLevelId = LEVEL_IDS[levelIndex - 1]
+    const prevIssuedAt = earnedMap.get(prevLevelId)
+    if (prevIssuedAt && levelConfig.minDaysAfterPrevious > 0) {
+      const daysSince = Math.floor(
+        (Date.now() - new Date(prevIssuedAt).getTime()) / (1000 * 60 * 60 * 24)
+      )
+      if (daysSince < levelConfig.minDaysAfterPrevious) {
+        const remaining = levelConfig.minDaysAfterPrevious - daysSince
+        return NextResponse.json(
+          {
+            error: `Too soon — ${remaining} day${remaining === 1 ? "" : "s"} remaining before ${levelConfig.name} can be issued (minimum ${levelConfig.minDaysAfterPrevious} days after ${prevLevelId.replace(/-/g, " ")})`,
+          },
+          { status: 400 }
+        )
+      }
+    }
+  }
+
+  // Check skill signoffs if they exist
+  const { data: signoffs } = await supabase
+    .from("skill_signoffs")
+    .select("skill_index")
+    .eq("student_id", student.id)
+    .eq("org_id", membership.org_id)
+    .eq("level", normalizedLevel)
+
+  const signedCount = signoffs?.length ?? 0
+  const requiredCount = levelConfig.skills.length
+  if (signedCount < requiredCount) {
+    const skip = body.skip_skills_check === true
+    if (!skip) {
+      return NextResponse.json(
+        {
+          error: `${signedCount}/${requiredCount} skills signed off. Complete all skill requirements or pass skip_skills_check: true to override.`,
+          signedOff: signedCount,
+          required: requiredCount,
+        },
         { status: 400 }
       )
     }
@@ -138,6 +183,15 @@ export async function POST(request: Request) {
     .eq("user_id", user.id)
     .single()
 
+  // Trainer authorization: trainers can issue up to Singha (Level 3).
+  // Hanuman (4) and Garuda (5) require owner or admin role.
+  if (membership.role === "trainer" && levelConfig.number >= 4) {
+    return NextResponse.json(
+      { error: `Only gym owners and admins can issue ${levelConfig.name} (Level ${levelConfig.number}) certificates` },
+      { status: 403 }
+    )
+  }
+
   // Generate unique certificate number
   const certNumber = `MTP-${level.toUpperCase().slice(0, 3)}-${randomBytes(4).toString("hex").toUpperCase()}`
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
@@ -148,7 +202,7 @@ export async function POST(request: Request) {
       org_id: membership.org_id,
       user_id: student.id,
       level: normalizedLevel,
-      level_number: level_number || VALID_LEVELS.indexOf(normalizedLevel) + 1,
+      level_number: level_number || levelConfig.number,
       issued_by: trainerProfile?.id || null,
       certificate_number: certNumber,
       verification_url: `${siteUrl}/verify/${certNumber}`,

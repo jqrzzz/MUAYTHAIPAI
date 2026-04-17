@@ -156,31 +156,28 @@ export default function CertificateProgramsClient() {
     setBookingData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handlePayment = async (method: string, certId: string) => {
+  const handlePayment = async (_method: string, certId: string) => {
     const cert = certificates.find((c) => c.id === certId)
     if (!cert || !bookingData.name || !bookingData.email) return
 
     setIsProcessingPayment(true)
     try {
-      const res = await fetch("/api/bookings", {
+      const res = await fetch("/api/public/enroll", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          serviceName: `${cert.name} Certification (Level ${cert.level})`,
-          guest_name: bookingData.name,
-          guest_email: bookingData.email,
-          booking_date: new Date().toISOString().split("T")[0],
-          payment_method: method,
-          payment_amount_thb: parseInt(cert.price.replace(/[^0-9]/g, ""), 10),
-          payment_status: "pending",
-          status: "confirmed",
+          name: bookingData.name,
+          email: bookingData.email,
+          level: cert.id,
+          orgSlug: "wisarut-family-gym",
         }),
       })
-      if (!res.ok) throw new Error("Booking failed")
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Enrollment failed")
       setPaymentSuccess(certId)
       setBookingData({ name: "", email: "", cardNumber: "", expiry: "", cvc: "" })
-    } catch {
-      alert("Something went wrong. Please try again or contact us directly.")
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Something went wrong. Please try again or contact us directly.")
     } finally {
       setIsProcessingPayment(false)
     }
