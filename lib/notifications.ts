@@ -10,7 +10,7 @@ const serviceClient = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export type NotificationType = "new_booking" | "cancellation" | "payment_received" | "contact_form"
+export type NotificationType = "new_booking" | "cancellation" | "payment_received" | "contact_form" | "course_completed" | "cert_eligible"
 
 interface NotifyOptions {
   orgId: string
@@ -101,6 +101,9 @@ function isNotificationEnabled(
       return settings.notify_on_payment !== false
     case "contact_form":
       return true // Always notify on contact forms
+    case "course_completed":
+    case "cert_eligible":
+      return true
     default:
       return true
   }
@@ -220,6 +223,34 @@ export async function notifyPaymentReceived(data: {
       amount: data.amount,
       currency: data.currency,
       service_name: data.serviceName,
+    },
+  })
+}
+
+/**
+ * Notify gym that a student completed a course tied to a certification level
+ */
+export async function notifyCourseCompleted(data: {
+  orgId: string
+  studentName: string
+  studentId: string
+  courseTitle: string
+  courseId: string
+  certificateLevel: string
+  levelName: string
+}) {
+  await insertNotification({
+    orgId: data.orgId,
+    type: "cert_eligible",
+    title: "Certification Eligible",
+    body: `${data.studentName} completed "${data.courseTitle}" and is now eligible for ${data.levelName} certification`,
+    metadata: {
+      student_id: data.studentId,
+      student_name: data.studentName,
+      course_id: data.courseId,
+      course_title: data.courseTitle,
+      certificate_level: data.certificateLevel,
+      level_name: data.levelName,
     },
   })
 }

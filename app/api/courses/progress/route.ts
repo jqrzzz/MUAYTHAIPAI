@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { notifyCourseCompleted } from "@/lib/notifications"
+import { getLevelById } from "@/lib/certification-levels"
 
 const serviceClient = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -151,7 +153,7 @@ export async function POST(request: Request) {
 
     const { data: course } = await supabase
       .from("courses")
-      .select("total_lessons")
+      .select("total_lessons, certificate_level, org_id, title")
       .eq("id", course_id)
       .single()
 
@@ -168,6 +170,25 @@ export async function POST(request: Request) {
     if (pct >= 100) {
       enrollmentUpdate.status = "completed"
       enrollmentUpdate.completed_at = now
+
+      if (course?.certificate_level && course.org_id) {
+        const levelConfig = getLevelById(course.certificate_level)
+        const { data: profile } = await serviceClient
+          .from("users")
+          .select("full_name")
+          .eq("id", user.id)
+          .single()
+
+        notifyCourseCompleted({
+          orgId: course.org_id,
+          studentName: profile?.full_name || "Student",
+          studentId: user.id,
+          courseTitle: course.title || "Course",
+          courseId: course_id,
+          certificateLevel: course.certificate_level,
+          levelName: levelConfig?.name || course.certificate_level,
+        }).catch(() => {})
+      }
     }
 
     await supabase
