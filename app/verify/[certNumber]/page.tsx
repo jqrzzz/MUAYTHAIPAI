@@ -204,6 +204,20 @@ export default async function VerifyCertificatePage({ params }: Props) {
               </div>
             )}
           </div>
+
+          {/* Print certificate link */}
+          {isActive && (
+            <div className="mt-4 pt-4 border-t border-white/10 text-center">
+              <a
+                href={`/verify/${certNumber}/print`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`text-xs ${style.color} hover:underline`}
+              >
+                Print Certificate &rarr;
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Share buttons */}
