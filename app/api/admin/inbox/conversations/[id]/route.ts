@@ -140,6 +140,12 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (!membership) {
     return NextResponse.json({ error: "No organization" }, { status: 403 })
   }
+  if (!["owner", "admin"].includes(String(membership.role))) {
+    return NextResponse.json(
+      { error: "Forbidden: owner or admin required" },
+      { status: 403 },
+    )
+  }
 
   const body = await request.json().catch(() => ({}))
   const { status } = body as { status?: string }
