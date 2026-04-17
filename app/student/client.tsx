@@ -186,8 +186,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         const data = await res.json()
         setCredits(data.credits || [])
       }
-    } catch (error) {
-      console.error("Failed to fetch credits:", error)
+    } catch {
+      // silent — student dashboard is read-only
     }
     setLoadingCredits(false)
   }
@@ -200,8 +200,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         const data = await res.json()
         setNotes(data.notes || [])
       }
-    } catch (error) {
-      console.error("Failed to fetch notes:", error)
+    } catch {
+      // silent — student dashboard is read-only
     }
     setLoadingNotes(false)
   }
@@ -230,7 +230,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
           { role: "assistant", content: "Sorry, I couldn't process that. Please try again." },
         ])
       }
-    } catch (error) {
+    } catch {
       setChatMessages((prev) => [...prev, { role: "assistant", content: "Connection error. Please try again." }])
     }
     setChatLoading(false)

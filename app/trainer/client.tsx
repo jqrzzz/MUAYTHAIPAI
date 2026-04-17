@@ -215,9 +215,12 @@ export default function TrainerDashboardClient({
         setBookings((prev) =>
           prev.map((b) => (b.id === bookingId ? { ...b, status } : b))
         )
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast({ title: "Error", description: data.error || "Failed to update attendance", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error updating booking:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -235,15 +238,17 @@ export default function TrainerDashboardClient({
         setBookings((prev) =>
           prev.map((b) => (b.id === bookingId ? { ...b, payment_status: "paid" } : b))
         )
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast({ title: "Error", description: data.error || "Failed to update payment", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error updating payment:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Fetch bookings for a specific date
   const fetchBookingsForDate = async (date: string) => {
     setIsLoading(true)
     try {
@@ -253,9 +258,11 @@ export default function TrainerDashboardClient({
         setBookings(data.bookings || [])
         setSelectedDate(date)
         setScheduleView("list")
+      } else {
+        toast({ title: "Error", description: "Failed to load bookings", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error fetching bookings:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -279,8 +286,8 @@ export default function TrainerDashboardClient({
         }
         setMonthBookings(grouped)
       }
-    } catch (error) {
-      console.error("Error fetching month bookings:", error)
+    } catch {
+      toast({ title: "Error", description: "Failed to load calendar", variant: "destructive" })
     } finally {
       setIsLoadingMonth(false)
     }
@@ -311,14 +318,13 @@ export default function TrainerDashboardClient({
           setSelectedStudent(prev => prev ? { ...prev, last_visit: data.lastVisit, total_sessions: data.totalSessions } : null)
         }
       }
-    } catch (error) {
-      console.error("Error fetching student details:", error)
+    } catch {
+      toast({ title: "Error", description: "Failed to load student details", variant: "destructive" })
     } finally {
       setIsLoadingStudent(false)
     }
   }
 
-  // Add note to student (append-only)
   const handleAddNote = async () => {
     if (!selectedStudent || !newNote.trim()) return
     setIsLoading(true)
@@ -332,9 +338,11 @@ export default function TrainerDashboardClient({
         const data = await res.json()
         setStudentNotes(prev => [data.note, ...prev])
         setNewNote("")
+      } else {
+        toast({ title: "Error", description: "Failed to save note", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error adding note:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -409,11 +417,11 @@ export default function TrainerDashboardClient({
           send_invite: true,
         }),
       })
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json()
         setStudents((prev) => [
           {
-            id: data.user_id || Date.now().toString(),
+            id: data.studentId || crypto.randomUUID(),
             full_name: newStudent.name,
             email: newStudent.email,
             avatar_url: null,
@@ -426,9 +434,11 @@ export default function TrainerDashboardClient({
         ])
         setNewStudent({ name: "", email: "" })
         setShowAddStudent(false)
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to add student", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error adding student:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
     } finally {
       setIsAddingStudent(false)
     }
