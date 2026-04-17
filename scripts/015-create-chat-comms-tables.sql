@@ -24,7 +24,7 @@
 -- groups (public LINE OA, owner group chat, staff channel, etc.). Every
 -- conversation belongs to exactly one group.
 -- ============================================
-CREATE TABLE mtp_chat_groups (
+CREATE TABLE IF NOT EXISTS mtp_chat_groups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
 
@@ -38,7 +38,7 @@ CREATE TABLE mtp_chat_groups (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX mtp_chat_groups_org_id_idx ON mtp_chat_groups (org_id);
+CREATE INDEX IF NOT EXISTS mtp_chat_groups_org_id_idx ON mtp_chat_groups (org_id);
 
 -- ============================================
 -- 2. MTP_CHAT_GROUP_MEMBERS
@@ -46,7 +46,7 @@ CREATE INDEX mtp_chat_groups_org_id_idx ON mtp_chat_groups (org_id);
 -- (user_id NULL = random inbound visitor) or bound to a platform user
 -- (user_id set = the gym owner, staff, or a returning student).
 -- ============================================
-CREATE TABLE mtp_chat_group_members (
+CREATE TABLE IF NOT EXISTS mtp_chat_group_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id UUID NOT NULL REFERENCES mtp_chat_groups(id) ON DELETE CASCADE,
 
@@ -64,8 +64,8 @@ CREATE TABLE mtp_chat_group_members (
   UNIQUE (channel, channel_user_id, channel_chat_id)
 );
 
-CREATE INDEX mtp_chat_group_members_group_id_idx ON mtp_chat_group_members (group_id);
-CREATE INDEX mtp_chat_group_members_user_id_idx ON mtp_chat_group_members (user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS mtp_chat_group_members_group_id_idx ON mtp_chat_group_members (group_id);
+CREATE INDEX IF NOT EXISTS mtp_chat_group_members_user_id_idx ON mtp_chat_group_members (user_id) WHERE user_id IS NOT NULL;
 
 -- ============================================
 -- 3. MTP_CONVERSATIONS
@@ -73,7 +73,7 @@ CREATE INDEX mtp_chat_group_members_user_id_idx ON mtp_chat_group_members (user_
 -- First-class row so we don't reconstruct threads from tuples — a known
 -- regret from the ScootScoot reference implementation.
 -- ============================================
-CREATE TABLE mtp_conversations (
+CREATE TABLE IF NOT EXISTS mtp_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   group_id UUID NOT NULL REFERENCES mtp_chat_groups(id) ON DELETE CASCADE,
@@ -94,9 +94,9 @@ CREATE TABLE mtp_conversations (
   UNIQUE (channel, external_thread_id)
 );
 
-CREATE INDEX mtp_conversations_org_id_idx ON mtp_conversations (org_id);
-CREATE INDEX mtp_conversations_org_status_idx ON mtp_conversations (org_id, status);
-CREATE INDEX mtp_conversations_last_message_at_idx ON mtp_conversations (org_id, last_message_at DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS mtp_conversations_org_id_idx ON mtp_conversations (org_id);
+CREATE INDEX IF NOT EXISTS mtp_conversations_org_status_idx ON mtp_conversations (org_id, status);
+CREATE INDEX IF NOT EXISTS mtp_conversations_last_message_at_idx ON mtp_conversations (org_id, last_message_at DESC NULLS LAST);
 
 -- ============================================
 -- 4. MTP_COMMUNICATION_LOG
@@ -106,7 +106,7 @@ CREATE INDEX mtp_conversations_last_message_at_idx ON mtp_conversations (org_id,
 -- draft_status — avoids diverging a separate ai_drafts table from the
 -- message log.
 -- ============================================
-CREATE TABLE mtp_communication_log (
+CREATE TABLE IF NOT EXISTS mtp_communication_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   conversation_id UUID NOT NULL REFERENCES mtp_conversations(id) ON DELETE CASCADE,
@@ -130,9 +130,9 @@ CREATE TABLE mtp_communication_log (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX mtp_communication_log_conversation_idx ON mtp_communication_log (conversation_id, created_at);
-CREATE INDEX mtp_communication_log_org_review_idx ON mtp_communication_log (org_id) WHERE needs_review = TRUE;
-CREATE INDEX mtp_communication_log_drafts_idx ON mtp_communication_log (org_id, draft_status) WHERE draft_status = 'pending';
+CREATE INDEX IF NOT EXISTS mtp_communication_log_conversation_idx ON mtp_communication_log (conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS mtp_communication_log_org_review_idx ON mtp_communication_log (org_id) WHERE needs_review = TRUE;
+CREATE INDEX IF NOT EXISTS mtp_communication_log_drafts_idx ON mtp_communication_log (org_id, draft_status) WHERE draft_status = 'pending';
 
 -- ============================================
 -- 5. MTP_ACTION_TOKENS
@@ -142,7 +142,7 @@ CREATE INDEX mtp_communication_log_drafts_idx ON mtp_communication_log (org_id, 
 -- into the web console. Never execute from the GET of the deeplink —
 -- only from an authenticated POST on the confirm page.
 -- ============================================
-CREATE TABLE mtp_action_tokens (
+CREATE TABLE IF NOT EXISTS mtp_action_tokens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -159,7 +159,7 @@ CREATE TABLE mtp_action_tokens (
   proposed_by_conversation UUID REFERENCES mtp_conversations(id) ON DELETE SET NULL
 );
 
-CREATE INDEX mtp_action_tokens_user_unconsumed_idx ON mtp_action_tokens (user_id, expires_at) WHERE consumed_at IS NULL;
+CREATE INDEX IF NOT EXISTS mtp_action_tokens_user_unconsumed_idx ON mtp_action_tokens (user_id, expires_at) WHERE consumed_at IS NULL;
 
 -- ============================================
 -- ENABLE RLS

@@ -19,7 +19,7 @@
 -- from accidentally claiming the same inbound account — the DB enforces
 -- multi-tenant isolation.
 
-CREATE TABLE mtp_chat_group_channels (
+CREATE TABLE IF NOT EXISTS mtp_chat_group_channels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id UUID NOT NULL REFERENCES mtp_chat_groups(id) ON DELETE CASCADE,
 
@@ -36,7 +36,7 @@ CREATE TABLE mtp_chat_group_channels (
   UNIQUE (channel, external_account_id)
 );
 
-CREATE INDEX mtp_chat_group_channels_group_id_idx ON mtp_chat_group_channels (group_id);
+CREATE INDEX IF NOT EXISTS mtp_chat_group_channels_group_id_idx ON mtp_chat_group_channels (group_id);
 
 ALTER TABLE mtp_chat_group_channels ENABLE ROW LEVEL SECURITY;
 

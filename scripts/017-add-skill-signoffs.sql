@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS skill_signoffs (
   UNIQUE(org_id, student_id, level, skill_index)
 );
 
-CREATE INDEX idx_skill_signoffs_student ON skill_signoffs(student_id, level);
-CREATE INDEX idx_skill_signoffs_org ON skill_signoffs(org_id, level);
+CREATE INDEX IF NOT EXISTS idx_skill_signoffs_student ON skill_signoffs(student_id, level);
+CREATE INDEX IF NOT EXISTS idx_skill_signoffs_org ON skill_signoffs(org_id, level);
 
 -- Enable RLS
 ALTER TABLE skill_signoffs ENABLE ROW LEVEL SECURITY;
@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS certification_enrollments (
   UNIQUE(org_id, user_id, level)
 );
 
-CREATE INDEX idx_cert_enrollments_user ON certification_enrollments(user_id, status);
-CREATE INDEX idx_cert_enrollments_org ON certification_enrollments(org_id, status);
+CREATE INDEX IF NOT EXISTS idx_cert_enrollments_user ON certification_enrollments(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_cert_enrollments_org ON certification_enrollments(org_id, status);
 
 -- Enable RLS
 ALTER TABLE certification_enrollments ENABLE ROW LEVEL SECURITY;
