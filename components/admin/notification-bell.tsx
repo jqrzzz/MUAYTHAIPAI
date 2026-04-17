@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Bell, Check, CheckCheck, Calendar, XCircle, Banknote, MessageSquare } from "lucide-react"
+import { Bell, Check, CheckCheck, Calendar, XCircle, Banknote, MessageSquare, Award, GraduationCap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface Notification {
@@ -24,6 +24,10 @@ function getNotificationIcon(type: string) {
       return <Banknote className="w-4 h-4 text-emerald-400" />
     case "contact_form":
       return <MessageSquare className="w-4 h-4 text-blue-400" />
+    case "cert_eligible":
+      return <Award className="w-4 h-4 text-amber-400" />
+    case "course_completed":
+      return <GraduationCap className="w-4 h-4 text-purple-400" />
     default:
       return <Bell className="w-4 h-4 text-neutral-400" />
   }

@@ -215,6 +215,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Link certificate back to certification_enrollment if one exists
+  if (certificate) {
+    await supabase
+      .from("certification_enrollments")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        certificate_id: certificate.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("org_id", membership.org_id)
+      .eq("user_id", student.id)
+      .eq("level", normalizedLevel)
+      .eq("status", "active")
+  }
+
   return NextResponse.json({ certificate })
 }
 

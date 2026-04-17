@@ -149,6 +149,16 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
   const [loadingCredits, setLoadingCredits] = useState(false)
   const [loadingNotes, setLoadingNotes] = useState(false)
 
+  // Certification progress
+  const [certProgress, setCertProgress] = useState<{
+    id: string; number: number; name: string; icon: string; creature: string;
+    duration: string; color: string; earned: boolean; earnedAt: string | null;
+    certificateNumber: string | null; enrolled: boolean; enrolledAt: string | null;
+    enrolledGym: string | null; skillsSignedOff: number; skillsTotal: number;
+    eligible: boolean; daysUntilEligible: number;
+  }[]>([])
+  const [loadingProgress, setLoadingProgress] = useState(false)
+
   // AI Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState("")
@@ -161,6 +171,12 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
     router.push("/")
     router.refresh()
   }
+
+  useEffect(() => {
+    if (activeView === "certificates" && certProgress.length === 0) {
+      fetchCertProgress()
+    }
+  }, [activeView])
 
   useEffect(() => {
     if (activeView === "credits" && credits.length === 0) {
@@ -204,6 +220,20 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
       // silent — student dashboard is read-only
     }
     setLoadingNotes(false)
+  }
+
+  const fetchCertProgress = async () => {
+    setLoadingProgress(true)
+    try {
+      const res = await fetch("/api/student/certification-progress")
+      if (res.ok) {
+        const data = await res.json()
+        setCertProgress(data.levels || [])
+      }
+    } catch {
+      // silent
+    }
+    setLoadingProgress(false)
   }
 
   const sendChatMessage = async () => {
@@ -613,29 +643,91 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               </Card>
             )}
 
-            {/* Level Progress */}
+            {/* Certification Progress */}
             <div>
-              <h3 className="text-sm font-medium text-neutral-500 mb-3">Certificate Levels</h3>
-              <div className="space-y-2">
-                {["naga", "phayra-nak", "singha", "hanuman", "garuda"].map((level, i) => {
-                  const earned = certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, ""))
-                  return (
+              <h3 className="text-sm font-medium text-neutral-500 mb-3">Certification Progress</h3>
+              {loadingProgress ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-neutral-600" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(certProgress.length > 0 ? certProgress : ["naga", "phayra-nak", "singha", "hanuman", "garuda"].map((level, i) => ({
+                    id: level, number: i + 1, name: level.replace(/[-_]/g, " "), icon: getLevelInfo(level).icon,
+                    creature: "", duration: "", color: "", earned: certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, "")),
+                    earnedAt: null, certificateNumber: null, enrolled: false, enrolledAt: null, enrolledGym: null,
+                    skillsSignedOff: 0, skillsTotal: 0, eligible: false, daysUntilEligible: 0,
+                  }))).map((level) => (
                     <div
-                      key={level}
-                      className={`flex items-center gap-3 p-3 rounded-xl ${earned ? "bg-neutral-800/50" : "bg-neutral-900/30"}`}
+                      key={level.id}
+                      className={`p-3 rounded-xl ${level.earned ? "bg-neutral-800/50" : level.enrolled ? "bg-neutral-800/30 border border-neutral-700/50" : "bg-neutral-900/30"}`}
                     >
-                      <div className="text-2xl">{getLevelInfo(level).icon}</div>
-                      <div className="flex-1">
-                        <p className={`capitalize font-medium ${earned ? "text-white" : "text-neutral-500"}`}>
-                          {level.replace(/[-_]/g, " ")}
-                        </p>
-                        <p className="text-xs text-neutral-600">Level {i + 1}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">{level.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`capitalize font-medium ${level.earned ? "text-white" : level.enrolled ? "text-neutral-300" : "text-neutral-500"}`}>
+                              {level.name}
+                            </p>
+                            <span className="text-[10px] text-neutral-600">Level {level.number}</span>
+                          </div>
+                          {level.earned && level.earnedAt && (
+                            <p className="text-[11px] text-green-500/70 mt-0.5">
+                              Earned {new Date(level.earnedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                          {level.enrolled && !level.earned && (
+                            <p className="text-[11px] text-orange-400/70 mt-0.5">
+                              Enrolled{level.enrolledGym ? ` at ${level.enrolledGym}` : ""}
+                            </p>
+                          )}
+                          {!level.earned && !level.enrolled && level.daysUntilEligible > 0 && (
+                            <p className="text-[11px] text-neutral-600 mt-0.5">
+                              {level.daysUntilEligible} day{level.daysUntilEligible === 1 ? "" : "s"} until eligible
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0">
+                          {level.earned ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : level.enrolled && level.skillsTotal > 0 ? (
+                            <span className="text-[11px] font-medium text-orange-400">
+                              {level.skillsSignedOff}/{level.skillsTotal}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                      {earned && <CheckCircle className="w-5 h-5 text-green-500" />}
+                      {/* Skills progress bar for enrolled levels */}
+                      {level.enrolled && !level.earned && level.skillsTotal > 0 && (
+                        <div className="mt-2 ml-11">
+                          <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all"
+                              style={{ width: `${Math.round((level.skillsSignedOff / level.skillsTotal) * 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-neutral-600 mt-1">
+                            {level.skillsSignedOff === level.skillsTotal
+                              ? "All skills verified — ready for certification"
+                              : `${level.skillsTotal - level.skillsSignedOff} skill${level.skillsTotal - level.skillsSignedOff === 1 ? "" : "s"} remaining`}
+                          </p>
+                        </div>
+                      )}
+                      {/* Certificate link */}
+                      {level.earned && level.certificateNumber && (
+                        <a
+                          href={`/verify/${level.certificateNumber}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-[10px] text-neutral-600 hover:text-neutral-400 mt-1 ml-11 font-mono transition-colors"
+                        >
+                          {level.certificateNumber} &rarr;
+                        </a>
+                      )}
                     </div>
-                  )
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

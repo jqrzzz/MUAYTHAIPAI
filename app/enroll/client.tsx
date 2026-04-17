@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { CheckCircle, ChevronRight, ArrowLeft, Loader2, Award } from "lucide-react"
 import Link from "next/link"
@@ -17,6 +18,7 @@ type Step = "level" | "details" | "confirm" | "success"
 
 export default function EnrollClient() {
   const mounted = useMounted()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>("level")
   const [selectedLevel, setSelectedLevel] = useState<CertificationLevel | null>(null)
   const [form, setForm] = useState({ name: "", email: "", phone: "" })
@@ -27,6 +29,18 @@ export default function EnrollClient() {
     gymName: string
     message: string
   } | null>(null)
+
+  const orgSlug = searchParams.get("gym") || "wisarut-family-gym"
+  const [gymName, setGymName] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/public/services?gym=${orgSlug}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.gym?.name) setGymName(data.gym.name)
+      })
+      .catch(() => {})
+  }, [orgSlug])
 
   if (!mounted) return null
 
@@ -57,7 +71,7 @@ export default function EnrollClient() {
           email: form.email.trim(),
           phone: form.phone.trim() || undefined,
           level: selectedLevel.id,
-          orgSlug: "wisarut-family-gym",
+          orgSlug,
         }),
       })
       const data = await res.json()
@@ -280,7 +294,7 @@ export default function EnrollClient() {
                     <hr className="border-neutral-800" />
                     <div className="flex justify-between">
                       <span className="text-neutral-500">Gym</span>
-                      <span className="text-white">Muay Thai Pai — Wisarut Family</span>
+                      <span className="text-white">{gymName || orgSlug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
                     </div>
                     <div className="flex justify-between text-base font-bold">
                       <span className="text-neutral-300">Total</span>

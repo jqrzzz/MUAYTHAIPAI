@@ -156,7 +156,7 @@ export default function CertificateProgramsClient() {
     setBookingData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handlePayment = async (_method: string, certId: string) => {
+  const handlePayment = async (certId: string) => {
     const cert = certificates.find((c) => c.id === certId)
     if (!cert || !bookingData.name || !bookingData.email) return
 
@@ -169,7 +169,7 @@ export default function CertificateProgramsClient() {
           name: bookingData.name,
           email: bookingData.email,
           level: cert.id,
-          orgSlug: "wisarut-family-gym",
+          orgSlug: new URLSearchParams(window.location.search).get("gym") || "wisarut-family-gym",
         }),
       })
       const data = await res.json()
@@ -450,7 +450,7 @@ export default function CertificateProgramsClient() {
                                           <motion.button
                                             onClick={(e) => {
                                               e.stopPropagation()
-                                              handlePayment("card", cert.id)
+                                              handlePayment(cert.id)
                                             }}
                                             disabled={isProcessingPayment}
                                             className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-orange-600 dark:to-amber-600 dark:hover:from-orange-500 dark:hover:to-amber-500 disabled:opacity-50"
