@@ -7,6 +7,7 @@ import type { Metadata, Viewport } from "next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/react"
 import { SOCIAL_LINKS } from "@/lib/socials"
+import OckOckChatWidget from "@/components/public/ockock-chat-widget"
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
 
@@ -215,6 +216,7 @@ export default function RootLayout({
       <body className={`${cinzel.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
+          <OckOckChatWidget orgSlug="wisarut-family-gym" />
         </ThemeProvider>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-KM47GH0T7J"
