@@ -320,6 +320,10 @@ export default function AdminDashboardClient({
   const [studentsLoading, setStudentsLoading] = useState(false)
   const [studentTransactions, setStudentTransactions] = useState<CreditTransaction[]>([])
 
+  // Inbox badge counts — surfaced in the sidebar so Gym can see pending
+  // drafts / awaiting conversations at a glance without opening the tab.
+  const [inboxCounts, setInboxCounts] = useState({ awaiting: 0, pendingDrafts: 0, total: 0 })
+
   useEffect(() => {
     if (activeTab === "trainers") {
       fetchPendingInvites()
@@ -328,6 +332,35 @@ export default function AdminDashboardClient({
       fetchStudents()
     }
   }, [activeTab])
+
+  // Keep the inbox badge fresh: fetch on mount, and any time the user
+  // navigates to a non-inbox tab (their actions inside the inbox may
+  // have changed the counts).
+  useEffect(() => {
+    fetchInboxCounts()
+  }, [])
+
+  useEffect(() => {
+    if (activeTab !== "inbox") {
+      fetchInboxCounts()
+    }
+  }, [activeTab])
+
+  const fetchInboxCounts = async () => {
+    try {
+      const res = await fetch("/api/admin/inbox/counts", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setInboxCounts({
+          awaiting: data.awaiting ?? 0,
+          pendingDrafts: data.pendingDrafts ?? 0,
+          total: data.total ?? 0,
+        })
+      }
+    } catch {
+      // Non-critical — badge just won't update this cycle.
+    }
+  }
 
   const fetchPendingInvites = async () => {
     try {
@@ -898,7 +931,7 @@ export default function AdminDashboardClient({
       items: [
         { id: "today" as const, label: "Today", labelTh: "วันนี้", icon: Calendar },
         { id: "recent" as const, label: "Recent", labelTh: "ล่าสุด", icon: Clock },
-        { id: "inbox" as const, label: "Inbox", labelTh: "กล่องข้อความ", icon: Inbox },
+        { id: "inbox" as const, label: "Inbox", labelTh: "กล่องข้อความ", icon: Inbox, badge: inboxCounts.total },
         { id: "students" as const, label: "Students", labelTh: "นักเรียน", icon: GraduationCap },
       ],
     },
@@ -998,6 +1031,11 @@ export default function AdminDashboardClient({
                       ) : null}
                       <span>{item.label}</span>
                       <span className="text-xs opacity-60">({item.labelTh})</span>
+                      {"badge" in item && typeof item.badge === "number" && item.badge > 0 && (
+                        <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-semibold">
+                          {item.badge > 99 ? "99+" : item.badge}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1046,25 +1084,36 @@ export default function AdminDashboardClient({
                   {group.label}
                 </p>
               )}
-              {group.items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  title={sidebarCollapsed ? `${item.label} (${item.labelTh})` : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors mb-1 ${
-                    activeTab === item.id
-                      ? "bg-orange-600 text-white"
-                      : "text-neutral-300 hover:bg-neutral-800"
-                  } ${sidebarCollapsed ? "justify-center" : ""}`}
-                >
-                  {item.icon === null ? (
-                    <OckOckAvatar size={20} />
-                  ) : item.icon ? (
-                    <item.icon className="w-5 h-5 shrink-0" />
-                  ) : null}
-                  {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                </button>
-              ))}
+              {group.items.map((item) => {
+                const hasBadge = "badge" in item && typeof item.badge === "number" && item.badge > 0
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    title={sidebarCollapsed ? `${item.label} (${item.labelTh})` : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors mb-1 relative ${
+                      activeTab === item.id
+                        ? "bg-orange-600 text-white"
+                        : "text-neutral-300 hover:bg-neutral-800"
+                    } ${sidebarCollapsed ? "justify-center" : ""}`}
+                  >
+                    {item.icon === null ? (
+                      <OckOckAvatar size={20} />
+                    ) : item.icon ? (
+                      <item.icon className="w-5 h-5 shrink-0" />
+                    ) : null}
+                    {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+                    {hasBadge && !sidebarCollapsed && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-semibold">
+                        {(item as { badge: number }).badge > 99 ? "99+" : (item as { badge: number }).badge}
+                      </span>
+                    )}
+                    {hasBadge && sidebarCollapsed && (
+                      <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-neutral-900" />
+                    )}
+                  </button>
+                )
+              })}
             </div>
           ))}
         </nav>
@@ -1130,10 +1179,13 @@ export default function AdminDashboardClient({
           </button>
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg text-neutral-400"
+            className="relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg text-neutral-400"
           >
             <MoreHorizontal className="w-5 h-5" />
             <span className="text-xs">More</span>
+            {inboxCounts.total > 0 && (
+              <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-neutral-900" />
+            )}
           </button>
         </div>
       </nav>
@@ -2203,7 +2255,12 @@ export default function AdminDashboardClient({
 
           {activeTab === "ockock" && <OckockChatTab orgId={membership.org_id} />}
 
-          {activeTab === "inbox" && <InboxTab role={membership.role} />}
+          {activeTab === "inbox" && (
+            <InboxTab
+              role={membership.role}
+              onGoToChannels={() => setActiveTab("channels")}
+            />
+          )}
 
           {activeTab === "channels" && <ChannelsTab role={membership.role} />}
         </div>

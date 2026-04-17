@@ -28,6 +28,7 @@ import {
   CheckCheck,
   ChevronLeft,
   Inbox,
+  Link2,
   MessageSquare,
   RefreshCw,
   Send,
@@ -121,9 +122,11 @@ const CHANNEL_COLOR: Record<Channel, string> = {
 interface InboxTabProps {
   /** Current user's role in this org — gates the reply composer. */
   role?: string
+  /** Called when the empty-state CTA asks to open the Channels tab. */
+  onGoToChannels?: () => void
 }
 
-export default function InboxTab({ role }: InboxTabProps) {
+export default function InboxTab({ role, onGoToChannels }: InboxTabProps) {
   const canReply = role === "owner" || role === "admin"
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
@@ -359,9 +362,23 @@ export default function InboxTab({ role }: InboxTabProps) {
             ) : listError ? (
               <div className="p-6 text-center text-red-300 text-sm">{listError}</div>
             ) : conversations.length === 0 ? (
-              <div className="p-6 text-center text-neutral-400 text-sm">
-                <MessageSquare className="w-8 h-8 mx-auto mb-2 text-neutral-600" />
-                No conversations yet
+              <div className="p-6 text-center text-sm space-y-3">
+                <MessageSquare className="w-8 h-8 mx-auto text-neutral-600" />
+                <div className="text-neutral-300 font-medium">No conversations yet</div>
+                <p className="text-neutral-500 text-xs leading-relaxed">
+                  Visitors write in via LINE, Telegram, WhatsApp or Instagram.
+                  Connect a channel to start receiving messages.
+                </p>
+                {onGoToChannels && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onGoToChannels}
+                    className="border-neutral-700 bg-transparent text-neutral-200 hover:bg-neutral-800"
+                  >
+                    <Link2 className="w-3.5 h-3.5 mr-1.5" /> Set up channels
+                  </Button>
+                )}
               </div>
             ) : (
               <ul className="space-y-1">
@@ -428,7 +445,9 @@ export default function InboxTab({ role }: InboxTabProps) {
             <CardContent className="p-10 text-center text-neutral-400 text-sm h-full flex items-center justify-center">
               <div>
                 <MessageSquare className="w-10 h-10 mx-auto mb-3 text-neutral-600" />
-                Select a conversation
+                {conversations.length === 0
+                  ? "Connect a channel to start"
+                  : "Select a conversation"}
               </div>
             </CardContent>
           ) : loadingThread && !thread ? (
