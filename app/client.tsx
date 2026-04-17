@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { BookingSection } from "@/components/booking-section"
-import { PlatformCtaSection } from "@/components/platform-cta-section"
+// import { PlatformCtaSection } from "@/components/platform-cta-section"
 import { MarketingBottomNav, useMounted, EXPAND_COLLAPSE } from "@/components/marketing"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon, TikTokIcon } from "@/components/social-icons"
@@ -970,8 +970,8 @@ export function ClientPage(): ReactElement {
         )}
       </AnimatePresence>
 
-      {/* Platform Network CTA */}
-      <PlatformCtaSection />
+      {/* Platform Network CTA — hidden until OckOck platform launch */}
+      {/* <PlatformCtaSection /> */}
 
       <MarketingBottomNav active="family" />
     </div>
