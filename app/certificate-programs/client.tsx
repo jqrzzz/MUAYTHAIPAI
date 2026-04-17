@@ -157,17 +157,33 @@ export default function CertificateProgramsClient() {
   }
 
   const handlePayment = async (method: string, certId: string) => {
+    const cert = certificates.find((c) => c.id === certId)
+    if (!cert || !bookingData.name || !bookingData.email) return
+
     setIsProcessingPayment(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsProcessingPayment(false)
-    setPaymentSuccess(certId)
-    setBookingData({
-      name: "",
-      email: "",
-      cardNumber: "",
-      expiry: "",
-      cvc: "",
-    })
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceName: `${cert.name} Certification (Level ${cert.level})`,
+          guest_name: bookingData.name,
+          guest_email: bookingData.email,
+          booking_date: new Date().toISOString().split("T")[0],
+          payment_method: method,
+          payment_amount_thb: parseInt(cert.price.replace(/[^0-9]/g, ""), 10),
+          payment_status: "pending",
+          status: "confirmed",
+        }),
+      })
+      if (!res.ok) throw new Error("Booking failed")
+      setPaymentSuccess(certId)
+      setBookingData({ name: "", email: "", cardNumber: "", expiry: "", cvc: "" })
+    } catch {
+      alert("Something went wrong. Please try again or contact us directly.")
+    } finally {
+      setIsProcessingPayment(false)
+    }
   }
 
   if (!mounted) return null
