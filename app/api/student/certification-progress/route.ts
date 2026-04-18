@@ -27,7 +27,7 @@ export async function GET() {
       .in("status", ["active"]),
     supabase
       .from("skill_signoffs")
-      .select("level, skill_index, org_id")
+      .select("level, skill_index, org_id, signed_off_at, notes")
       .eq("student_id", user.id),
     supabase
       .from("enrollments")
@@ -50,10 +50,16 @@ export async function GET() {
     }
   }
 
-  // Build signoff counts per level
+  // Build signoff data per level
   const signoffsByLevel: Record<string, number> = {}
+  const signoffDetails: Record<string, Set<number>> = {}
+  const signoffDates: Record<string, Record<number, string>> = {}
   for (const s of signoffs) {
     signoffsByLevel[s.level] = (signoffsByLevel[s.level] || 0) + 1
+    if (!signoffDetails[s.level]) signoffDetails[s.level] = new Set()
+    signoffDetails[s.level].add(s.skill_index)
+    if (!signoffDates[s.level]) signoffDates[s.level] = {}
+    signoffDates[s.level][s.skill_index] = s.signed_off_at
   }
 
   // Build earned levels set with issued dates
@@ -120,6 +126,11 @@ export async function GET() {
       skillsSignedOff,
       skillsTotal,
       courseCompleted: courseCompletedLevels.has(level.id),
+      skills: level.skills.map((skillName, idx) => ({
+        name: skillName,
+        signedOff: signoffDetails[level.id]?.has(idx) || false,
+        signedOffAt: signoffDates[level.id]?.[idx] || null,
+      })),
       eligible: eligible && priorLevelsEarned,
       daysUntilEligible,
     }
