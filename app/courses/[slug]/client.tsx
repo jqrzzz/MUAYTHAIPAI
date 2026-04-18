@@ -135,7 +135,24 @@ export default function CourseDetailClient({
         return
       }
       if (res.status === 402) {
-        setEnrollError("This is a paid course. Payment integration coming soon.")
+        // Paid course — go through checkout
+        const checkoutRes = await fetch("/api/courses/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ course_id: course.id }),
+        })
+        if (checkoutRes.ok) {
+          const checkoutData = await checkoutRes.json()
+          if (checkoutData.checkout_url) {
+            window.location.href = checkoutData.checkout_url
+            return
+          }
+          // Simulated payment (Stripe not connected yet)
+          setEnrollment(checkoutData.enrollment)
+        } else {
+          const errData = await checkoutRes.json().catch(() => null)
+          setEnrollError(errData?.error || "Checkout failed. Please try again.")
+        }
       } else if (res.ok) {
         const data = await res.json()
         setEnrollment(data.enrollment)
