@@ -228,6 +228,34 @@ export async function notifyPaymentReceived(data: {
 }
 
 /**
+ * Notify gym that a certificate was issued to a student
+ */
+export async function notifyCertificateIssued(data: {
+  orgId: string
+  studentName: string
+  studentId: string
+  levelName: string
+  levelNumber: number
+  certificateNumber: string
+  issuedByName: string
+}) {
+  await insertNotification({
+    orgId: data.orgId,
+    type: "cert_eligible",
+    title: "Certificate Issued",
+    body: `${data.issuedByName} issued a Level ${data.levelNumber} ${data.levelName} certificate to ${data.studentName} (${data.certificateNumber})`,
+    metadata: {
+      student_id: data.studentId,
+      student_name: data.studentName,
+      level_name: data.levelName,
+      level_number: data.levelNumber,
+      certificate_number: data.certificateNumber,
+      issued_by_name: data.issuedByName,
+    },
+  })
+}
+
+/**
  * Notify gym that a student completed a course tied to a certification level
  */
 export async function notifyCourseCompleted(data: {

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { randomBytes } from "crypto"
 import { LEVEL_IDS, getLevelById, getLevelIndex } from "@/lib/certification-levels"
 import { notifyStudentCertificateIssued } from "@/lib/student-notifications"
+import { notifyCertificateIssued } from "@/lib/notifications"
 
 // GET - List certificates issued by this gym
 export async function GET() {
@@ -176,13 +177,20 @@ export async function POST(request: Request) {
     }
   }
 
-  // Get issuing trainer's profile (if the user is a trainer)
-  const { data: trainerProfile } = await supabase
-    .from("trainer_profiles")
-    .select("id")
-    .eq("org_id", membership.org_id)
-    .eq("user_id", user.id)
-    .single()
+  // Get issuing user's name + trainer profile
+  const [{ data: trainerProfile }, { data: issuerProfile }] = await Promise.all([
+    supabase
+      .from("trainer_profiles")
+      .select("id, display_name")
+      .eq("org_id", membership.org_id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("users")
+      .select("full_name")
+      .eq("id", user.id)
+      .single(),
+  ])
 
   // Trainer authorization: trainers can issue up to Singha (Level 3).
   // Hanuman (4) and Garuda (5) require owner or admin role.
@@ -217,13 +225,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Send student notification email
+  // Notify student (email) and gym (in-app)
   if (certificate) {
+    const issuerName = trainerProfile?.display_name || issuerProfile?.full_name || "Trainer"
     notifyStudentCertificateIssued({
       studentId: student.id,
       levelId: normalizedLevel,
       certificateNumber: certNumber,
       orgId: membership.org_id,
+    }).catch(() => {})
+    notifyCertificateIssued({
+      orgId: membership.org_id,
+      studentName: student_email,
+      studentId: student.id,
+      levelName: levelConfig.name,
+      levelNumber: levelConfig.number,
+      certificateNumber: certNumber,
+      issuedByName: issuerName,
     }).catch(() => {})
   }
 
