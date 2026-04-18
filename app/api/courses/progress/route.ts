@@ -171,7 +171,7 @@ export async function POST(request: Request) {
       enrollmentUpdate.status = "completed"
       enrollmentUpdate.completed_at = now
 
-      if (course?.certificate_level && course.org_id) {
+      if (course?.certificate_level) {
         const levelConfig = getLevelById(course.certificate_level)
         const { data: profile } = await serviceClient
           .from("users")
@@ -179,15 +179,43 @@ export async function POST(request: Request) {
           .eq("id", user.id)
           .single()
 
-        notifyCourseCompleted({
-          orgId: course.org_id,
-          studentName: profile?.full_name || "Student",
-          studentId: user.id,
-          courseTitle: course.title || "Course",
-          courseId: course_id,
-          certificateLevel: course.certificate_level,
-          levelName: levelConfig?.name || course.certificate_level,
-        }).catch(() => {})
+        // For org-specific courses, auto-create certification enrollment
+        if (course.org_id) {
+          const { data: existingCertEnrollment } = await serviceClient
+            .from("certification_enrollments")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("org_id", course.org_id)
+            .eq("level", course.certificate_level)
+            .single()
+
+          if (!existingCertEnrollment) {
+            await serviceClient
+              .from("certification_enrollments")
+              .insert({
+                org_id: course.org_id,
+                user_id: user.id,
+                level: course.certificate_level,
+                status: "active",
+                notes: `Auto-enrolled after completing course: ${course.title}`,
+              })
+              .select()
+              .single()
+          }
+        }
+
+        // Notify gym if course belongs to one
+        if (course.org_id) {
+          notifyCourseCompleted({
+            orgId: course.org_id,
+            studentName: profile?.full_name || "Student",
+            studentId: user.id,
+            courseTitle: course.title || "Course",
+            courseId: course_id,
+            certificateLevel: course.certificate_level,
+            levelName: levelConfig?.name || course.certificate_level,
+          }).catch(() => {})
+        }
       }
     }
 

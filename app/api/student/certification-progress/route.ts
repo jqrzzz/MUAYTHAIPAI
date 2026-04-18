@@ -13,8 +13,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Fetch certificates, enrollments, and skill signoffs in parallel
-  const [certsRes, enrollmentsRes, signoffsRes] = await Promise.all([
+  // Fetch certificates, enrollments, skill signoffs, and completed courses in parallel
+  const [certsRes, enrollmentsRes, signoffsRes, completedCoursesRes] = await Promise.all([
     supabase
       .from("certificates")
       .select("id, level, level_number, issued_at, certificate_number, org_id, status, organizations:org_id (name)")
@@ -29,11 +29,26 @@ export async function GET() {
       .from("skill_signoffs")
       .select("level, skill_index, org_id")
       .eq("student_id", user.id),
+    supabase
+      .from("enrollments")
+      .select("course_id, status, completed_at, courses!inner(certificate_level)")
+      .eq("user_id", user.id)
+      .eq("status", "completed"),
   ])
 
   const certificates = certsRes.data || []
   const enrollments = enrollmentsRes.data || []
   const signoffs = signoffsRes.data || []
+  const completedCourses = completedCoursesRes.data || []
+
+  // Build set of levels with completed courses
+  const courseCompletedLevels = new Set<string>()
+  for (const enrollment of completedCourses) {
+    const course = enrollment.courses as unknown as { certificate_level: string | null }
+    if (course?.certificate_level) {
+      courseCompletedLevels.add(course.certificate_level)
+    }
+  }
 
   // Build signoff counts per level
   const signoffsByLevel: Record<string, number> = {}
@@ -104,6 +119,7 @@ export async function GET() {
       enrolledGym: enrollment?.org_name || null,
       skillsSignedOff,
       skillsTotal,
+      courseCompleted: courseCompletedLevels.has(level.id),
       eligible: eligible && priorLevelsEarned,
       daysUntilEligible,
     }

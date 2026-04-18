@@ -156,7 +156,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
     duration: string; color: string; earned: boolean; earnedAt: string | null;
     certificateNumber: string | null; enrolled: boolean; enrolledAt: string | null;
     enrolledGym: string | null; skillsSignedOff: number; skillsTotal: number;
-    eligible: boolean; daysUntilEligible: number;
+    courseCompleted: boolean; eligible: boolean; daysUntilEligible: number;
   }[]>([])
   const [loadingProgress, setLoadingProgress] = useState(false)
 
@@ -657,7 +657,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                     id: level, number: i + 1, name: level.replace(/[-_]/g, " "), icon: getLevelInfo(level).icon,
                     creature: "", duration: "", color: "", earned: certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, "")),
                     earnedAt: null, certificateNumber: null, enrolled: false, enrolledAt: null, enrolledGym: null,
-                    skillsSignedOff: 0, skillsTotal: 0, eligible: false, daysUntilEligible: 0,
+                    courseCompleted: false, skillsSignedOff: 0, skillsTotal: 0, eligible: false, daysUntilEligible: 0,
                   }))).map((level) => (
                     <div
                       key={level.id}
@@ -680,6 +680,11 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                           {level.enrolled && !level.earned && (
                             <p className="text-[11px] text-orange-400/70 mt-0.5">
                               Enrolled{level.enrolledGym ? ` at ${level.enrolledGym}` : ""}
+                            </p>
+                          )}
+                          {!level.earned && level.courseCompleted && !level.enrolled && (
+                            <p className="text-[11px] text-blue-400/70 mt-0.5">
+                              Course completed — book in-person assessment to certify
                             </p>
                           )}
                           {!level.earned && !level.enrolled && level.daysUntilEligible > 0 && (
