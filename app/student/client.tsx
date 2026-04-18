@@ -735,16 +735,26 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                           </p>
                         </div>
                       )}
-                      {/* Certificate link */}
+                      {/* Certificate link + print */}
                       {level.earned && level.certificateNumber && (
-                        <a
-                          href={`/verify/${level.certificateNumber}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block text-[10px] text-neutral-600 hover:text-neutral-400 mt-1 ml-11 font-mono transition-colors"
-                        >
-                          {level.certificateNumber} &rarr;
-                        </a>
+                        <div className="flex items-center gap-3 mt-1 ml-11">
+                          <a
+                            href={`/verify/${level.certificateNumber}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-neutral-600 hover:text-neutral-400 font-mono transition-colors"
+                          >
+                            {level.certificateNumber} &rarr;
+                          </a>
+                          <a
+                            href={`/verify/${level.certificateNumber}/print`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-orange-500/60 hover:text-orange-400 transition-colors"
+                          >
+                            Download PDF
+                          </a>
+                        </div>
                       )}
                     </div>
                   ))}

@@ -206,6 +206,7 @@ export async function POST(request: Request) {
       issued_by: trainerProfile?.id || null,
       certificate_number: certNumber,
       verification_url: `${siteUrl}/verify/${certNumber}`,
+      certificate_pdf_url: `${siteUrl}/verify/${certNumber}/print`,
       status: "active",
     })
     .select()
