@@ -20,6 +20,7 @@ import OckockChatTab from "@/components/admin/ockock-chat-tab"
 import MarketingTab from "@/components/admin/marketing-tab"
 import InboxTab from "@/components/admin/inbox-tab"
 import ChannelsTab from "@/components/admin/channels-tab"
+import CoursesTab from "@/components/admin/courses-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import {
   Award,
@@ -190,7 +191,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -299,6 +300,7 @@ export default function AdminDashboardClient({
         { id: "inbox" as const, label: "Inbox", labelTh: "กล่องข้อความ", icon: Inbox, badge: inboxCounts.total },
         { id: "students" as const, label: "Students", labelTh: "นักเรียน", icon: GraduationCap },
         { id: "certificates" as const, label: "Certificates", labelTh: "ใบรับรอง", icon: Award },
+        { id: "courses" as const, label: "Courses", labelTh: "หลักสูตร", icon: BookOpen },
       ],
     },
     {
@@ -736,6 +738,8 @@ export default function AdminDashboardClient({
           )}
 
           {activeTab === "channels" && <ChannelsTab role={membership.role} />}
+
+          {activeTab === "courses" && <CoursesTab orgId={membership.org_id} />}
         </div>
       </main>
     </div>
