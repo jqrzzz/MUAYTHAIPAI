@@ -35,6 +35,28 @@ interface ContactFormData {
   org?: OrgEmailContext
 }
 
+export interface CertificateIssuedEmailData {
+  studentName: string
+  studentEmail: string
+  levelName: string
+  levelIcon: string
+  levelNumber: number
+  certificateNumber: string
+  verificationUrl: string
+  printUrl: string
+  gymName: string
+  issuedAt: string
+}
+
+export interface CourseCompletedEmailData {
+  studentName: string
+  studentEmail: string
+  courseTitle: string
+  levelName: string
+  levelIcon: string
+  siteUrl: string
+}
+
 interface EmailTemplate {
   subject: string
   html: string
@@ -129,6 +151,66 @@ export class EmailService {
       }
     } catch (error) {
       console.error("[v0] Failed to send staff notification:", error instanceof Error ? error.message : String(error))
+      return false
+    }
+  }
+
+  async sendCertificateIssuedEmail(data: CertificateIssuedEmailData): Promise<boolean> {
+    try {
+      const template = this.generateCertificateIssuedTemplate(data)
+
+      if (!this.resend) {
+        console.log("[email] Certificate issued email (no Resend):", data.studentEmail, data.certificateNumber)
+        return false
+      }
+
+      const result = await this.resend.emails.send({
+        from: `Muay Thai Pai <noreply@muaythaipai.com>`,
+        to: data.studentEmail,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      })
+
+      if (result.error) {
+        console.error("[email] Certificate issued email failed:", result.error)
+        return false
+      }
+
+      console.log("[email] Certificate issued email sent to:", data.studentEmail)
+      return true
+    } catch (error) {
+      console.error("[email] Failed to send certificate issued email:", error instanceof Error ? error.message : String(error))
+      return false
+    }
+  }
+
+  async sendCourseCompletedEmail(data: CourseCompletedEmailData): Promise<boolean> {
+    try {
+      const template = this.generateCourseCompletedTemplate(data)
+
+      if (!this.resend) {
+        console.log("[email] Course completed email (no Resend):", data.studentEmail, data.courseTitle)
+        return false
+      }
+
+      const result = await this.resend.emails.send({
+        from: `Muay Thai Pai <noreply@muaythaipai.com>`,
+        to: data.studentEmail,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      })
+
+      if (result.error) {
+        console.error("[email] Course completed email failed:", result.error)
+        return false
+      }
+
+      console.log("[email] Course completed email sent to:", data.studentEmail)
+      return true
+    } catch (error) {
+      console.error("[email] Failed to send course completed email:", error instanceof Error ? error.message : String(error))
       return false
     }
   }
@@ -570,6 +652,194 @@ export class EmailService {
       
       Action Required: Please respond to ${data.email} within 24 hours.
     `
+
+    return { subject, html, text }
+  }
+
+  private generateCertificateIssuedTemplate(data: CertificateIssuedEmailData): EmailTemplate {
+    const formattedDate = new Date(data.issuedAt).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+    const subject = `${data.levelIcon} Congratulations! You've earned your ${data.levelName} certification`
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .header { background: linear-gradient(135deg, #1f2937, #111827); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header h1 { margin: 0 0 8px; font-size: 28px; }
+            .header .level-icon { font-size: 48px; display: block; margin-bottom: 16px; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .cert-card { background: white; padding: 24px; border-radius: 8px; border: 2px solid #f97316; margin: 20px 0; }
+            .cert-row { display: flex; justify-content: space-between; margin: 8px 0; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+            .cert-label { font-weight: bold; color: #374151; }
+            .cert-value { color: #6b7280; }
+            .btn { display: inline-block; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin: 8px 4px; }
+            .btn-primary { background: #f97316; color: white; }
+            .btn-secondary { background: #1f2937; color: white; }
+            .actions { text-align: center; margin: 24px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #9ca3af; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <span class="level-icon">${data.levelIcon}</span>
+              <h1>Congratulations, ${data.studentName}!</h1>
+              <p style="margin: 0; opacity: 0.9;">You've earned your <strong>${data.levelName}</strong> certification</p>
+            </div>
+            <div class="content">
+              <p>Your trainer at <strong>${data.gymName}</strong> has certified you at <strong>Level ${data.levelNumber} — ${data.levelName}</strong>.</p>
+
+              <div class="cert-card">
+                <h3 style="margin-top: 0; color: #f97316;">Certificate Details</h3>
+                <div class="cert-row">
+                  <span class="cert-label">Certificate #</span>
+                  <span class="cert-value">${data.certificateNumber}</span>
+                </div>
+                <div class="cert-row">
+                  <span class="cert-label">Level</span>
+                  <span class="cert-value">${data.levelIcon} ${data.levelName} (Level ${data.levelNumber})</span>
+                </div>
+                <div class="cert-row">
+                  <span class="cert-label">Issued By</span>
+                  <span class="cert-value">${data.gymName}</span>
+                </div>
+                <div class="cert-row" style="border-bottom: none;">
+                  <span class="cert-label">Date</span>
+                  <span class="cert-value">${formattedDate}</span>
+                </div>
+              </div>
+
+              <div class="actions">
+                <a href="${data.verificationUrl}" class="btn btn-primary">View Certificate</a>
+                <a href="${data.printUrl}" class="btn btn-secondary">Download PDF</a>
+              </div>
+
+              <p style="font-size: 14px; color: #6b7280;">Share your verification link with anyone who wants to confirm your certification:<br>
+              <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 13px;">${data.verificationUrl}</code></p>
+
+              <div class="footer">
+                <p>Keep training hard — the next level awaits!</p>
+                <p>Muay Thai Pai</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const text = `
+Congratulations, ${data.studentName}!
+
+You've earned your ${data.levelName} (Level ${data.levelNumber}) certification!
+
+Certificate Details:
+- Certificate #: ${data.certificateNumber}
+- Level: ${data.levelName} (Level ${data.levelNumber})
+- Issued By: ${data.gymName}
+- Date: ${formattedDate}
+
+View your certificate: ${data.verificationUrl}
+Download PDF: ${data.printUrl}
+
+Share your verification link to confirm your certification:
+${data.verificationUrl}
+
+Keep training hard — the next level awaits!
+
+Muay Thai Pai
+    `.trim()
+
+    return { subject, html, text }
+  }
+
+  private generateCourseCompletedTemplate(data: CourseCompletedEmailData): EmailTemplate {
+    const subject = `${data.levelIcon} Course Complete! Next steps for your ${data.levelName} certification`
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .header { background: linear-gradient(135deg, #059669, #047857); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header h1 { margin: 0 0 8px; font-size: 28px; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .steps { background: white; padding: 24px; border-radius: 8px; margin: 20px 0; }
+            .step { display: flex; align-items: flex-start; margin: 16px 0; }
+            .step-num { background: #f97316; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0; margin-right: 12px; margin-top: 2px; }
+            .step-text { flex: 1; }
+            .btn { display: inline-block; background: #f97316; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; }
+            .actions { text-align: center; margin: 24px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #9ca3af; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div style="font-size: 48px; margin-bottom: 16px;">&#10003;</div>
+              <h1>Course Complete!</h1>
+              <p style="margin: 0; opacity: 0.9;">${data.courseTitle}</p>
+            </div>
+            <div class="content">
+              <p>Great work, <strong>${data.studentName}</strong>! You've finished the coursework for <strong>${data.levelName}</strong> certification.</p>
+
+              <div class="steps">
+                <h3 style="margin-top: 0; color: #374151;">What happens next?</h3>
+                <div class="step">
+                  <div class="step-num">1</div>
+                  <div class="step-text"><strong>In-person assessment</strong> — Visit your gym and demonstrate your skills to a trainer.</div>
+                </div>
+                <div class="step">
+                  <div class="step-num">2</div>
+                  <div class="step-text"><strong>Skill sign-offs</strong> — Your trainer will sign off each technique as you demonstrate proficiency.</div>
+                </div>
+                <div class="step">
+                  <div class="step-num">3</div>
+                  <div class="step-text"><strong>Certificate issued</strong> — Once all skills are verified, your gym issues your official ${data.levelIcon} ${data.levelName} certificate.</div>
+                </div>
+              </div>
+
+              <div class="actions">
+                <a href="${data.siteUrl}/student" class="btn">View My Progress</a>
+              </div>
+
+              <div class="footer">
+                <p>You're one step closer to your ${data.levelName} certification!</p>
+                <p>Muay Thai Pai</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const text = `
+Course Complete! — ${data.courseTitle}
+
+Great work, ${data.studentName}! You've finished the coursework for ${data.levelName} certification.
+
+What happens next?
+
+1. In-person assessment — Visit your gym and demonstrate your skills to a trainer.
+2. Skill sign-offs — Your trainer will sign off each technique as you demonstrate proficiency.
+3. Certificate issued — Once all skills are verified, your gym issues your official ${data.levelName} certificate.
+
+View your progress: ${data.siteUrl}/student
+
+You're one step closer to your ${data.levelName} certification!
+
+Muay Thai Pai
+    `.trim()
 
     return { subject, html, text }
   }

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { notifyCourseCompleted } from "@/lib/notifications"
 import { getLevelById } from "@/lib/certification-levels"
+import { notifyStudentCourseCompleted } from "@/lib/student-notifications"
 
 const serviceClient = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -216,6 +217,13 @@ export async function POST(request: Request) {
             levelName: levelConfig?.name || course.certificate_level,
           }).catch(() => {})
         }
+
+        // Email student about course completion and next steps
+        notifyStudentCourseCompleted({
+          studentId: user.id,
+          courseTitle: course.title || "Course",
+          certificateLevel: course.certificate_level,
+        }).catch(() => {})
       }
     }
 

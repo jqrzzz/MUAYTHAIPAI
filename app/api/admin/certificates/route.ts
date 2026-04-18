@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { randomBytes } from "crypto"
 import { LEVEL_IDS, getLevelById, getLevelIndex } from "@/lib/certification-levels"
+import { notifyStudentCertificateIssued } from "@/lib/student-notifications"
 
 // GET - List certificates issued by this gym
 export async function GET() {
@@ -214,6 +215,16 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Send student notification email
+  if (certificate) {
+    notifyStudentCertificateIssued({
+      studentId: student.id,
+      levelId: normalizedLevel,
+      certificateNumber: certNumber,
+      orgId: membership.org_id,
+    }).catch(() => {})
   }
 
   // Link certificate back to certification_enrollment if one exists
