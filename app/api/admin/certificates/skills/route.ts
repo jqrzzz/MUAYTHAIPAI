@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { getLevelById, CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { notifyCourseCompleted } from "@/lib/notifications"
+
+const serviceClient = createServiceClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -147,11 +154,32 @@ export async function POST(request: Request) {
     .eq("student_id", student_id)
     .eq("level", level)
 
+  const allComplete = (count ?? 0) >= levelConfig.skills.length
+
+  // Notify gym when all skills for a level are complete
+  if (allComplete) {
+    const { data: studentProfile } = await serviceClient
+      .from("users")
+      .select("full_name")
+      .eq("id", student_id)
+      .single()
+
+    notifyCourseCompleted({
+      orgId: membership.org_id,
+      studentName: studentProfile?.full_name || "Student",
+      studentId: student_id,
+      courseTitle: "Skill Assessment",
+      courseId: "",
+      certificateLevel: level,
+      levelName: levelConfig.name,
+    }).catch(() => {})
+  }
+
   return NextResponse.json({
     signoff,
     completedCount: count ?? 0,
     totalCount: levelConfig.skills.length,
-    allComplete: (count ?? 0) >= levelConfig.skills.length,
+    allComplete,
     skillName: levelConfig.skills[skill_index],
   })
 }
