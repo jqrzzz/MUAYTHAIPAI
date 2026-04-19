@@ -4,6 +4,8 @@ import Stripe from "stripe"
 import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
+import { randomBytes } from "crypto"
+import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 
 const stripe = new Stripe(env.stripe.secretKey(), {
   apiVersion: "2024-06-20",
@@ -241,6 +243,12 @@ export async function GET() {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     const metadata = session.metadata || {}
+
+    if (metadata.type === "certificate_purchase" && metadata.user_id && metadata.level) {
+      await issueCertificateFromPayment(metadata.user_id, metadata.level)
+      return
+    }
+
     const customerEmail = session.customer_details?.email || metadata.customer_email
     const service = metadata.service_type || metadata.service_name
 
@@ -276,5 +284,46 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   } catch (error) {
     console.error("Error handling checkout completion:", error)
+  }
+}
+
+async function issueCertificateFromPayment(userId: string, level: string) {
+  const levelConfig = CERTIFICATION_LEVELS.find((l) => l.id === level)
+  if (!levelConfig) return
+
+  const { data: existing } = await supabase
+    .from("certificates")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("level", level)
+    .eq("status", "active")
+    .single()
+
+  if (existing) {
+    console.log(`Certificate already exists for user ${userId} at level ${level}`)
+    return
+  }
+
+  const certNumber = `MTP-${level.toUpperCase().slice(0, 3)}-${randomBytes(4).toString("hex").toUpperCase()}`
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+
+  const { error } = await supabase
+    .from("certificates")
+    .insert({
+      org_id: null,
+      user_id: userId,
+      level,
+      level_number: levelConfig.number,
+      issued_by: null,
+      certificate_number: certNumber,
+      verification_url: `${siteUrl}/verify/${certNumber}`,
+      certificate_pdf_url: `${siteUrl}/verify/${certNumber}/print`,
+      status: "active",
+    })
+
+  if (error) {
+    console.error("Failed to issue certificate:", error)
+  } else {
+    console.log(`Certificate ${certNumber} issued for user ${userId} at level ${level}`)
   }
 }

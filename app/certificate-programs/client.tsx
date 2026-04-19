@@ -85,15 +85,23 @@ export default function CertificateProgramsClient() {
   const [enrollments, setEnrollments] = useState<UserEnrollment[]>([])
   const [courses, setCourses] = useState<CourseInfo[]>([])
   const [loadingUser, setLoadingUser] = useState(true)
+  const [hasSubscription, setHasSubscription] = useState(false)
+  const [subscribing, setSubscribing] = useState(false)
 
   useEffect(() => {
     async function load() {
       try {
-        const [certRes, courseRes, enrollRes] = await Promise.all([
+        const [certRes, courseRes, enrollRes, subRes] = await Promise.all([
           fetch("/api/student/certificates").catch(() => null),
           fetch("/api/public/courses?category=certification"),
           fetch("/api/student/courses").catch(() => null),
+          fetch("/api/student/subscription").catch(() => null),
         ])
+
+        if (subRes?.ok) {
+          const subData = await subRes.json()
+          setHasSubscription(subData.subscription?.status === "active")
+        }
 
         if (certRes?.ok) {
           const certData = await certRes.json()
@@ -145,7 +153,7 @@ export default function CertificateProgramsClient() {
     const course = courses.find((c) => c.certificate_level === level.id)
     if (course) {
       const enrollment = enrollments.find((e) => e.course_id === course.id)
-      if (enrollment?.status === "active") return "in_progress"
+      if (enrollment?.status === "active" || enrollment?.status === "completed") return "in_progress"
     }
 
     if (level.number === 1) return "available"
@@ -154,6 +162,32 @@ export default function CertificateProgramsClient() {
     if (userCerts.some((c) => c.level === prevLevel.id)) return "available"
 
     return "locked"
+  }
+
+  async function handleSubscribe() {
+    setSubscribing(true)
+    try {
+      const res = await fetch("/api/student/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnUrl: window.location.href }),
+      })
+      if (res.status === 401) {
+        window.location.href = "/student/login?redirect=/certificate-programs"
+        return
+      }
+      if (res.ok) {
+        const data = await res.json()
+        if (data.url) {
+          window.location.href = data.url
+          return
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSubscribing(false)
+    }
   }
 
   function getCourseForLevel(levelId: string): CourseInfo | undefined {
@@ -201,6 +235,27 @@ export default function CertificateProgramsClient() {
             verifiable credentials, and join a network of practitioners who carry the
             art forward.
           </motion.p>
+
+          {!loadingUser && !hasSubscription && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="mt-6"
+            >
+              <button
+                onClick={handleSubscribe}
+                disabled={subscribing}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-3 text-sm font-bold text-black hover:from-orange-400 hover:to-amber-400 transition-colors disabled:opacity-50"
+              >
+                {subscribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Start Learning — ฿299/mo
+              </button>
+              <p className="text-xs text-neutral-500 mt-2">Access all course content. Cancel anytime.</p>
+            </motion.div>
+          )}
 
           {/* Journey line */}
           <motion.div
@@ -440,6 +495,24 @@ export default function CertificateProgramsClient() {
                                     <CheckCircle className="h-4 w-4" />
                                     Review Course
                                   </Link>
+                                ) : !level.requiresGym && enrollment && enrollment.status === "completed" ? (
+                                  <button
+                                    onClick={async () => {
+                                      const res = await fetch("/api/student/certificates/purchase", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ level: level.id }),
+                                      })
+                                      if (res.ok) {
+                                        const data = await res.json()
+                                        if (data.url) window.location.href = data.url
+                                      }
+                                    }}
+                                    className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:from-emerald-400 hover:to-emerald-500 transition-colors"
+                                  >
+                                    <Award className="h-4 w-4" />
+                                    Get Certified — ฿{level.certFeeTHB.toLocaleString()}
+                                  </button>
                                 ) : status === "in_progress" ? (
                                   <Link
                                     href={`/courses/${course.slug}`}
