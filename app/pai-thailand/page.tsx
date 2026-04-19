@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import PaiThailandClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
   title: "About Pai | Muay Thai Pai",
@@ -24,5 +25,15 @@ export const metadata: Metadata = {
 }
 
 export default function PaiThailandPage() {
-  return <PaiThailandClient />
+  return (
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "About Pai", url: "https://muaythaipai.com/pai-thailand" },
+        ]}
+      />
+      <PaiThailandClient />
+    </>
+  )
 }

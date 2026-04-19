@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Trophy, Loader2 } from "lucide-react"
+import Image from "next/image"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 
 interface Fighter {
@@ -94,10 +95,12 @@ export default function FightersPageClient() {
                     {/* Profile Photo */}
                     <div className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700">
                       {fighter.image ? (
-                        <img
+                        <Image
                           src={fighter.image || "/placeholder.svg"}
                           alt={`${fighter.name} ${fighter.nickname} profile photo`}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="80px"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-neutral-400 text-3xl">
@@ -156,10 +159,13 @@ export default function FightersPageClient() {
           {/* Image Carousel */}
           <div className="relative rounded-2xl overflow-hidden mb-8">
             <div className="relative aspect-video">
-              <img
+              <Image
                 src={ringsideImages[currentImageIndex] || "/placeholder.svg"}
                 alt="Ringside Muay Thai experience"
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 768px"
+                className="object-cover"
+                priority={currentImageIndex === 0}
               />
             </div>
 

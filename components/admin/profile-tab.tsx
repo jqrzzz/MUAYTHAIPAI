@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { User, Camera, X, Plus, ToggleLeft, ToggleRight, Save } from "lucide-react"
+import Image from "next/image"
 
 interface TrainerProfile {
   id: string
@@ -160,9 +161,11 @@ export default function ProfileTab() {
               <div className="flex flex-wrap gap-3 mb-3">
                 {myProfileForm.photos.map((photo, index) => (
                   <div key={index} className="relative">
-                    <img
+                    <Image
                       src={photo || "/placeholder.svg"}
                       alt={`Photo ${index + 1}`}
+                      width={96}
+                      height={96}
                       className="w-24 h-24 object-cover rounded-lg border border-neutral-700"
                     />
                     <button

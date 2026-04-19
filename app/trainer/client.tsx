@@ -188,6 +188,13 @@ export default function TrainerDashboardClient({
   const [certLevel, setCertLevel] = useState("")
   const [isIssuingCert, setIsIssuingCert] = useState(false)
   const [certSuccess, setCertSuccess] = useState<string | null>(null)
+  const [skillSignoffs, setSkillSignoffs] = useState<{
+    skills: Array<{ index: number; name: string; signedOff: boolean }>
+    completedCount: number
+    totalCount: number
+    allComplete: boolean
+  } | null>(null)
+  const [loadingSkills, setLoadingSkills] = useState(false)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -215,9 +222,12 @@ export default function TrainerDashboardClient({
         setBookings((prev) =>
           prev.map((b) => (b.id === bookingId ? { ...b, status } : b))
         )
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast({ title: "Error", description: data.error || "Failed to update attendance", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error updating booking:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -235,15 +245,17 @@ export default function TrainerDashboardClient({
         setBookings((prev) =>
           prev.map((b) => (b.id === bookingId ? { ...b, payment_status: "paid" } : b))
         )
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast({ title: "Error", description: data.error || "Failed to update payment", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error updating payment:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Fetch bookings for a specific date
   const fetchBookingsForDate = async (date: string) => {
     setIsLoading(true)
     try {
@@ -253,9 +265,11 @@ export default function TrainerDashboardClient({
         setBookings(data.bookings || [])
         setSelectedDate(date)
         setScheduleView("list")
+      } else {
+        toast({ title: "Error", description: "Failed to load bookings", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error fetching bookings:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -279,8 +293,8 @@ export default function TrainerDashboardClient({
         }
         setMonthBookings(grouped)
       }
-    } catch (error) {
-      console.error("Error fetching month bookings:", error)
+    } catch {
+      toast({ title: "Error", description: "Failed to load calendar", variant: "destructive" })
     } finally {
       setIsLoadingMonth(false)
     }
@@ -311,14 +325,13 @@ export default function TrainerDashboardClient({
           setSelectedStudent(prev => prev ? { ...prev, last_visit: data.lastVisit, total_sessions: data.totalSessions } : null)
         }
       }
-    } catch (error) {
-      console.error("Error fetching student details:", error)
+    } catch {
+      toast({ title: "Error", description: "Failed to load student details", variant: "destructive" })
     } finally {
       setIsLoadingStudent(false)
     }
   }
 
-  // Add note to student (append-only)
   const handleAddNote = async () => {
     if (!selectedStudent || !newNote.trim()) return
     setIsLoading(true)
@@ -332,9 +345,11 @@ export default function TrainerDashboardClient({
         const data = await res.json()
         setStudentNotes(prev => [data.note, ...prev])
         setNewNote("")
+      } else {
+        toast({ title: "Error", description: "Failed to save note", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error adding note:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -351,6 +366,7 @@ export default function TrainerDashboardClient({
         body: JSON.stringify({
           student_email: selectedStudent.email,
           level: certLevel,
+          skip_skills_check: !skillSignoffs?.allComplete,
         }),
       })
       const data = await res.json()
@@ -365,6 +381,83 @@ export default function TrainerDashboardClient({
       })
     } finally {
       setIsIssuingCert(false)
+    }
+  }
+
+  const fetchSkillSignoffs = async (studentId: string, level: string) => {
+    setLoadingSkills(true)
+    try {
+      const res = await fetch(`/api/admin/certificates/skills?student_id=${studentId}&level=${level}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSkillSignoffs(data)
+      } else {
+        setSkillSignoffs(null)
+      }
+    } catch {
+      setSkillSignoffs(null)
+    } finally {
+      setLoadingSkills(false)
+    }
+  }
+
+  const handleToggleSkill = async (skillIndex: number, currentlySignedOff: boolean) => {
+    if (!selectedStudent || !certLevel) return
+    const method = currentlySignedOff ? "DELETE" : "POST"
+    try {
+      const res = await fetch("/api/admin/certificates/skills", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_id: selectedStudent.id,
+          level: certLevel,
+          skill_index: skillIndex,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (method === "DELETE") {
+          setSkillSignoffs((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  skills: prev.skills.map((s) =>
+                    s.index === skillIndex ? { ...s, signedOff: false } : s
+                  ),
+                  completedCount: prev.completedCount - 1,
+                  allComplete: false,
+                }
+              : null
+          )
+        } else {
+          setSkillSignoffs((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  skills: prev.skills.map((s) =>
+                    s.index === skillIndex ? { ...s, signedOff: true } : s
+                  ),
+                  completedCount: data.completedCount,
+                  allComplete: data.allComplete,
+                }
+              : null
+          )
+        }
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast({ title: "Error", description: data.error || "Failed to update skill", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Error", description: "Connection error", variant: "destructive" })
+    }
+  }
+
+  const handleLevelChange = (level: string) => {
+    setCertLevel(level)
+    setCertSuccess(null)
+    setSkillSignoffs(null)
+    if (level && selectedStudent) {
+      fetchSkillSignoffs(selectedStudent.id, level)
     }
   }
 
@@ -409,11 +502,11 @@ export default function TrainerDashboardClient({
           send_invite: true,
         }),
       })
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json()
         setStudents((prev) => [
           {
-            id: data.user_id || Date.now().toString(),
+            id: data.studentId || crypto.randomUUID(),
             full_name: newStudent.name,
             email: newStudent.email,
             avatar_url: null,
@@ -426,9 +519,11 @@ export default function TrainerDashboardClient({
         ])
         setNewStudent({ name: "", email: "" })
         setShowAddStudent(false)
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to add student", variant: "destructive" })
       }
-    } catch (error) {
-      console.error("Error adding student:", error)
+    } catch {
+      toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
     } finally {
       setIsAddingStudent(false)
     }
@@ -681,6 +776,7 @@ export default function TrainerDashboardClient({
             </div>
             <button
               onClick={handleSignOut}
+              aria-label="Sign out"
               className="p-2 text-neutral-400 hover:text-white transition-colors"
             >
               <LogOut className="w-5 h-5" />
@@ -1673,39 +1769,111 @@ export default function TrainerDashboardClient({
 
               {/* Issue Certificate */}
               {selectedStudent?.email && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Award className="w-3 h-3" />
-                    Certificate
+                    Certification
                   </p>
                   {certSuccess ? (
                     <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm">
                       <p className="text-emerald-400 font-medium">Certificate issued!</p>
                       <p className="text-neutral-400 text-xs mt-1">#{certSuccess}</p>
+                      <a
+                        href={`/verify/${certSuccess}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-orange-400 text-xs flex items-center gap-1 mt-2 hover:text-orange-300"
+                      >
+                        View certificate <ExternalLink className="w-3 h-3" />
+                      </a>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <>
                       <select
                         value={certLevel}
-                        onChange={(e) => setCertLevel(e.target.value)}
-                        className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white"
+                        onChange={(e) => handleLevelChange(e.target.value)}
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white"
                       >
                         <option value="">Select level...</option>
-                        <option value="naga">Naga (Level 1)</option>
-                        <option value="phayra-nak">Phayra Nak (Level 2)</option>
-                        <option value="singha">Singha (Level 3)</option>
-                        <option value="hanuman">Hanuman (Level 4)</option>
-                        <option value="garuda">Garuda (Level 5)</option>
+                        <option value="naga">🐍 Naga (Level 1)</option>
+                        <option value="phayra-nak">🐉 Phayra Nak (Level 2)</option>
+                        <option value="singha">🦁 Singha (Level 3)</option>
+                        <option value="hanuman">🐒 Hanuman (Level 4)</option>
+                        <option value="garuda">🦅 Garuda (Level 5)</option>
                       </select>
-                      <Button
-                        onClick={handleIssueCertificate}
-                        disabled={isIssuingCert || !certLevel}
-                        className="bg-orange-600 hover:bg-orange-500"
-                        size="sm"
-                      >
-                        {isIssuingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
-                      </Button>
-                    </div>
+
+                      {/* Skills Checklist */}
+                      {certLevel && (
+                        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-neutral-300">Skills Assessment</p>
+                            {skillSignoffs && (
+                              <Badge className={`text-[10px] ${skillSignoffs.allComplete ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-neutral-700 text-neutral-300 border-neutral-600"}`}>
+                                {skillSignoffs.completedCount}/{skillSignoffs.totalCount}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {loadingSkills ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="w-4 h-4 animate-spin text-neutral-500" />
+                            </div>
+                          ) : skillSignoffs ? (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                              {skillSignoffs.skills.map((skill) => (
+                                <button
+                                  key={skill.index}
+                                  onClick={() => handleToggleSkill(skill.index, skill.signedOff)}
+                                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-xs transition-colors ${
+                                    skill.signedOff
+                                      ? "bg-emerald-500/10 text-emerald-300"
+                                      : "bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800"
+                                  }`}
+                                >
+                                  {skill.signedOff ? (
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                  ) : (
+                                    <div className="w-3.5 h-3.5 rounded-full border border-neutral-600 shrink-0" />
+                                  )}
+                                  <span className="flex-1">{skill.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-neutral-500 py-2">Select a level to see required skills</p>
+                          )}
+
+                          {/* Progress bar */}
+                          {skillSignoffs && skillSignoffs.totalCount > 0 && (
+                            <div className="mt-2">
+                              <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${skillSignoffs.allComplete ? "bg-emerald-500" : "bg-orange-500"}`}
+                                  style={{ width: `${(skillSignoffs.completedCount / skillSignoffs.totalCount) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Issue button */}
+                      {certLevel && (
+                        <Button
+                          onClick={handleIssueCertificate}
+                          disabled={isIssuingCert || !certLevel}
+                          className={`w-full ${skillSignoffs?.allComplete ? "bg-emerald-600 hover:bg-emerald-500" : "bg-orange-600 hover:bg-orange-500"}`}
+                          size="sm"
+                        >
+                          {isIssuingCert ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Award className="w-4 h-4 mr-2" />
+                          )}
+                          {skillSignoffs?.allComplete ? "Issue Certificate" : "Issue Certificate (skip skills check)"}
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

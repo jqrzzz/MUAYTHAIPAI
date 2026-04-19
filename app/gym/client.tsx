@@ -1,14 +1,19 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Moon, Sun, Heart, MessageCircle, Dumbbell, Menu, BoxIcon as Boxing } from "lucide-react"
-import { useTheme } from "next-themes"
-import { MoreMenu } from "@/components/more-menu"
-import { SacredBackground, DynamicGradient } from "@/components/sacred-background"
+import { SacredBackground } from "@/components/sacred-background"
 import { ContinueLearning } from "@/components/blog/continue-learning"
+import {
+  PageBackground,
+  MarketingTopNav,
+  MarketingBottomNav,
+  SplashScreen,
+  useSplash,
+  useMounted,
+} from "@/components/marketing"
 
 const gymImages = [
   { id: 1, url: "/images/gym-certificate.png", alt: "Muay Thai certification" },
@@ -29,93 +34,36 @@ const amenities = [
 ]
 
 export default function GymPageClient() {
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  const [showContent, setShowContent] = useState(false)
+  const mounted = useMounted()
+  const { showContent, dismiss } = useSplash()
   const [currentImage, setCurrentImage] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
-  const [visibleAmenities, setVisibleAmenities] = useState<number[]>([])
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
-
-  const touchStartX = useRef(0)
-  const touchEndX = useRef(0)
 
   useEffect(() => {
-    setMounted(true)
-    const timer = setTimeout(() => setShowContent(true), 2000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    if (!showContent || isPaused) return
+    if (!showContent) return
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % gymImages.length)
     }, 5000)
     return () => clearInterval(interval)
-  }, [showContent, isPaused])
-
-  const nextImage = () => setCurrentImage((prev) => (prev + 1) % gymImages.length)
-
-  const prevImage = () => setCurrentImage((prev) => (prev - 1 + gymImages.length) % gymImages.length)
-
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
+  }, [showContent])
 
   if (!mounted) return null
 
   return (
-    <div
-      className={`min-h-screen overflow-hidden relative transition-all duration-500 ${
-        theme === "dark"
-          ? "bg-gradient-to-b from-black via-neutral-900 to-black"
-          : "bg-gradient-to-b from-neutral-100 via-white to-neutral-50"
-      }`}
-    >
-      <DynamicGradient />
+    <PageBackground>
       <SacredBackground />
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <motion.div
-            key="splash"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.8 }}
-            className="flex items-center justify-center min-h-screen z-20 relative"
-          >
-            <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-black text-amber-500">Gym</h1>
-              <p className="text-lg text-amber-400 tracking-widest">MUAY THAI PAI</p>
-              <p className="text-sm text-amber-300 tracking-wider">WISARUT FAMILY</p>
-            </div>
-          </motion.div>
+          <SplashScreen key="gym-splash" onSkip={dismiss} />
         ) : (
           <motion.div
-            key="content"
+            key="gym-content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
             className="relative z-20 min-h-screen"
           >
-            {/* TOP NAV */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex justify-between p-4">
-              <div className="flex gap-2">
-                <Link href="/" className="backdrop-blur-md rounded-full p-3 border border-white/20">
-                  <ArrowLeft className="w-5 h-5 text-amber-400" />
-                </Link>
-              </div>
-
-              <button
-                onClick={toggleTheme}
-                className="absolute top-4 right-4 backdrop-blur-md rounded-full p-3 border border-white/20"
-              >
-                {theme === "dark" ? (
-                  <Sun className="w-5 h-5 text-amber-400" />
-                ) : (
-                  <Moon className="w-5 h-5 text-orange-600" />
-                )}
-              </button>
-            </div>
+            <MarketingTopNav />
 
             {/* TITLE */}
             <div className="text-center mt-20">
@@ -186,44 +134,14 @@ export default function GymPageClient() {
               </div>
             </div>
 
-            {/* Continue Learning section */}
             <div className="pb-24">
               <ContinueLearning currentPage="gym" />
             </div>
 
-            {/* BOTTOM NAV */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-black/80 border-t border-white/10">
-              <div className="flex justify-around py-3 px-4">
-                {[
-                  { icon: Heart, label: "Family", href: "/" },
-                  { icon: Boxing, label: "Classes", href: "/classes" },
-                  { icon: Dumbbell, label: "Gym", href: "/gym" },
-                  { icon: MessageCircle, label: "Contact", href: "/contact" },
-                  { icon: Menu, label: "More", isButton: true },
-                ].map((item) =>
-                  item.isButton ? (
-                    <button
-                      key={item.label}
-                      onClick={() => setShowMoreMenu(true)}
-                      className="flex flex-col items-center"
-                    >
-                      <item.icon className="w-5 h-5 text-gray-300" />
-                      <span className="text-xs text-gray-400">{item.label}</span>
-                    </button>
-                  ) : (
-                    <Link key={item.label} href={item.href!} className="flex flex-col items-center">
-                      <item.icon className="w-5 h-5 text-gray-300" />
-                      <span className="text-xs text-gray-400">{item.label}</span>
-                    </Link>
-                  ),
-                )}
-              </div>
-            </div>
-
-            <MoreMenu isOpen={showMoreMenu} onClose={() => setShowMoreMenu(false)} />
+            <MarketingBottomNav active="gym" />
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageBackground>
   )
 }

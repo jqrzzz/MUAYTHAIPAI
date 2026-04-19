@@ -1,28 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  ArrowLeft,
-  Moon,
-  Sun,
-  Heart,
-  MessageCircle,
-  BoxIcon as Boxing,
-  Dumbbell,
-  Menu,
-  ChevronDown,
-  ChevronUp,
-  Utensils,
-  Leaf,
-  Landmark,
-  Mountain,
-} from "lucide-react"
-import { useTheme } from "next-themes"
-import { MoreMenu } from "@/components/more-menu"
+import { ChevronDown, ChevronUp, Utensils, Leaf, Landmark, Mountain } from "lucide-react"
 import { MiniSlideshow } from "@/components/mini-slideshow"
 import { ContinueLearning } from "@/components/blog/continue-learning"
+import {
+  PageBackground,
+  MarketingTopNav,
+  MarketingBottomNav,
+  SplashScreen,
+  useSplash,
+  useMounted,
+  CONTENT_FADE_IN,
+  EXPAND_COLLAPSE,
+} from "@/components/marketing"
 import React from "react"
 
 const paiSections = [
@@ -69,27 +62,9 @@ const paiSlideshowImages = [
 ]
 
 export default function PaiThailandClient() {
-  const [showContent, setShowContent] = useState(false)
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const { showContent, dismiss } = useSplash()
+  const mounted = useMounted()
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-    const timer = setTimeout(() => {
-      setShowContent(true)
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
-
-  const toggleMoreMenu = () => {
-    setShowMoreMenu(!showMoreMenu)
-  }
 
   const handleToggleSection = (sectionId: string) => {
     setExpandedSection(expandedSection === sectionId ? null : sectionId)
@@ -100,108 +75,21 @@ export default function PaiThailandClient() {
   }
 
   return (
-    <div
-      className={`min-h-screen overflow-hidden relative transition-all duration-500 ${
-        theme === "dark"
-          ? "bg-gradient-to-b from-black via-neutral-900 to-black"
-          : "bg-gradient-to-b from-neutral-100 via-white to-neutral-50"
-      }`}
-    >
-      <div
-        className={`absolute inset-0 z-10 ${
-          theme === "dark"
-            ? "bg-gradient-to-br from-orange-600/25 via-transparent to-amber-600/20"
-            : "bg-gradient-to-br from-orange-500/20 via-transparent to-orange-400/15"
-        }`}
-      />
+    <PageBackground>
+      <h1 className="sr-only">About Pai, Thailand</h1>
 
       <AnimatePresence mode="wait">
         {!showContent ? (
-          <motion.div
-            key="pai-splash"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative z-20 flex items-center justify-center min-h-screen"
-          >
-            <div className="text-center">
-              <motion.h1
-                className={`text-4xl md:text-5xl font-black mb-2 ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-amber-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent"
-                    : "text-orange-800"
-                }`}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-              >
-                About Pai
-              </motion.h1>
-              <motion.p
-                className={`text-lg font-bold tracking-widest ${
-                  theme === "dark" ? "text-amber-200/90" : "text-amber-800/90"
-                }`}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-              >
-                MUAY THAI PAI
-              </motion.p>
-            </div>
-          </motion.div>
+          <SplashScreen key="pai-splash" onSkip={dismiss} />
         ) : (
           <motion.div
             key="pai-content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
+            transition={CONTENT_FADE_IN}
             className="relative z-20 min-h-screen flex flex-col"
           >
-            {/* Top Navigation */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex justify-between p-4">
-              <motion.div
-                className="flex gap-2"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Link
-                  href="/"
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    theme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/15 border-black/25 hover:bg-black/25"
-                  }`}
-                  aria-label="Back to home"
-                >
-                  <ArrowLeft className={`w-5 h-5 ${theme === "dark" ? "text-amber-400" : "text-orange-600"}`} />
-                </Link>
-              </motion.div>
-
-              <motion.div
-                className="absolute top-4 right-4 z-50"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <button
-                  onClick={toggleTheme}
-                  className={`backdrop-blur-md rounded-full p-3 border transition-colors ${
-                    theme === "dark"
-                      ? "bg-white/10 border-white/20 hover:bg-white/20"
-                      : "bg-black/15 border-black/25 hover:bg-black/25"
-                  }`}
-                  aria-label="Toggle theme"
-                >
-                  {theme === "dark" ? (
-                    <Sun className="w-5 h-5 text-amber-400" />
-                  ) : (
-                    <Moon className="w-5 h-5 text-orange-600" />
-                  )}
-                </button>
-              </motion.div>
-            </div>
+            <MarketingTopNav />
 
             {/* Hero Section */}
             <div className="relative w-full h-screen flex items-center justify-center">
@@ -211,27 +99,17 @@ export default function PaiThailandClient() {
                 role="img"
                 aria-label="Pai landscape with person, dog, sunset, and mountains"
               />
-              <div className={`absolute inset-0 z-[2] ${theme === "dark" ? "bg-black/50" : "bg-black/40"}`} />
+              <div className="absolute inset-0 z-[2] bg-black/40 dark:bg-black/50" />
               <motion.div
                 className="relative z-[3] text-center px-4"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8, duration: 1 }}
               >
-                <h1
-                  className={`text-5xl md:text-7xl font-black mb-4 leading-tight ${
-                    theme === "dark"
-                      ? "bg-gradient-to-r from-amber-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent"
-                      : "text-orange-800"
-                  }`}
-                >
+                <h2 className="text-5xl md:text-7xl font-black mb-4 leading-tight text-orange-800 dark:bg-gradient-to-r dark:from-amber-300 dark:via-orange-400 dark:to-yellow-500 dark:bg-clip-text dark:text-transparent">
                   Discover Pai
-                </h1>
-                <p
-                  className={`text-xl md:text-2xl font-semibold ${
-                    theme === "dark" ? "text-amber-200/90" : "text-orange-200/90"
-                  }`}
-                >
+                </h2>
+                <p className="text-xl md:text-2xl font-semibold text-orange-200/90 dark:text-amber-200/90">
                   Where Adventure Meets Serenity
                 </p>
               </motion.div>
@@ -240,17 +118,17 @@ export default function PaiThailandClient() {
             {/* Main Content Area */}
             <div className="flex flex-col items-center flex-grow px-4 py-16 gap-6 max-w-7xl mx-auto">
               <section className="py-8 px-4 max-w-4xl mx-auto text-center">
-                <motion.h2
-                  className={`text-3xl md:text-4xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-orange-800"}`}
+                <motion.h3
+                  className="text-3xl md:text-4xl font-bold mb-6 text-orange-800 dark:text-white"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
                   viewport={{ once: true }}
                 >
                   {"Rest, Recharge, and Immerse Yourself in Pai's Serenity"}
-                </motion.h2>
+                </motion.h3>
                 <motion.p
-                  className={`text-lg leading-relaxed ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}
+                  className="text-lg leading-relaxed text-gray-700 dark:text-gray-300"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2, duration: 0.6 }}
@@ -261,7 +139,7 @@ export default function PaiThailandClient() {
                   }
                 </motion.p>
                 <motion.p
-                  className={`text-sm mt-4 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+                  className="text-sm mt-4 text-gray-600 dark:text-gray-400"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.6 }}
@@ -290,91 +168,78 @@ export default function PaiThailandClient() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.1, duration: 0.8 }}
               >
-                {paiSections.map((section) => (
-                  <motion.div
-                    key={section.id}
-                    className={`relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg cursor-pointer transition-all duration-300 ${
-                      expandedSection === section.id
-                        ? theme === "dark"
-                          ? "border-orange-500/30"
-                          : "border-orange-700/50"
-                        : theme === "dark"
-                          ? "bg-orange-950/30 border-orange-500/20"
-                          : "bg-orange-100/60 border-orange-600/30"
-                    }`}
-                    onClick={() => handleToggleSection(section.id)}
-                    whileHover={{ scale: expandedSection === section.id ? 1 : 1.02 }}
-                  >
-                    <div className="p-6 flex justify-between items-center">
-                      <div>
-                        <h3
-                          className={`text-xl font-bold ${
-                            expandedSection === section.id
-                              ? theme === "dark"
-                                ? "bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent"
-                                : "bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent"
-                              : theme === "dark"
-                                ? "text-gray-300"
-                                : "text-orange-800"
-                          }`}
+                {paiSections.map((section) => {
+                  const isExpanded = expandedSection === section.id
+                  return (
+                    <motion.div
+                      key={section.id}
+                      className={
+                        isExpanded
+                          ? "relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg cursor-pointer transition-all duration-300 border-orange-700/50 dark:border-orange-500/30"
+                          : "relative backdrop-blur-xl rounded-2xl overflow-hidden border shadow-lg cursor-pointer transition-all duration-300 bg-orange-100/60 border-orange-600/30 dark:bg-orange-950/30 dark:border-orange-500/20"
+                      }
+                      onClick={() => handleToggleSection(section.id)}
+                      whileHover={{ scale: isExpanded ? 1 : 1.02 }}
+                    >
+                      <div className="p-6 flex justify-between items-center">
+                        <div>
+                          <h3
+                            className={
+                              isExpanded
+                                ? "text-xl font-bold bg-gradient-to-r from-amber-900 to-orange-900 bg-clip-text text-transparent dark:from-amber-700 dark:to-orange-700"
+                                : "text-xl font-bold text-orange-800 dark:text-gray-300"
+                            }
+                          >
+                            {section.title}
+                          </h3>
+                        </div>
+                        <div
+                          className={
+                            isExpanded
+                              ? "rounded-full p-2 bg-orange-500/10 dark:bg-orange-500/20"
+                              : "rounded-full p-2 bg-gray-100 dark:bg-white/10"
+                          }
                         >
-                          {section.title}
-                        </h3>
+                          {isExpanded ? (
+                            <ChevronUp className="w-6 h-6 text-amber-900 dark:text-amber-700" />
+                          ) : (
+                            <ChevronDown className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                          )}
+                        </div>
                       </div>
-                      <div
-                        className={`rounded-full p-2 ${
-                          expandedSection === section.id
-                            ? theme === "dark"
-                              ? "bg-orange-500/20"
-                              : "bg-orange-500/10"
-                            : theme === "dark"
-                              ? "bg-white/10"
-                              : "bg-gray-100"
-                        }`}
-                      >
-                        {expandedSection === section.id ? (
-                          <ChevronUp className={`w-6 h-6 ${theme === "dark" ? "text-amber-700" : "text-amber-900"}`} />
-                        ) : (
-                          <ChevronDown className={`w-6 h-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`} />
-                        )}
-                      </div>
-                    </div>
 
-                    <AnimatePresence>
-                      {expandedSection === section.id && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="px-6 pb-6 pt-2">
-                            <div
-                              className={`h-px w-full bg-gradient-to-r from-transparent ${theme === "dark" ? "via-orange-500/30" : "via-orange-600/40"} to-transparent mb-6`}
-                            />
-                            <div className={`space-y-4 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
-                              {section.media.type === "icon" && section.media.icon && (
-                                <div className="flex justify-center items-center w-full h-48 rounded-lg mb-4 overflow-hidden">
-                                  {React.createElement(section.media.icon, {
-                                    className: `w-24 h-24 ${theme === "dark" ? "text-amber-400/70" : "text-orange-600/70"}`,
-                                    "aria-label": section.media.alt,
-                                  })}
-                                </div>
-                              )}
-                              <h4
-                                className={`text-xl font-semibold ${theme === "dark" ? "text-amber-200" : "text-orange-900"}`}
-                              >
-                                {section.expandedHeading}
-                              </h4>
-                              <p>{section.description}</p>
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={EXPAND_COLLAPSE}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-6 pb-6 pt-2">
+                              <div className="h-px w-full bg-gradient-to-r from-transparent via-orange-600/40 to-transparent dark:via-orange-500/30 mb-6" />
+                              <div className="space-y-4 text-gray-700 dark:text-gray-300">
+                                {section.media.type === "icon" && section.media.icon && (
+                                  <div className="flex justify-center items-center w-full h-48 rounded-lg mb-4 overflow-hidden">
+                                    {React.createElement(section.media.icon, {
+                                      className: "w-24 h-24 text-orange-600/70 dark:text-amber-400/70",
+                                      "aria-label": section.media.alt,
+                                    })}
+                                  </div>
+                                )}
+                                <h4 className="text-xl font-semibold text-orange-900 dark:text-amber-200">
+                                  {section.expandedHeading}
+                                </h4>
+                                <p>{section.description}</p>
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )
+                })}
               </motion.div>
 
               {/* Slideshow */}
@@ -388,54 +253,10 @@ export default function PaiThailandClient() {
               </div>
             </div>
 
-            {/* Bottom Navigation */}
-            <motion.div
-              className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t ${
-                theme === "dark" ? "bg-black/80 border-white/10" : "bg-white/90 border-gray-200"
-              }`}
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              transition={{ delay: 1.1, duration: 0.8 }}
-            >
-              <div className="flex justify-around py-3 px-4">
-                {[
-                  { icon: Heart, label: "Family", href: "/" },
-                  { icon: Boxing, label: "Classes", href: "/classes" },
-                  { icon: Dumbbell, label: "Gym", href: "/gym" },
-                  { icon: MessageCircle, label: "Contact", href: "/contact" },
-                  { icon: Menu, label: "More", isButton: true },
-                ].map((item) =>
-                  item.isButton ? (
-                    <motion.button
-                      key={item.label}
-                      onClick={toggleMoreMenu}
-                      className={theme === "dark" ? "text-gray-400" : "text-gray-500"}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <item.icon className="w-5 h-5" />
-                        <span className="text-xs font-medium">{item.label}</span>
-                      </div>
-                    </motion.button>
-                  ) : (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className={`flex flex-col items-center gap-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span className="text-xs font-medium">{item.label}</span>
-                    </Link>
-                  ),
-                )}
-              </div>
-            </motion.div>
+            <MarketingBottomNav />
           </motion.div>
         )}
       </AnimatePresence>
-
-      <MoreMenu isOpen={showMoreMenu} onClose={() => setShowMoreMenu(false)} />
-    </div>
+    </PageBackground>
   )
 }

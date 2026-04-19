@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import ApprenticeshipClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
   title: "Apprenticeship | Muay Thai Pai",
@@ -21,5 +22,15 @@ export const metadata: Metadata = {
 }
 
 export default function ApprenticeshipPage() {
-  return <ApprenticeshipClient />
+  return (
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "Apprenticeship", url: "https://muaythaipai.com/apprenticeship" },
+        ]}
+      />
+      <ApprenticeshipClient />
+    </>
+  )
 }

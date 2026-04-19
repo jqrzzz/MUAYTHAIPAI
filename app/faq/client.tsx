@@ -1,12 +1,12 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { ChevronDown, ChevronUp, MapPin, Clock, DollarSign, Users, Award, Plane } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useTheme } from "next-themes"
 import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooterMenu } from "@/components/site-footer-menu"
 import { ContinueLearning } from "@/components/blog/continue-learning"
+import { EXPAND_COLLAPSE } from "@/components/marketing"
 
 const faqData = [
   {
@@ -138,31 +138,21 @@ const faqData = [
 ]
 
 export default function FAQClient() {
-  const { theme } = useTheme()
-  const [mounted, setMounted] = useState(false)
   const [openItems, setOpenItems] = useState<string[]>([])
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const resolvedTheme = mounted ? theme : "dark"
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
 
   return (
-    <div className={`min-h-screen ${resolvedTheme === "dark" ? "bg-black text-white" : "bg-white text-gray-900"}`}>
+    <div className="min-h-screen bg-white text-gray-900 dark:bg-black dark:text-white">
       <SiteHeader />
 
       {/* Hero Section */}
-      <div
-        className={`py-20 ${resolvedTheme === "dark" ? "bg-gradient-to-b from-orange-900/20 to-black" : "bg-gradient-to-b from-orange-50 to-white"}`}
-      >
+      <div className="py-20 bg-gradient-to-b from-orange-50 to-white dark:from-orange-900/20 dark:to-black">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <motion.h1
-            className={`text-4xl md:text-6xl font-bold mb-6 ${resolvedTheme === "dark" ? "text-white" : "text-gray-900"}`}
+            className="text-4xl md:text-6xl font-bold mb-6 text-gray-900 dark:text-white"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -170,7 +160,7 @@ export default function FAQClient() {
             Frequently Asked Questions
           </motion.h1>
           <motion.p
-            className={`text-xl mb-8 ${resolvedTheme === "dark" ? "text-gray-300" : "text-gray-600"}`}
+            className="text-xl mb-8 text-gray-600 dark:text-gray-300"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -183,14 +173,12 @@ export default function FAQClient() {
       {/* FAQ Content */}
       <div className="max-w-4xl mx-auto px-4 py-16">
         <motion.div
-          className={`mb-12 p-6 rounded-xl ${
-            resolvedTheme === "dark" ? "bg-gray-800/50 border border-gray-700" : "bg-gray-50 border border-gray-200"
-          }`}
+          className="mb-12 p-6 rounded-xl bg-gray-50 border border-gray-200 dark:bg-gray-800/50 dark:border-gray-700"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <p className={`text-sm mb-3 ${resolvedTheme === "dark" ? "text-gray-400" : "text-gray-600"}`}>Quick Links:</p>
+          <p className="text-sm mb-3 text-gray-600 dark:text-gray-400">Quick Links:</p>
           <div className="flex flex-wrap gap-4 text-sm">
             <Link href="/classes" className="text-primary underline-offset-4 hover:underline">
               View Classes
@@ -216,12 +204,10 @@ export default function FAQClient() {
             transition={{ duration: 0.6, delay: categoryIndex * 0.1 }}
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className={`p-3 rounded-full ${resolvedTheme === "dark" ? "bg-orange-500/20" : "bg-orange-100"}`}>
-                <category.icon
-                  className={`w-6 h-6 ${resolvedTheme === "dark" ? "text-orange-400" : "text-orange-600"}`}
-                />
+              <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-500/20">
+                <category.icon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
-              <h2 className={`text-2xl font-bold ${resolvedTheme === "dark" ? "text-white" : "text-gray-900"}`}>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {category.category}
               </h2>
             </div>
@@ -234,32 +220,22 @@ export default function FAQClient() {
                 return (
                   <motion.div
                     key={itemId}
-                    className={`border rounded-lg overflow-hidden ${
-                      resolvedTheme === "dark" ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                    }`}
+                    className="border rounded-lg overflow-hidden border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50"
                     whileHover={{ scale: 1.01 }}
                     transition={{ duration: 0.2 }}
                   >
                     <button
                       onClick={() => toggleItem(itemId)}
-                      className={`w-full px-6 py-4 text-left flex items-center justify-between hover:bg-opacity-80 transition-colors ${
-                        resolvedTheme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                      }`}
+                      className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-opacity-80 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                       aria-expanded={isOpen}
                     >
-                      <h3
-                        className={`font-semibold text-lg ${resolvedTheme === "dark" ? "text-white" : "text-gray-900"}`}
-                      >
+                      <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
                         {item.question}
                       </h3>
                       {isOpen ? (
-                        <ChevronUp
-                          className={`w-5 h-5 ${resolvedTheme === "dark" ? "text-orange-400" : "text-orange-600"}`}
-                        />
+                        <ChevronUp className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                       ) : (
-                        <ChevronDown
-                          className={`w-5 h-5 ${resolvedTheme === "dark" ? "text-orange-400" : "text-orange-600"}`}
-                        />
+                        <ChevronDown className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                       )}
                     </button>
 
@@ -269,10 +245,10 @@ export default function FAQClient() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3 }}
+                          transition={EXPAND_COLLAPSE}
                           className="overflow-hidden"
                         >
-                          <div className={`px-6 pb-4 ${resolvedTheme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                          <div className="px-6 pb-4 text-gray-600 dark:text-gray-300">
                             <p className="leading-relaxed">{item.answer}</p>
                           </div>
                         </motion.div>
@@ -287,29 +263,21 @@ export default function FAQClient() {
 
         {/* Contact CTA */}
         <motion.div
-          className={`mt-16 p-8 rounded-2xl text-center ${
-            resolvedTheme === "dark"
-              ? "bg-gradient-to-r from-orange-900/30 to-amber-900/30 border border-orange-500/20"
-              : "bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200"
-          }`}
+          className="mt-16 p-8 rounded-2xl text-center bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 dark:from-orange-900/30 dark:to-amber-900/30 dark:border-orange-500/20"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
         >
-          <h3 className={`text-2xl font-bold mb-4 ${resolvedTheme === "dark" ? "text-white" : "text-gray-900"}`}>
+          <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
             Still Have Questions?
           </h3>
-          <p className={`mb-6 ${resolvedTheme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+          <p className="mb-6 text-gray-600 dark:text-gray-300">
             {"Don't hesitate to reach out! The Wisarut Family is always happy to help answer any questions."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/contact"
-              className={`px-6 py-3 rounded-full font-semibold transition-colors ${
-                resolvedTheme === "dark"
-                  ? "bg-orange-500 text-white hover:bg-orange-600"
-                  : "bg-orange-500 text-white hover:bg-orange-600"
-              }`}
+              className="px-6 py-3 rounded-full font-semibold transition-colors bg-orange-500 text-white hover:bg-orange-600"
             >
               Contact Us
             </Link>

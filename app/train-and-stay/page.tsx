@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import TrainAndStayClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
   title: "Train & Stay | Muay Thai Pai",
@@ -21,5 +22,15 @@ export const metadata: Metadata = {
 }
 
 export default function TrainAndStayPage() {
-  return <TrainAndStayClient />
+  return (
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "Train & Stay", url: "https://muaythaipai.com/train-and-stay" },
+        ]}
+      />
+      <TrainAndStayClient />
+    </>
+  )
 }

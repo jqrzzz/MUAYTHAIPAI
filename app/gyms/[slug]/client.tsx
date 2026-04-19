@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -93,7 +94,7 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
           <div className="flex items-start gap-4 mb-4">
             <div className="w-16 h-16 bg-neutral-800 rounded-xl flex items-center justify-center flex-shrink-0">
               {gym.logo_url ? (
-                <img src={gym.logo_url || "/placeholder.svg"} alt={gym.name} className="w-12 h-12 object-contain" />
+                <Image src={gym.logo_url || "/placeholder.svg"} alt={gym.name} width={48} height={48} className="w-12 h-12 object-contain" />
               ) : (
                 <Dumbbell className="w-8 h-8 text-neutral-600" />
               )}
@@ -272,9 +273,11 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 bg-neutral-800 rounded-full flex items-center justify-center flex-shrink-0">
                         {trainer.photo_url ? (
-                          <img
+                          <Image
                             src={trainer.photo_url || "/placeholder.svg"}
                             alt={trainer.display_name}
+                            width={56}
+                            height={56}
                             className="w-14 h-14 rounded-full object-cover"
                           />
                         ) : (

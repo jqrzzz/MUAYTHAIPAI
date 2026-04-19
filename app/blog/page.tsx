@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import BlogClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
   title: "Blog | Muay Thai Pai",
@@ -16,5 +17,15 @@ export const metadata: Metadata = {
 }
 
 export default function BlogPage() {
-  return <BlogClient />
+  return (
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "Blog", url: "https://muaythaipai.com/blog" },
+        ]}
+      />
+      <BlogClient />
+    </>
+  )
 }

@@ -19,6 +19,7 @@ import {
   Sparkles,
   BookOpen,
   MessageSquare,
+  Sprout,
 } from "lucide-react"
 
 const OckOckAvatar = ({ size = 32 }: { size?: number }) => (
@@ -51,6 +52,8 @@ export default function TrainOckockTab() {
   const [quickReplyInput, setQuickReplyInput] = useState("")
   const [quickReplyResponse, setQuickReplyResponse] = useState("")
   const [isGeneratingReply, setIsGeneratingReply] = useState(false)
+  const [isSeeding, setIsSeeding] = useState(false)
+  const [seedMessage, setSeedMessage] = useState<string | null>(null)
 
   useEffect(() => {
     fetchFaqs()
@@ -134,6 +137,25 @@ export default function TrainOckockTab() {
     setIsGeneratingReply(false)
   }
 
+  const handleSeedFaqs = async () => {
+    setIsSeeding(true)
+    setSeedMessage(null)
+    try {
+      const res = await fetch("/api/admin/faqs/seed", { method: "POST" })
+      const data = await res.json()
+      if (res.ok) {
+        setSeedMessage(data.message ?? "Seeded from website FAQ")
+        fetchFaqs()
+      } else {
+        setSeedMessage(data.error ?? "Could not seed FAQs")
+      }
+    } catch (error) {
+      console.error("Failed to seed FAQs:", error)
+      setSeedMessage("Could not seed FAQs — check your connection and try again.")
+    }
+    setIsSeeding(false)
+  }
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
   }
@@ -143,22 +165,45 @@ export default function TrainOckockTab() {
       {/* Header with OckOck branding */}
       <Card className="bg-neutral-900/50 border-neutral-800">
         <CardContent className="pt-6">
-          <div className="flex items-center gap-4 mb-4">
-            <OckOckAvatar size={64} />
-            <div>
-              <h2 className="text-2xl font-bold text-white">Train Your Water Buffalo</h2>
-              <p className="text-neutral-400">Teach OckOck how to answer customer questions</p>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="h-2 bg-neutral-700 rounded-full w-48">
-                  <div
-                    className="h-2 bg-orange-500 rounded-full transition-all"
-                    style={{ width: `${Math.min((faqs.length / 20) * 100, 100)}%` }}
-                  />
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <OckOckAvatar size={64} />
+              <div>
+                <h2 className="text-2xl font-bold text-white">Train Your Water Buffalo</h2>
+                <p className="text-neutral-400">Teach OckOck how to answer customer questions</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="h-2 bg-neutral-700 rounded-full w-48">
+                    <div
+                      className="h-2 bg-orange-500 rounded-full transition-all"
+                      style={{ width: `${Math.min((faqs.length / 20) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-neutral-400">{faqs.length} answers learned</span>
                 </div>
-                <span className="text-sm text-neutral-400">{faqs.length} answers learned</span>
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSeedFaqs}
+              disabled={isSeeding}
+              className="border-neutral-700 bg-transparent shrink-0"
+              title="Import the canned Q&A from the public /faq page"
+            >
+              {isSeeding ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Seeding...
+                </>
+              ) : (
+                <>
+                  <Sprout className="w-4 h-4 mr-2" /> Seed from website FAQ
+                </>
+              )}
+            </Button>
           </div>
+          {seedMessage && (
+            <p className="text-sm text-neutral-400 mt-3">{seedMessage}</p>
+          )}
         </CardContent>
       </Card>
 

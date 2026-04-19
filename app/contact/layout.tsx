@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact Muay Thai Pai | Book Your Training",
     description: "Contact us to start your authentic Muay Thai journey in Pai, Thailand. Quick response guaranteed.",
-    url: "https://www.muaythaipai.com/contact",
+    url: "https://muaythaipai.com/contact",
   },
 }
 

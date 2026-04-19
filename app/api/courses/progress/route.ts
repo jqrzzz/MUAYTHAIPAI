@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { notifyCourseCompleted } from "@/lib/notifications"
+import { getLevelById } from "@/lib/certification-levels"
+import { notifyStudentCourseCompleted } from "@/lib/student-notifications"
 
 const serviceClient = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -151,7 +154,7 @@ export async function POST(request: Request) {
 
     const { data: course } = await supabase
       .from("courses")
-      .select("total_lessons")
+      .select("total_lessons, certificate_level, org_id, title")
       .eq("id", course_id)
       .single()
 
@@ -168,6 +171,60 @@ export async function POST(request: Request) {
     if (pct >= 100) {
       enrollmentUpdate.status = "completed"
       enrollmentUpdate.completed_at = now
+
+      if (course?.certificate_level) {
+        const levelConfig = getLevelById(course.certificate_level)
+        const { data: profile } = await serviceClient
+          .from("users")
+          .select("full_name")
+          .eq("id", user.id)
+          .single()
+
+        // For org-specific courses, auto-create certification enrollment
+        if (course.org_id) {
+          const { data: existingCertEnrollment } = await serviceClient
+            .from("certification_enrollments")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("org_id", course.org_id)
+            .eq("level", course.certificate_level)
+            .single()
+
+          if (!existingCertEnrollment) {
+            await serviceClient
+              .from("certification_enrollments")
+              .insert({
+                org_id: course.org_id,
+                user_id: user.id,
+                level: course.certificate_level,
+                status: "active",
+                notes: `Auto-enrolled after completing course: ${course.title}`,
+              })
+              .select()
+              .single()
+          }
+        }
+
+        // Notify gym if course belongs to one
+        if (course.org_id) {
+          notifyCourseCompleted({
+            orgId: course.org_id,
+            studentName: profile?.full_name || "Student",
+            studentId: user.id,
+            courseTitle: course.title || "Course",
+            courseId: course_id,
+            certificateLevel: course.certificate_level,
+            levelName: levelConfig?.name || course.certificate_level,
+          }).catch(() => {})
+        }
+
+        // Email student about course completion and next steps
+        notifyStudentCourseCompleted({
+          studentId: user.id,
+          courseTitle: course.title || "Course",
+          certificateLevel: course.certificate_level,
+        }).catch(() => {})
+      }
     }
 
     await supabase

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: "Muay Thai Career Path | Professional Fighter & Coach Training",
     description:
       "Earn official Thai accreditation and start your professional Muay Thai career. Fighter and coaching paths available.",
-    url: "https://www.muaythaipai.com/careers",
+    url: "https://muaythaipai.com/careers",
   },
 }
 

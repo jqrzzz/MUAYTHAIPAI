@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { randomBytes } from "crypto"
+import { LEVEL_IDS, getLevelById, getLevelIndex } from "@/lib/certification-levels"
+import { notifyStudentCertificateIssued } from "@/lib/student-notifications"
+import { notifyCertificateIssued } from "@/lib/notifications"
 
 // GET - List certificates issued by this gym
 export async function GET() {
@@ -72,10 +75,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "student_email and level are required" }, { status: 400 })
   }
 
-  const VALID_LEVELS = ["naga", "phayra-nak", "singha", "hanuman", "garuda"]
-  if (!VALID_LEVELS.includes(level.toLowerCase())) {
+  const normalizedLevel = level.toLowerCase()
+  const levelConfig = getLevelById(normalizedLevel)
+  if (!levelConfig) {
     return NextResponse.json(
-      { error: `Invalid level. Must be one of: ${VALID_LEVELS.join(", ")}` },
+      { error: `Invalid level. Must be one of: ${LEVEL_IDS.join(", ")}` },
       { status: 400 }
     )
   }
@@ -97,7 +101,7 @@ export async function POST(request: Request) {
     .select("id")
     .eq("org_id", membership.org_id)
     .eq("user_id", student.id)
-    .eq("level", level.toLowerCase())
+    .eq("level", normalizedLevel)
     .eq("status", "active")
     .single()
 
@@ -108,13 +112,94 @@ export async function POST(request: Request) {
     )
   }
 
-  // Get issuing trainer's profile (if the user is a trainer)
-  const { data: trainerProfile } = await supabase
-    .from("trainer_profiles")
-    .select("id")
+  // Enforce level progression — require all prior levels (checked cross-gym)
+  const levelIndex = getLevelIndex(normalizedLevel)
+  if (levelIndex > 0) {
+    const requiredLevels = LEVEL_IDS.slice(0, levelIndex)
+    const { data: earnedCerts } = await supabase
+      .from("certificates")
+      .select("level, issued_at")
+      .eq("user_id", student.id)
+      .eq("status", "active")
+      .in("level", requiredLevels)
+
+    const earnedMap = new Map(
+      (earnedCerts ?? []).map((c: { level: string; issued_at: string }) => [c.level, c.issued_at])
+    )
+    const missing = requiredLevels.filter((l) => !earnedMap.has(l))
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { error: `Student must complete ${missing.map((l) => l.replace(/-/g, " ")).join(", ")} first` },
+        { status: 400 }
+      )
+    }
+
+    // Enforce minimum time since previous level
+    const prevLevelId = LEVEL_IDS[levelIndex - 1]
+    const prevIssuedAt = earnedMap.get(prevLevelId)
+    if (prevIssuedAt && levelConfig.minDaysAfterPrevious > 0) {
+      const daysSince = Math.floor(
+        (Date.now() - new Date(prevIssuedAt).getTime()) / (1000 * 60 * 60 * 24)
+      )
+      if (daysSince < levelConfig.minDaysAfterPrevious) {
+        const remaining = levelConfig.minDaysAfterPrevious - daysSince
+        return NextResponse.json(
+          {
+            error: `Too soon — ${remaining} day${remaining === 1 ? "" : "s"} remaining before ${levelConfig.name} can be issued (minimum ${levelConfig.minDaysAfterPrevious} days after ${prevLevelId.replace(/-/g, " ")})`,
+          },
+          { status: 400 }
+        )
+      }
+    }
+  }
+
+  // Check skill signoffs if they exist
+  const { data: signoffs } = await supabase
+    .from("skill_signoffs")
+    .select("skill_index")
+    .eq("student_id", student.id)
     .eq("org_id", membership.org_id)
-    .eq("user_id", user.id)
-    .single()
+    .eq("level", normalizedLevel)
+
+  const signedCount = signoffs?.length ?? 0
+  const requiredCount = levelConfig.skills.length
+  if (signedCount < requiredCount) {
+    const skip = body.skip_skills_check === true
+    if (!skip) {
+      return NextResponse.json(
+        {
+          error: `${signedCount}/${requiredCount} skills signed off. Complete all skill requirements or pass skip_skills_check: true to override.`,
+          signedOff: signedCount,
+          required: requiredCount,
+        },
+        { status: 400 }
+      )
+    }
+  }
+
+  // Get issuing user's name + trainer profile
+  const [{ data: trainerProfile }, { data: issuerProfile }] = await Promise.all([
+    supabase
+      .from("trainer_profiles")
+      .select("id, display_name")
+      .eq("org_id", membership.org_id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("users")
+      .select("full_name")
+      .eq("id", user.id)
+      .single(),
+  ])
+
+  // Trainer authorization: trainers can issue up to Singha (Level 3).
+  // Hanuman (4) and Garuda (5) require owner or admin role.
+  if (membership.role === "trainer" && levelConfig.number >= 4) {
+    return NextResponse.json(
+      { error: `Only gym owners and admins can issue ${levelConfig.name} (Level ${levelConfig.number}) certificates` },
+      { status: 403 }
+    )
+  }
 
   // Generate unique certificate number
   const certNumber = `MTP-${level.toUpperCase().slice(0, 3)}-${randomBytes(4).toString("hex").toUpperCase()}`
@@ -125,11 +210,12 @@ export async function POST(request: Request) {
     .insert({
       org_id: membership.org_id,
       user_id: student.id,
-      level: level.toLowerCase(),
-      level_number: level_number || VALID_LEVELS.indexOf(level.toLowerCase()) + 1,
+      level: normalizedLevel,
+      level_number: level_number || levelConfig.number,
       issued_by: trainerProfile?.id || null,
       certificate_number: certNumber,
       verification_url: `${siteUrl}/verify/${certNumber}`,
+      certificate_pdf_url: `${siteUrl}/verify/${certNumber}/print`,
       status: "active",
     })
     .select()
@@ -139,5 +225,92 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Notify student (email) and gym (in-app)
+  if (certificate) {
+    const issuerName = trainerProfile?.display_name || issuerProfile?.full_name || "Trainer"
+    notifyStudentCertificateIssued({
+      studentId: student.id,
+      levelId: normalizedLevel,
+      certificateNumber: certNumber,
+      orgId: membership.org_id,
+    }).catch(() => {})
+    notifyCertificateIssued({
+      orgId: membership.org_id,
+      studentName: student_email,
+      studentId: student.id,
+      levelName: levelConfig.name,
+      levelNumber: levelConfig.number,
+      certificateNumber: certNumber,
+      issuedByName: issuerName,
+    }).catch(() => {})
+  }
+
+  // Link certificate back to certification_enrollment if one exists
+  if (certificate) {
+    await supabase
+      .from("certification_enrollments")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        certificate_id: certificate.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("org_id", membership.org_id)
+      .eq("user_id", student.id)
+      .eq("level", normalizedLevel)
+      .eq("status", "active")
+  }
+
   return NextResponse.json({ certificate })
+}
+
+// PATCH - Revoke or reinstate a certificate
+export async function PATCH(request: Request) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { data: membership } = await supabase
+    .from("org_members")
+    .select("org_id, role")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .single()
+
+  if (!membership || !["owner", "admin"].includes(membership.role)) {
+    return NextResponse.json({ error: "Only owners and admins can revoke certificates" }, { status: 403 })
+  }
+
+  const body = await request.json()
+  const { certificate_id, status } = body as { certificate_id?: string; status?: string }
+
+  if (!certificate_id || !status || !["active", "revoked"].includes(status)) {
+    return NextResponse.json(
+      { error: "certificate_id and status (active|revoked) are required" },
+      { status: 400 }
+    )
+  }
+
+  const { data: updated, error } = await supabase
+    .from("certificates")
+    .update({ status })
+    .eq("id", certificate_id)
+    .eq("org_id", membership.org_id)
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+  if (!updated) {
+    return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
+  }
+
+  return NextResponse.json({ certificate: updated })
 }

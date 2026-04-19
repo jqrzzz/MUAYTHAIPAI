@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   MapPin,
@@ -150,9 +151,11 @@ export default function GymsListClient({ gyms, user }: GymsListClientProps) {
                     <div className="flex items-start gap-4">
                       <div className="w-14 h-14 bg-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0">
                         {gym.logo_url ? (
-                          <img
+                          <Image
                             src={gym.logo_url}
                             alt={gym.name}
+                            width={40}
+                            height={40}
                             className="w-10 h-10 object-contain"
                           />
                         ) : (

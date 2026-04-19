@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Search,
   Loader2,
@@ -224,11 +225,13 @@ function CourseCard({ course, featured }: { course: Course; featured?: boolean }
       >
         {/* Cover */}
         {course.cover_image_url ? (
-          <div className="aspect-video overflow-hidden rounded-t-xl">
-            <img
+          <div className="relative aspect-video overflow-hidden rounded-t-xl">
+            <Image
               src={course.cover_image_url}
               alt={course.title}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover transition-transform group-hover:scale-105"
             />
           </div>
         ) : (

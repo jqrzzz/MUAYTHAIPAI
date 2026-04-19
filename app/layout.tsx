@@ -1,11 +1,13 @@
 import type React from "react"
 import "./globals.css"
 import { Cinzel } from "next/font/google"
+import Script from "next/script"
 import { ThemeProvider } from "@/components/theme-provider"
 import type { Metadata, Viewport } from "next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/react"
 import { SOCIAL_LINKS } from "@/lib/socials"
+import OckOckChatWidget from "@/components/public/ockock-chat-widget"
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
 
@@ -40,10 +42,10 @@ export const metadata: Metadata = {
     siteName: "Muay Thai Pai",
     images: [
       {
-        url: "/images/muay-thai-logo-og.png",
+        url: "/images/pai-hero-main.jpeg",
         width: 1200,
-        height: 1200,
-        alt: "Muay Thai Pai - Traditional Thai warrior logo representing authentic Muay Thai training with the Wisarut Family in Pai, Thailand",
+        height: 630,
+        alt: "Muay Thai Pai - Traditional Muay Thai training with the Wisarut Family in Pai, Thailand",
       },
     ],
   },
@@ -51,7 +53,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Muay Thai Pai | Authentic Training in Thailand",
     description: "Experience authentic Muay Thai training in Pai, Thailand with the legendary Wisarut Family.",
-    images: ["/images/muay-thai-logo-og.png"],
+    images: ["/images/pai-hero-main.jpeg"],
   },
   verification: {
     google: "7ZBHOghQ2JU9BhnOmTuC2hcJY52ZQg78UwNzFL3HNqQ", // Updated to new Google verification code
@@ -87,20 +89,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://i.ytimg.com" />
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
 
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-KM47GH0T7J" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-KM47GH0T7J', {
-                page_path: window.location.pathname,
-              });
-            `,
-          }}
-        />
-
         {/* Organization Schema - Tells Google exactly who you are */}
         <script
           type="application/ld+json"
@@ -129,7 +117,6 @@ export default function RootLayout({
               },
               contactPoint: {
                 "@type": "ContactPoint",
-                telephone: "+1-619-865-0445",
                 contactType: "customer service",
                 availableLanguage: ["English", "Thai"],
                 email: "help@muaythaipai.com",
@@ -150,7 +137,6 @@ export default function RootLayout({
               description:
                 "Authentic Muay Thai training gym in Pai, Thailand, run by the legendary Wisarut Family. Third-generation masters teaching traditional Thai boxing.",
               url: "https://muaythaipai.com",
-              telephone: "+1-619-865-0445",
               email: "help@muaythaipai.com",
               image: [
                 "https://muaythaipai.com/images/muay-thai-logo-og.png",
@@ -230,7 +216,20 @@ export default function RootLayout({
       <body className={`${cinzel.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
+          <OckOckChatWidget orgSlug="wisarut-family-gym" />
         </ThemeProvider>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-KM47GH0T7J"
+          strategy="afterInteractive"
+        />
+        <Script id="ga-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-KM47GH0T7J', { page_path: window.location.pathname });
+          `}
+        </Script>
         <SpeedInsights />
         <Analytics />
       </body>

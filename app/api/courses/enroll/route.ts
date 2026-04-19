@@ -47,11 +47,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ enrollment: existing })
   }
 
-  // For paid courses, we'd check payment here.
-  // For now, allow enrollment for free courses directly.
+  // Paid courses go through /api/courses/checkout
   if (!course.is_free && course.price_thb > 0) {
     return NextResponse.json(
-      { error: "This is a paid course. Payment integration coming soon." },
+      { error: "paid_course", price_thb: course.price_thb, course_id: course.id },
       { status: 402 }
     )
   }

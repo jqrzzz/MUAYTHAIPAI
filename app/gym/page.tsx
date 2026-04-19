@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import GymPageClient from "./client"
+import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
   title: "About Muay Thai Pai | Third-Generation Family Gym in Thailand",
@@ -11,10 +12,20 @@ export const metadata: Metadata = {
     title: "About Muay Thai Pai | Third-Generation Family Gym",
     description:
       "Meet Kru Wisarut and the family behind Muay Thai Pai. Featured in National Geographic, preserving traditional Muay Thai since 1975.",
-    url: "https://www.muaythaipai.com/gym",
+    url: "https://muaythaipai.com/gym",
   },
 }
 
 export default function GymPage() {
-  return <GymPageClient />
+  return (
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "https://muaythaipai.com" },
+          { name: "Our Gym", url: "https://muaythaipai.com/gym" },
+        ]}
+      />
+      <GymPageClient />
+    </>
+  )
 }

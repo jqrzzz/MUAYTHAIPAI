@@ -31,6 +31,7 @@ import {
   BookOpen,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
+import StudentCoursesView from "@/components/student/courses-view"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
 
@@ -141,13 +142,25 @@ interface StudentDashboardProps {
 export default function StudentDashboardClient({ user, profile, bookings, certificates, gyms }: StudentDashboardProps) {
   const router = useRouter()
   const [activeView, setActiveView] = useState<
-    "home" | "bookings" | "certificates" | "gyms" | "profile" | "credits" | "notes" | "ai"
+    "home" | "bookings" | "certificates" | "gyms" | "profile" | "credits" | "notes" | "ai" | "courses"
   >("home")
 
   const [credits, setCredits] = useState<StudentCredit[]>([])
   const [notes, setNotes] = useState<StudentNote[]>([])
   const [loadingCredits, setLoadingCredits] = useState(false)
   const [loadingNotes, setLoadingNotes] = useState(false)
+
+  // Certification progress
+  const [certProgress, setCertProgress] = useState<{
+    id: string; number: number; name: string; icon: string; creature: string;
+    duration: string; color: string; earned: boolean; earnedAt: string | null;
+    certificateNumber: string | null; enrolled: boolean; enrolledAt: string | null;
+    enrolledGym: string | null; skillsSignedOff: number; skillsTotal: number;
+    courseCompleted: boolean;
+    skills: { name: string; signedOff: boolean; signedOffAt: string | null }[];
+    eligible: boolean; daysUntilEligible: number;
+  }[]>([])
+  const [loadingProgress, setLoadingProgress] = useState(false)
 
   // AI Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -161,6 +174,12 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
     router.push("/")
     router.refresh()
   }
+
+  useEffect(() => {
+    if (activeView === "certificates" && certProgress.length === 0) {
+      fetchCertProgress()
+    }
+  }, [activeView])
 
   useEffect(() => {
     if (activeView === "credits" && credits.length === 0) {
@@ -186,8 +205,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         const data = await res.json()
         setCredits(data.credits || [])
       }
-    } catch (error) {
-      console.error("Failed to fetch credits:", error)
+    } catch {
+      // silent — student dashboard is read-only
     }
     setLoadingCredits(false)
   }
@@ -200,10 +219,24 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         const data = await res.json()
         setNotes(data.notes || [])
       }
-    } catch (error) {
-      console.error("Failed to fetch notes:", error)
+    } catch {
+      // silent — student dashboard is read-only
     }
     setLoadingNotes(false)
+  }
+
+  const fetchCertProgress = async () => {
+    setLoadingProgress(true)
+    try {
+      const res = await fetch("/api/student/certification-progress")
+      if (res.ok) {
+        const data = await res.json()
+        setCertProgress(data.levels || [])
+      }
+    } catch {
+      // silent
+    }
+    setLoadingProgress(false)
   }
 
   const sendChatMessage = async () => {
@@ -230,7 +263,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
           { role: "assistant", content: "Sorry, I couldn't process that. Please try again." },
         ])
       }
-    } catch (error) {
+    } catch {
       setChatMessages((prev) => [...prev, { role: "assistant", content: "Connection error. Please try again." }])
     }
     setChatLoading(false)
@@ -456,14 +489,14 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                   <p className="text-white font-medium text-sm">Find Gyms</p>
                   <p className="text-neutral-500 text-xs">Browse network</p>
                 </button>
-                <Link
-                  href="/courses"
-                  className="bg-gradient-to-br from-purple-900/30 to-indigo-800/20 border border-purple-500/30 rounded-xl p-4 text-left hover:border-purple-500/50 transition-colors block"
+                <button
+                  onClick={() => setActiveView("courses")}
+                  className="bg-gradient-to-br from-purple-900/30 to-indigo-800/20 border border-purple-500/30 rounded-xl p-4 text-left hover:border-purple-500/50 transition-colors"
                 >
                   <BookOpen className="w-5 h-5 text-purple-400 mb-2" />
-                  <p className="text-white font-medium text-sm">Learn Online</p>
-                  <p className="text-purple-400/70 text-xs">Video courses</p>
-                </Link>
+                  <p className="text-white font-medium text-sm">My Courses</p>
+                  <p className="text-purple-400/70 text-xs">Track progress</p>
+                </button>
                 <button
                   onClick={() => setActiveView("bookings")}
                   className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-left hover:bg-neutral-800/50 transition-colors"
@@ -613,29 +646,120 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               </Card>
             )}
 
-            {/* Level Progress */}
+            {/* Certification Progress */}
             <div>
-              <h3 className="text-sm font-medium text-neutral-500 mb-3">Certificate Levels</h3>
-              <div className="space-y-2">
-                {["naga", "phayra-nak", "singha", "hanuman", "garuda"].map((level, i) => {
-                  const earned = certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, ""))
-                  return (
+              <h3 className="text-sm font-medium text-neutral-500 mb-3">Certification Progress</h3>
+              {loadingProgress ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-neutral-600" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(certProgress.length > 0 ? certProgress : ["naga", "phayra-nak", "singha", "hanuman", "garuda"].map((level, i) => ({
+                    id: level, number: i + 1, name: level.replace(/[-_]/g, " "), icon: getLevelInfo(level).icon,
+                    creature: "", duration: "", color: "", earned: certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, "")),
+                    earnedAt: null, certificateNumber: null, enrolled: false, enrolledAt: null, enrolledGym: null,
+                    courseCompleted: false, skills: [], skillsSignedOff: 0, skillsTotal: 0, eligible: false, daysUntilEligible: 0,
+                  }))).map((level) => (
                     <div
-                      key={level}
-                      className={`flex items-center gap-3 p-3 rounded-xl ${earned ? "bg-neutral-800/50" : "bg-neutral-900/30"}`}
+                      key={level.id}
+                      className={`p-3 rounded-xl ${level.earned ? "bg-neutral-800/50" : level.enrolled ? "bg-neutral-800/30 border border-neutral-700/50" : "bg-neutral-900/30"}`}
                     >
-                      <div className="text-2xl">{getLevelInfo(level).icon}</div>
-                      <div className="flex-1">
-                        <p className={`capitalize font-medium ${earned ? "text-white" : "text-neutral-500"}`}>
-                          {level.replace(/[-_]/g, " ")}
-                        </p>
-                        <p className="text-xs text-neutral-600">Level {i + 1}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">{level.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`capitalize font-medium ${level.earned ? "text-white" : level.enrolled ? "text-neutral-300" : "text-neutral-500"}`}>
+                              {level.name}
+                            </p>
+                            <span className="text-[10px] text-neutral-600">Level {level.number}</span>
+                          </div>
+                          {level.earned && level.earnedAt && (
+                            <p className="text-[11px] text-green-500/70 mt-0.5">
+                              Earned {new Date(level.earnedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                          {level.enrolled && !level.earned && (
+                            <p className="text-[11px] text-orange-400/70 mt-0.5">
+                              Enrolled{level.enrolledGym ? ` at ${level.enrolledGym}` : ""}
+                            </p>
+                          )}
+                          {!level.earned && level.courseCompleted && !level.enrolled && (
+                            <p className="text-[11px] text-blue-400/70 mt-0.5">
+                              Course completed — book in-person assessment to certify
+                            </p>
+                          )}
+                          {!level.earned && !level.enrolled && level.daysUntilEligible > 0 && (
+                            <p className="text-[11px] text-neutral-600 mt-0.5">
+                              {level.daysUntilEligible} day{level.daysUntilEligible === 1 ? "" : "s"} until eligible
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0">
+                          {level.earned ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : level.enrolled && level.skillsTotal > 0 ? (
+                            <span className="text-[11px] font-medium text-orange-400">
+                              {level.skillsSignedOff}/{level.skillsTotal}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                      {earned && <CheckCircle className="w-5 h-5 text-green-500" />}
+                      {/* Skills checklist for enrolled or course-completed levels */}
+                      {!level.earned && level.skills.length > 0 && (level.enrolled || level.courseCompleted) && (
+                        <div className="mt-2 ml-11">
+                          <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden mb-2">
+                            <div
+                              className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all"
+                              style={{ width: `${Math.round((level.skillsSignedOff / level.skillsTotal) * 100)}%` }}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            {level.skills.map((skill, si) => (
+                              <div key={si} className="flex items-center gap-2">
+                                {skill.signedOff ? (
+                                  <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                ) : (
+                                  <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 flex-shrink-0" />
+                                )}
+                                <span className={`text-[11px] ${skill.signedOff ? "text-green-400/80" : "text-neutral-500"}`}>
+                                  {skill.name}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-neutral-600 mt-2">
+                            {level.skillsSignedOff === level.skillsTotal
+                              ? "All skills verified — ready for certification"
+                              : `${level.skillsTotal - level.skillsSignedOff} skill${level.skillsTotal - level.skillsSignedOff === 1 ? "" : "s"} remaining`}
+                          </p>
+                        </div>
+                      )}
+                      {/* Certificate link + print */}
+                      {level.earned && level.certificateNumber && (
+                        <div className="flex items-center gap-3 mt-1 ml-11">
+                          <a
+                            href={`/verify/${level.certificateNumber}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-neutral-600 hover:text-neutral-400 font-mono transition-colors"
+                          >
+                            {level.certificateNumber} &rarr;
+                          </a>
+                          <a
+                            href={`/verify/${level.certificateNumber}/print`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-orange-500/60 hover:text-orange-400 transition-colors"
+                          >
+                            Download PDF
+                          </a>
+                        </div>
+                      )}
                     </div>
-                  )
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -896,6 +1020,9 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             </div>
           </div>
         )}
+
+        {/* Courses View */}
+        {activeView === "courses" && <StudentCoursesView />}
 
         {/* Profile View */}
         {activeView === "profile" && (

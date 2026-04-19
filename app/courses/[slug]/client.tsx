@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Play,
@@ -134,7 +135,24 @@ export default function CourseDetailClient({
         return
       }
       if (res.status === 402) {
-        setEnrollError("This is a paid course. Payment integration coming soon.")
+        // Paid course — go through checkout
+        const checkoutRes = await fetch("/api/courses/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ course_id: course.id }),
+        })
+        if (checkoutRes.ok) {
+          const checkoutData = await checkoutRes.json()
+          if (checkoutData.checkout_url) {
+            window.location.href = checkoutData.checkout_url
+            return
+          }
+          // Simulated payment (Stripe not connected yet)
+          setEnrollment(checkoutData.enrollment)
+        } else {
+          const errData = await checkoutRes.json().catch(() => null)
+          setEnrollError(errData?.error || "Checkout failed. Please try again.")
+        }
       } else if (res.ok) {
         const data = await res.json()
         setEnrollment(data.enrollment)
@@ -194,11 +212,14 @@ export default function CourseDetailClient({
           <div className="lg:col-span-2">
             {/* Course Hero */}
             {course.cover_image_url && (
-              <div className="mb-6 overflow-hidden rounded-xl">
-                <img
+              <div className="relative mb-6 w-full aspect-video overflow-hidden rounded-xl">
+                <Image
                   src={course.cover_image_url}
                   alt={course.title}
-                  className="w-full aspect-video object-cover"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 768px"
+                  priority
+                  className="object-cover"
                 />
               </div>
             )}
