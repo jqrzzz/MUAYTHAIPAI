@@ -33,9 +33,9 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
     },
     {
       icon: GraduationCap,
-      label: "Online Courses",
-      href: "/courses",
-      description: "Learn Muay Thai with video lessons",
+      label: "Online Classes",
+      href: "/online-classes",
+      description: "Learn Muay Thai online — ฿299/mo",
     },
     {
       icon: Users,

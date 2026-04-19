@@ -35,11 +35,31 @@ export default function StudentLoginClient() {
         data: { session },
       } = await supabase.auth.getSession()
       if (session) {
-        router.push("/student")
+        const subscribe = searchParams.get("subscribe")
+        const redirect = searchParams.get("redirect")
+        if (subscribe === "true") {
+          try {
+            const res = await fetch("/api/student/subscription", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ returnUrl: window.location.origin + "/courses" }),
+            })
+            if (res.ok) {
+              const data = await res.json()
+              if (data.url) {
+                window.location.href = data.url
+                return
+              }
+            }
+          } catch {
+            // fall through to normal redirect
+          }
+        }
+        router.push(redirect || "/student")
       }
     }
     checkSession()
-  }, [router])
+  }, [router, searchParams])
 
   const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,11 +69,20 @@ export default function StudentLoginClient() {
     const supabase = createClient()
 
     try {
+      const subscribe = searchParams.get("subscribe")
+      const redirect = searchParams.get("redirect")
+      let callbackNext = "/student"
+      if (subscribe === "true") {
+        callbackNext = `/student/login?subscribe=true&redirect=${encodeURIComponent(redirect || "/courses")}`
+      } else if (redirect) {
+        callbackNext = redirect
+      }
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback?next=/student`,
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackNext)}`,
           data: fullName ? { full_name: fullName } : undefined,
         },
       })
