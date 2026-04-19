@@ -85,6 +85,7 @@ export default function LessonPlayerClient({
 }) {
   const router = useRouter()
   const [completed, setCompleted] = useState(false)
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
@@ -102,10 +103,13 @@ export default function LessonPlayerClient({
         const res = await fetch(`/api/courses/progress?course_id=${course.id}`)
         if (res.ok) {
           const data = await res.json()
-          const lessonProgress = data.progress?.find(
-            (p: { lesson_id: string }) => p.lesson_id === lesson.id
+          const ids = new Set<string>(
+            (data.progress || [])
+              .filter((p: { status: string }) => p.status === "completed")
+              .map((p: { lesson_id: string }) => p.lesson_id)
           )
-          if (lessonProgress?.status === "completed") {
+          setCompletedIds(ids)
+          if (ids.has(lesson.id)) {
             setCompleted(true)
           }
         }
@@ -131,6 +135,7 @@ export default function LessonPlayerClient({
       })
       if (res.ok) {
         setCompleted(true)
+        setCompletedIds((prev) => new Set(prev).add(lesson.id))
       } else {
         setSaveError("Couldn't save progress. Please try again.")
       }
@@ -329,7 +334,9 @@ export default function LessonPlayerClient({
                     <div key={mod.id}>
                       <p className="text-xs text-neutral-500 mb-1">{mod.title}</p>
                       <div className="space-y-0.5">
-                        {mod.lessons.map((l) => (
+                        {mod.lessons.map((l) => {
+                          const isCompleted = completedIds.has(l.id)
+                          return (
                           <Link
                             key={l.id}
                             href={`/courses/${course.slug}/${l.id}`}
@@ -337,18 +344,25 @@ export default function LessonPlayerClient({
                             className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                               l.id === lesson.id
                                 ? "bg-orange-500/10 text-orange-400"
-                                : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                                : isCompleted
+                                  ? "text-neutral-500 hover:bg-white/5 hover:text-white"
+                                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
                             }`}
                           >
-                            <span className="text-neutral-600">
-                              {l.content_type === "video" ? <Play className="h-3 w-3" /> :
-                               l.content_type === "text" ? <FileText className="h-3 w-3" /> :
-                               l.content_type === "drill" ? <Dumbbell className="h-3 w-3" /> :
-                               <HelpCircle className="h-3 w-3" />}
-                            </span>
+                            {isCompleted ? (
+                              <CheckCircle className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                            ) : (
+                              <span className="text-neutral-600 flex-shrink-0">
+                                {l.content_type === "video" ? <Play className="h-3 w-3" /> :
+                                 l.content_type === "text" ? <FileText className="h-3 w-3" /> :
+                                 l.content_type === "drill" ? <Dumbbell className="h-3 w-3" /> :
+                                 <HelpCircle className="h-3 w-3" />}
+                              </span>
+                            )}
                             <span className="truncate">{l.title}</span>
                           </Link>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   ))}
