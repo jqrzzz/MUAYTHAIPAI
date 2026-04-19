@@ -47,12 +47,16 @@ const DIFFICULTIES = [
   { key: "beginner", label: "Beginner" },
   { key: "intermediate", label: "Intermediate" },
   { key: "advanced", label: "Advanced" },
+  { key: "expert", label: "Expert" },
+  { key: "master", label: "Master" },
 ]
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: "bg-emerald-500/15 text-emerald-400",
   intermediate: "bg-amber-500/15 text-amber-400",
   advanced: "bg-red-500/15 text-red-400",
+  expert: "bg-purple-500/15 text-purple-400",
+  master: "bg-yellow-500/15 text-yellow-400",
   "all-levels": "bg-blue-500/15 text-blue-400",
 }
 

@@ -134,20 +134,25 @@ export default function CourseDetailClient({
         window.location.href = `/student/login?redirect=/courses/${course.slug}`
         return
       }
-      if (res.status === 402) {
+      if (res.status === 403) {
+        const data = await res.json().catch(() => null)
+        setEnrollError(data?.error || "You don't meet the prerequisites for this course.")
+      } else if (res.status === 402) {
         // Paid course — go through checkout
         const checkoutRes = await fetch("/api/courses/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ course_id: course.id }),
         })
-        if (checkoutRes.ok) {
+        if (checkoutRes.status === 403) {
+          const errData = await checkoutRes.json().catch(() => null)
+          setEnrollError(errData?.error || "You don't meet the prerequisites for this course.")
+        } else if (checkoutRes.ok) {
           const checkoutData = await checkoutRes.json()
           if (checkoutData.checkout_url) {
             window.location.href = checkoutData.checkout_url
             return
           }
-          // Simulated payment (Stripe not connected yet)
           setEnrollment(checkoutData.enrollment)
         } else {
           const errData = await checkoutRes.json().catch(() => null)
@@ -229,6 +234,8 @@ export default function CourseDetailClient({
                 course.difficulty === "beginner" ? "bg-emerald-500/15 text-emerald-400" :
                 course.difficulty === "intermediate" ? "bg-amber-500/15 text-amber-400" :
                 course.difficulty === "advanced" ? "bg-red-500/15 text-red-400" :
+                course.difficulty === "expert" ? "bg-purple-500/15 text-purple-400" :
+                course.difficulty === "master" ? "bg-yellow-500/15 text-yellow-400" :
                 "bg-blue-500/15 text-blue-400"
               }`}>
                 {course.difficulty}

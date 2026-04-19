@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { CERTIFICATION_LEVELS, getPreviousLevel } from "@/lib/certification-levels"
+
+const serviceClient = createServiceClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // POST /api/courses/checkout — create a checkout session for a paid course
 // When Stripe is connected, this will create a real payment intent.
@@ -21,7 +28,7 @@ export async function POST(request: Request) {
 
   const { data: course } = await supabase
     .from("courses")
-    .select("id, title, slug, price_thb, is_free, status")
+    .select("id, title, slug, price_thb, is_free, status, certificate_level")
     .eq("id", course_id)
     .eq("status", "published")
     .single()
@@ -32,6 +39,42 @@ export async function POST(request: Request) {
 
   if (course.is_free || course.price_thb === 0) {
     return NextResponse.json({ error: "This course is free — enroll directly" }, { status: 400 })
+  }
+
+  // Prerequisite check for certification courses
+  if (course.certificate_level) {
+    const level = CERTIFICATION_LEVELS.find((l) => l.id === course.certificate_level)
+    const prevLevel = getPreviousLevel(course.certificate_level)
+
+    if (prevLevel) {
+      const { data: prevCert } = await serviceClient
+        .from("certificates")
+        .select("id, issued_at")
+        .eq("user_id", user.id)
+        .eq("level", prevLevel.id)
+        .eq("status", "active")
+        .single()
+
+      if (!prevCert) {
+        return NextResponse.json(
+          { error: `You need an active ${prevLevel.name} (Level ${prevLevel.number}) certificate before enrolling in this course.` },
+          { status: 403 }
+        )
+      }
+
+      if (level && level.minDaysAfterPrevious > 0) {
+        const daysSince = Math.floor(
+          (Date.now() - new Date(prevCert.issued_at).getTime()) / (1000 * 60 * 60 * 24)
+        )
+        if (daysSince < level.minDaysAfterPrevious) {
+          const remaining = level.minDaysAfterPrevious - daysSince
+          return NextResponse.json(
+            { error: `Please wait ${remaining} more day${remaining === 1 ? "" : "s"} after your ${prevLevel.name} certificate before enrolling. (${level.minDaysAfterPrevious}-day minimum)` },
+            { status: 403 }
+          )
+        }
+      }
+    }
   }
 
   // Check if already enrolled

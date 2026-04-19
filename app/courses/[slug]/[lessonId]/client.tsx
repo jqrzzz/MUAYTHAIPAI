@@ -15,6 +15,7 @@ import {
   BookOpen,
   Loader2,
 } from "lucide-react"
+import MarkdownContent from "@/components/markdown-content"
 
 // ============================================
 // Types
@@ -189,8 +190,8 @@ export default function LessonPlayerClient({
 
             {/* Text lesson */}
             {lesson.content_type === "text" && lesson.text_content && (
-              <div className="prose prose-invert prose-sm max-w-none rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                <div className="whitespace-pre-line">{lesson.text_content}</div>
+              <div className="max-w-none rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                <MarkdownContent content={lesson.text_content} />
               </div>
             )}
 
@@ -206,22 +207,35 @@ export default function LessonPlayerClient({
                     </span>
                   )}
                 </div>
-                {lesson.drill_instructions && (
-                  <div className="text-sm text-neutral-300 whitespace-pre-line leading-relaxed">
-                    {lesson.drill_instructions}
-                  </div>
+                {(lesson.drill_instructions || lesson.text_content) && (
+                  <MarkdownContent content={lesson.drill_instructions || lesson.text_content!} />
                 )}
               </div>
             )}
 
-            {/* Quiz lesson */}
-            {lesson.content_type === "quiz" && quizQuestions && (
+            {/* Quiz lesson (standalone) */}
+            {lesson.content_type === "quiz" && quizQuestions && quizQuestions.length > 0 && (
               <QuizPlayer
                 questions={quizQuestions}
                 courseId={course.id}
                 lessonId={lesson.id}
                 onComplete={() => setCompleted(true)}
               />
+            )}
+
+            {/* Inline quiz for text/drill lessons that have quiz questions */}
+            {lesson.content_type !== "quiz" && quizQuestions && quizQuestions.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-4">
+                  Knowledge Check
+                </h3>
+                <QuizPlayer
+                  questions={quizQuestions}
+                  courseId={course.id}
+                  lessonId={lesson.id}
+                  onComplete={() => setCompleted(true)}
+                />
+              </div>
             )}
 
             {/* Description */}

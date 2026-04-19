@@ -89,17 +89,16 @@ export default async function LessonPage({ params }: Props) {
     ),
   }))
 
-  // Get quiz questions if quiz type — strip correct answers before sending to client
+  // Get quiz questions for any lesson that has them — strip correct answers
   let quizQuestions = null
-  if (lesson.content_type === "quiz") {
-    const { data } = await supabase
-      .from("quiz_questions")
-      .select("id, question_text, question_type, options, explanation, question_order")
-      .eq("lesson_id", lessonId)
-      .order("question_order")
+  const { data: quizData } = await supabase
+    .from("quiz_questions")
+    .select("id, question_text, question_type, options, explanation, question_order")
+    .eq("lesson_id", lessonId)
+    .order("question_order")
 
-    // Remove is_correct from options so clients can't cheat
-    quizQuestions = (data || []).map((q) => ({
+  if (quizData && quizData.length > 0) {
+    quizQuestions = quizData.map((q) => ({
       ...q,
       options: Array.isArray(q.options)
         ? q.options.map((opt: { id: string; text: string }) => ({ id: opt.id, text: opt.text }))
