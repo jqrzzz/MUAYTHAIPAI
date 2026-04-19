@@ -50,7 +50,7 @@ export default async function LessonPage({ params }: Props) {
 
   if (!lesson) notFound()
 
-  // Enrollment gate: preview lessons are open, others require enrollment
+  // Enrollment gate: preview lessons are open, others require enrollment or subscription
   if (!lesson.is_preview) {
     const authClient = await createServerClient()
     const { data: { user } } = await authClient.auth.getUser()
@@ -59,15 +59,23 @@ export default async function LessonPage({ params }: Props) {
       redirect(`/student/login?redirect=/courses/${slug}/${lessonId}`)
     }
 
-    const { data: enrollment } = await supabase
-      .from("enrollments")
-      .select("id, status")
-      .eq("user_id", user.id)
-      .eq("course_id", course.id)
-      .in("status", ["active", "completed"])
-      .single()
+    const [{ data: enrollment }, { data: subscription }] = await Promise.all([
+      supabase
+        .from("enrollments")
+        .select("id, status")
+        .eq("user_id", user.id)
+        .eq("course_id", course.id)
+        .in("status", ["active", "completed"])
+        .single(),
+      supabase
+        .from("student_subscriptions")
+        .select("id, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .single(),
+    ])
 
-    if (!enrollment) {
+    if (!enrollment && !subscription) {
       redirect(`/courses/${slug}`)
     }
   }

@@ -5,18 +5,18 @@ export const PAYMENT_CONFIG = {
   stripe: {
     publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
   },
+  subscription: {
+    studentMonthly: 299,
+  },
   services: {
     groupSession: 330,
     privateLessonBeginner: 600,
     privateLessonAdvanced: 900,
     gymMembership: 7700,
     muayThaiKids: 500,
-    onlineTraining: 330,
-    naga: 7000,
-    phayaNak: 10000,
-    ratchasi: 18000,
-    hanuman: 25000,
-    garuda: 42000,
+  },
+  certification: {
+    nagaCertFee: 2500,
   },
 } as const
 

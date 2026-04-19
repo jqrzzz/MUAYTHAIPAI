@@ -162,7 +162,7 @@ export default function EnrollClient() {
                       <p className="text-xs text-neutral-500 mt-0.5">{level.skills.length} skills assessed</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-white">{level.priceTHB.toLocaleString()} THB</p>
+                      <p className="text-sm font-bold text-white">{level.assessmentFeeTHB.toLocaleString()} THB</p>
                       <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-orange-400 transition-colors ml-auto mt-1" />
                     </div>
                   </button>
@@ -190,7 +190,7 @@ export default function EnrollClient() {
                     <span className="text-3xl">{selectedLevel.icon}</span>
                     <div>
                       <p className={`font-bold ${selectedLevel.color}`}>{selectedLevel.name} — Level {selectedLevel.number}</p>
-                      <p className="text-xs text-neutral-400">{selectedLevel.duration} &middot; {selectedLevel.priceTHB.toLocaleString()} THB</p>
+                      <p className="text-xs text-neutral-400">{selectedLevel.duration} &middot; {selectedLevel.assessmentFeeTHB.toLocaleString()} THB</p>
                     </div>
                   </div>
                 </div>
@@ -298,7 +298,7 @@ export default function EnrollClient() {
                     </div>
                     <div className="flex justify-between text-base font-bold">
                       <span className="text-neutral-300">Total</span>
-                      <span className="text-orange-400">{selectedLevel.priceTHB.toLocaleString()} THB</span>
+                      <span className="text-orange-400">{selectedLevel.assessmentFeeTHB.toLocaleString()} THB</span>
                     </div>
                   </div>
 

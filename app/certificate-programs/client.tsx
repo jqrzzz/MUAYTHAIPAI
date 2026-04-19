@@ -338,11 +338,12 @@ export default function CertificateProgramsClient() {
                     {/* Right side */}
                     <div className="flex-shrink-0 flex flex-col items-end gap-1">
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        ฿{level.priceTHB.toLocaleString()}
+                        {level.requiresGym
+                          ? `฿${level.assessmentFeeTHB.toLocaleString()}`
+                          : `฿${level.certFeeTHB.toLocaleString()}`}
                       </span>
-                      <span className="text-xs text-neutral-500 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {level.duration}
+                      <span className="text-[10px] text-neutral-500">
+                        {level.requiresGym ? "gym assessment" : "online cert"}
                       </span>
                       {isExpanded ? (
                         <ChevronUp className="h-4 w-4 text-neutral-500 mt-1" />
@@ -493,16 +494,25 @@ export default function CertificateProgramsClient() {
               How It Works
             </h2>
 
+            <div className="rounded-lg bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/20 p-4 mb-6 text-center">
+              <p className="text-sm font-semibold text-white">
+                All course content included with your subscription
+              </p>
+              <p className="text-xs text-neutral-400 mt-1">
+                ฿299/month — access every level, learn at your pace
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-10 h-10 rounded-full bg-orange-500/15 flex items-center justify-center mx-auto mb-3">
                   <BookOpen className="h-5 w-5 text-orange-400" />
                 </div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                  1. Learn Online
+                  1. Subscribe &amp; Learn
                 </h3>
                 <p className="text-xs text-gray-600 dark:text-neutral-400">
-                  Complete the course for your level — lessons, drills, and quizzes at your pace.
+                  Access all course content — lessons, drills, and quizzes for every level at your own pace.
                 </p>
               </div>
 
@@ -511,10 +521,10 @@ export default function CertificateProgramsClient() {
                   <Award className="h-5 w-5 text-orange-400" />
                 </div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                  2. Train at a Gym
+                  2. Earn Naga Online
                 </h3>
                 <p className="text-xs text-gray-600 dark:text-neutral-400">
-                  Visit a MUAYTHAIPAI network gym in Thailand. Demonstrate each skill for sign-off.
+                  Complete Level 1 and pass the online assessment to earn your Naga certificate — no gym required.
                 </p>
               </div>
 
@@ -523,10 +533,10 @@ export default function CertificateProgramsClient() {
                   <CheckCircle className="h-5 w-5 text-orange-400" />
                 </div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                  3. Get Certified
+                  3. Advance at a Gym
                 </h3>
                 <p className="text-xs text-gray-600 dark:text-neutral-400">
-                  Receive a verifiable certificate. Share it, print it, and carry it forward.
+                  Levels 2–5 require a physical assessment at a MUAYTHAIPAI partner gym in Thailand.
                 </p>
               </div>
             </div>

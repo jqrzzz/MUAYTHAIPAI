@@ -138,25 +138,43 @@ export default function CourseDetailClient({
         const data = await res.json().catch(() => null)
         setEnrollError(data?.error || "You don't meet the prerequisites for this course.")
       } else if (res.status === 402) {
-        // Paid course — go through checkout
-        const checkoutRes = await fetch("/api/courses/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ course_id: course.id }),
-        })
-        if (checkoutRes.status === 403) {
-          const errData = await checkoutRes.json().catch(() => null)
-          setEnrollError(errData?.error || "You don't meet the prerequisites for this course.")
-        } else if (checkoutRes.ok) {
-          const checkoutData = await checkoutRes.json()
-          if (checkoutData.checkout_url) {
-            window.location.href = checkoutData.checkout_url
-            return
+        const errData = await res.json().catch(() => null)
+        if (errData?.error === "subscription_required") {
+          // Redirect to subscribe
+          const subRes = await fetch("/api/student/subscription", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ returnUrl: window.location.href }),
+          })
+          if (subRes.ok) {
+            const subData = await subRes.json()
+            if (subData.url) {
+              window.location.href = subData.url
+              return
+            }
           }
-          setEnrollment(checkoutData.enrollment)
+          setEnrollError("Subscribe to access all courses. Please try again.")
         } else {
-          const errData = await checkoutRes.json().catch(() => null)
-          setEnrollError(errData?.error || "Checkout failed. Please try again.")
+          // Paid course — go through checkout
+          const checkoutRes = await fetch("/api/courses/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ course_id: course.id }),
+          })
+          if (checkoutRes.status === 403) {
+            const checkoutErr = await checkoutRes.json().catch(() => null)
+            setEnrollError(checkoutErr?.error || "You don't meet the prerequisites for this course.")
+          } else if (checkoutRes.ok) {
+            const checkoutData = await checkoutRes.json()
+            if (checkoutData.checkout_url) {
+              window.location.href = checkoutData.checkout_url
+              return
+            }
+            setEnrollment(checkoutData.enrollment)
+          } else {
+            const checkoutErr = await checkoutRes.json().catch(() => null)
+            setEnrollError(checkoutErr?.error || "Checkout failed. Please try again.")
+          }
         }
       } else if (res.ok) {
         const data = await res.json()
@@ -414,6 +432,11 @@ export default function CourseDetailClient({
                   <div className="mb-4 text-center">
                     {course.is_free ? (
                       <p className="text-lg font-bold text-emerald-400">Free</p>
+                    ) : course.price_thb === 0 ? (
+                      <div>
+                        <p className="text-lg font-bold text-orange-400">฿299/mo</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">subscription</p>
+                      </div>
                     ) : (
                       <p className="text-2xl font-bold text-white">
                         ฿{course.price_thb.toLocaleString()}
@@ -431,7 +454,7 @@ export default function CourseDetailClient({
                     ) : (
                       <Play className="h-4 w-4" />
                     )}
-                    {course.is_free ? "Start Learning" : "Enroll Now"}
+                    {course.is_free ? "Start Learning" : course.price_thb === 0 ? "Subscribe & Start" : "Enroll Now"}
                   </button>
                   {enrollError && (
                     <p className="mt-2 text-xs text-red-400 text-center">{enrollError}</p>

@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       booking_date: new Date().toISOString().split("T")[0],
       status: "confirmed",
       payment_status: "pending",
-      payment_amount_thb: levelConfig.priceTHB,
+      payment_amount_thb: levelConfig.assessmentFeeTHB,
       payment_method: null,
     })
     .select("id")
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       level,
       status: "active",
       payment_status: "pending",
-      payment_amount_thb: levelConfig.priceTHB,
+      payment_amount_thb: levelConfig.assessmentFeeTHB,
       booking_id: booking?.id || null,
     })
     .select()

@@ -89,7 +89,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ enrollment: existing })
   }
 
-  // Paid courses go through /api/courses/checkout
+  // Subscription-gated courses: check for active subscription
+  if (!course.is_free && course.price_thb === 0) {
+    const { data: subscription } = await serviceClient
+      .from("student_subscriptions")
+      .select("id, status")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .single()
+
+    if (!subscription) {
+      return NextResponse.json(
+        { error: "subscription_required", message: "Subscribe to access all courses" },
+        { status: 402 }
+      )
+    }
+  }
+
+  // Individually priced courses go through /api/courses/checkout
   if (!course.is_free && course.price_thb > 0) {
     return NextResponse.json(
       { error: "paid_course", price_thb: course.price_thb, course_id: course.id },

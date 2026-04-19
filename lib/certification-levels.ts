@@ -7,7 +7,9 @@ export interface CertificationLevel {
   creature: string
   icon: string
   duration: string
-  priceTHB: number
+  requiresGym: boolean
+  certFeeTHB: number
+  assessmentFeeTHB: number
   minDaysAfterPrevious: number
   color: string
   bgGradient: string
@@ -23,7 +25,9 @@ export const CERTIFICATION_LEVELS: CertificationLevel[] = [
     creature: "Serpent Deity",
     icon: "🐍",
     duration: "3 days",
-    priceTHB: 7000,
+    requiresGym: false,
+    certFeeTHB: 2500,
+    assessmentFeeTHB: 0,
     minDaysAfterPrevious: 0,
     color: "text-blue-400",
     bgGradient: "from-blue-500 to-blue-700",
@@ -45,7 +49,9 @@ export const CERTIFICATION_LEVELS: CertificationLevel[] = [
     creature: "Serpent King",
     icon: "🐉",
     duration: "1 week",
-    priceTHB: 10000,
+    requiresGym: true,
+    certFeeTHB: 0,
+    assessmentFeeTHB: 5000,
     minDaysAfterPrevious: 7,
     color: "text-emerald-400",
     bgGradient: "from-emerald-500 to-emerald-700",
@@ -67,7 +73,9 @@ export const CERTIFICATION_LEVELS: CertificationLevel[] = [
     creature: "Mythical Lion",
     icon: "🦁",
     duration: "10 days",
-    priceTHB: 18000,
+    requiresGym: true,
+    certFeeTHB: 0,
+    assessmentFeeTHB: 8000,
     minDaysAfterPrevious: 14,
     color: "text-amber-400",
     bgGradient: "from-amber-500 to-amber-700",
@@ -90,7 +98,9 @@ export const CERTIFICATION_LEVELS: CertificationLevel[] = [
     creature: "Divine Warrior",
     icon: "🐒",
     duration: "2 weeks",
-    priceTHB: 25000,
+    requiresGym: true,
+    certFeeTHB: 0,
+    assessmentFeeTHB: 12000,
     minDaysAfterPrevious: 30,
     color: "text-slate-300",
     bgGradient: "from-slate-400 to-slate-600",
@@ -114,7 +124,9 @@ export const CERTIFICATION_LEVELS: CertificationLevel[] = [
     creature: "Divine Eagle",
     icon: "🦅",
     duration: "1 month",
-    priceTHB: 42000,
+    requiresGym: true,
+    certFeeTHB: 0,
+    assessmentFeeTHB: 20000,
     minDaysAfterPrevious: 60,
     color: "text-yellow-400",
     bgGradient: "from-yellow-500 to-yellow-700",

@@ -19,61 +19,98 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  // Handle subscription events
+  // Handle subscription events for both gym and student subscriptions
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object
-      if (session.mode === "subscription" && session.metadata?.org_id) {
-        const orgId = session.metadata.org_id
-        const subscriptionId = session.subscription as string
+      if (session.mode !== "subscription") break
 
-        // Get subscription details
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      const subscriptionId = session.subscription as string
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId) as unknown as {
+        current_period_start: number
+        current_period_end: number
+      }
+      const periodStart = new Date(subscription.current_period_start * 1000).toISOString()
+      const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
 
-        // Update gym subscription
+      if (session.metadata?.type === "student_subscription" && session.metadata?.user_id) {
+        const userId = session.metadata.user_id
+        await supabase
+          .from("student_subscriptions")
+          .upsert(
+            {
+              user_id: userId,
+              stripe_subscription_id: subscriptionId,
+              stripe_customer_id: session.customer as string,
+              status: "active",
+              current_period_start: periodStart,
+              current_period_end: periodEnd,
+            },
+            { onConflict: "user_id" }
+          )
+        console.log(`Student subscription activated for user ${userId}`)
+      } else if (session.metadata?.org_id) {
         await supabase
           .from("gym_subscriptions")
           .update({
             stripe_subscription_id: subscriptionId,
             status: "active",
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_start: periodStart,
+            current_period_end: periodEnd,
           })
-          .eq("org_id", orgId)
-
-        console.log(`Subscription activated for org ${orgId}`)
+          .eq("org_id", session.metadata.org_id)
+        console.log(`Gym subscription activated for org ${session.metadata.org_id}`)
       }
       break
     }
 
     case "invoice.paid": {
-      const invoice = event.data.object
-      if (invoice.subscription) {
-        // Find org by subscription ID
-        const { data: sub } = await supabase
-          .from("gym_subscriptions")
-          .select("org_id")
-          .eq("stripe_subscription_id", invoice.subscription)
-          .single()
+      const invoice = event.data.object as unknown as { subscription?: string }
+      if (!invoice.subscription) break
 
-        if (sub) {
-          await supabase.from("gym_subscriptions").update({ status: "active" }).eq("org_id", sub.org_id)
+      const subId = invoice.subscription
+      const { data: gymSub } = await supabase
+        .from("gym_subscriptions")
+        .select("org_id")
+        .eq("stripe_subscription_id", subId)
+        .single()
+
+      if (gymSub) {
+        await supabase.from("gym_subscriptions").update({ status: "active" }).eq("org_id", gymSub.org_id)
+      } else {
+        const { data: studentSub } = await supabase
+          .from("student_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subId)
+          .single()
+        if (studentSub) {
+          await supabase.from("student_subscriptions").update({ status: "active" }).eq("user_id", studentSub.user_id)
         }
       }
       break
     }
 
     case "invoice.payment_failed": {
-      const invoice = event.data.object
-      if (invoice.subscription) {
-        const { data: sub } = await supabase
-          .from("gym_subscriptions")
-          .select("org_id")
-          .eq("stripe_subscription_id", invoice.subscription)
-          .single()
+      const invoice = event.data.object as unknown as { subscription?: string }
+      if (!invoice.subscription) break
 
-        if (sub) {
-          await supabase.from("gym_subscriptions").update({ status: "past_due" }).eq("org_id", sub.org_id)
+      const subId = invoice.subscription
+      const { data: gymSub } = await supabase
+        .from("gym_subscriptions")
+        .select("org_id")
+        .eq("stripe_subscription_id", subId)
+        .single()
+
+      if (gymSub) {
+        await supabase.from("gym_subscriptions").update({ status: "past_due" }).eq("org_id", gymSub.org_id)
+      } else {
+        const { data: studentSub } = await supabase
+          .from("student_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subId)
+          .single()
+        if (studentSub) {
+          await supabase.from("student_subscriptions").update({ status: "past_due" }).eq("user_id", studentSub.user_id)
         }
       }
       break
@@ -81,49 +118,76 @@ export async function POST(request: Request) {
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object
-      const { data: sub } = await supabase
+      const { data: gymSub } = await supabase
         .from("gym_subscriptions")
         .select("org_id")
         .eq("stripe_subscription_id", subscription.id)
         .single()
 
-      if (sub) {
+      if (gymSub) {
         await supabase
           .from("gym_subscriptions")
-          .update({
-            status: "cancelled",
-            stripe_subscription_id: null,
-          })
-          .eq("org_id", sub.org_id)
+          .update({ status: "cancelled", stripe_subscription_id: null })
+          .eq("org_id", gymSub.org_id)
+      } else {
+        const { data: studentSub } = await supabase
+          .from("student_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subscription.id)
+          .single()
+        if (studentSub) {
+          await supabase
+            .from("student_subscriptions")
+            .update({
+              status: "cancelled",
+              stripe_subscription_id: null,
+              cancelled_at: new Date().toISOString(),
+            })
+            .eq("user_id", studentSub.user_id)
+        }
       }
       break
     }
 
     case "customer.subscription.updated": {
-      const subscription = event.data.object
-      const { data: sub } = await supabase
+      const subscription = event.data.object as unknown as {
+        id: string
+        status: string
+        current_period_end: number
+      }
+      const newStatus =
+        subscription.status === "active"
+          ? "active"
+          : subscription.status === "past_due"
+            ? "past_due"
+            : subscription.status === "canceled"
+              ? "cancelled"
+              : subscription.status
+      const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+
+      const { data: gymSub } = await supabase
         .from("gym_subscriptions")
         .select("org_id")
         .eq("stripe_subscription_id", subscription.id)
         .single()
 
-      if (sub) {
-        const status =
-          subscription.status === "active"
-            ? "active"
-            : subscription.status === "past_due"
-              ? "past_due"
-              : subscription.status === "canceled"
-                ? "cancelled"
-                : subscription.status
-
+      if (gymSub) {
         await supabase
           .from("gym_subscriptions")
-          .update({
-            status,
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          })
-          .eq("org_id", sub.org_id)
+          .update({ status: newStatus, current_period_end: periodEnd })
+          .eq("org_id", gymSub.org_id)
+      } else {
+        const { data: studentSub } = await supabase
+          .from("student_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subscription.id)
+          .single()
+        if (studentSub) {
+          await supabase
+            .from("student_subscriptions")
+            .update({ status: newStatus, current_period_end: periodEnd })
+            .eq("user_id", studentSub.user_id)
+        }
       }
       break
     }

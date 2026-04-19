@@ -1,4 +1,5 @@
 import { PAYMENT_CONFIG } from "./payment-config"
+import { CERTIFICATION_LEVELS } from "./certification-levels"
 
 // Time slot configurations by service type
 export const TIME_SLOTS = {
@@ -35,7 +36,7 @@ export const PRIVATE_LESSON_TYPES = [
 // Service category definitions
 export const SERVICE_CATEGORIES = {
   training: ["group-session", "private-lesson", "gym-membership", "muay-thai-kids", "online-training"],
-  certificates: ["path-naga", "path-phayra-nak", "ratchasi", "hanuman", "garuda"],
+  certificates: ["cert-phayra-nak", "cert-singha", "cert-hanuman", "cert-garuda"],
 } as const
 
 // All available booking services
@@ -82,70 +83,25 @@ export const BOOKING_SERVICES = [
   },
   {
     id: "online-training",
-    name: "Online Training",
+    name: "Online Training Subscription",
     description:
-      "Train from anywhere with our virtual coaching sessions. Access to our online training system upon payment.",
-    price: PAYMENT_CONFIG.services.onlineTraining,
+      "Access all certification course content — every level, at your own pace. Cancel anytime.",
+    price: PAYMENT_CONFIG.subscription.studentMonthly,
     duration: "/ month",
     category: "training" as const,
   },
-  // Certificate Programs
-  {
-    id: "path-naga",
-    name: "Naga",
-    description:
-      "This introductory level lays the groundwork for your Muay Thai journey, focusing on essential techniques, stance, and footwork.",
-    price: PAYMENT_CONFIG.services.naga,
-    duration: "3 Days",
+  // Certificate Assessment Programs (gym-based)
+  ...CERTIFICATION_LEVELS.filter((l) => l.requiresGym).map((l) => ({
+    id: `cert-${l.id}` as const,
+    name: `${l.name} Assessment`,
+    description: `Level ${l.number} physical assessment — ${l.skills.length} skills evaluated by certified trainers.`,
+    price: l.assessmentFeeTHB,
+    duration: l.duration,
     category: "certificates" as const,
     hasCalendly: true,
-    calendlyEventUrl: "certificate-naga",
-  },
-  {
-    id: "path-phayra-nak",
-    name: "Phayra Nak",
-    description:
-      "Building on foundational skills, this intermediate course intensifies training with advanced combinations and clinching techniques.",
-    price: PAYMENT_CONFIG.services.phayaNak,
-    duration: "5 Days",
-    category: "certificates" as const,
-    hasCalendly: true,
-    calendlyEventUrl: "certificate-phayanak",
-  },
-  {
-    id: "ratchasi",
-    name: "Ratchasi",
-    description:
-      "This advanced level delves deeper into fight strategy, technical refinement, and peak physical conditioning.",
-    price: PAYMENT_CONFIG.services.ratchasi,
-    duration: "10 Days",
-    category: "certificates" as const,
-    hasCalendly: true,
-    calendlyEventUrl: "certificate-ratchasi",
-  },
-  {
-    id: "hanuman",
-    name: "Hanuman",
-    description:
-      "For serious practitioners aiming for mastery, combining technical excellence with mental discipline and recovery strategies.",
-    price: PAYMENT_CONFIG.services.hanuman,
-    duration: "1 Month",
-    category: "certificates" as const,
-    hasCalendly: true,
-    calendlyEventUrl: "certificate-hanuman",
-  },
-  {
-    id: "garuda",
-    name: "Garuda",
-    description:
-      "The pinnacle of our program, reserved for those dedicated to becoming true champions and ambassadors of Muay Thai.",
-    price: PAYMENT_CONFIG.services.garuda,
-    duration: "2 Months",
-    category: "certificates" as const,
-    hasCalendly: true,
-    calendlyEventUrl: "certificate-garuda",
-  },
-] as const
+    calendlyEventUrl: `certificate-${l.id}`,
+  })),
+]
 
 // Helper functions
 export function getServiceById(id: string) {
@@ -156,7 +112,7 @@ export function getServicesByCategory(category: "training" | "certificates") {
   return BOOKING_SERVICES.filter((service) => service.category === category)
 }
 
-export function getTimeSlotsForService(serviceName: string): string[] {
+export function getTimeSlotsForService(serviceName: string): readonly string[] {
   if (serviceName.toLowerCase().includes("group session")) {
     return TIME_SLOTS.groupSession
   } else if (serviceName.toLowerCase().includes("private") || serviceName.toLowerCase().includes("kids")) {
