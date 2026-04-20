@@ -107,9 +107,6 @@ export async function PATCH(request: Request) {
   const updates: Record<string, unknown> = {}
 
   if (role && ["admin", "trainer", "student", "promoter"].includes(role)) {
-    if (role === "owner") {
-      return NextResponse.json({ error: "Cannot assign owner role" }, { status: 400 })
-    }
     updates.role = role
   }
 

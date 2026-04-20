@@ -193,6 +193,7 @@ export default function TeamTab({ orgId, onFeedback }: TeamTabProps) {
   }
 
   const handleResendInvite = async (inviteId: string) => {
+    setActionLoading(true)
     try {
       const res = await fetch("/api/admin/invites", {
         method: "PATCH",
@@ -207,10 +208,13 @@ export default function TeamTab({ orgId, onFeedback }: TeamTabProps) {
       }
     } catch {
       onFeedback("error", "Network error")
+    } finally {
+      setActionLoading(false)
     }
   }
 
   const handleCancelInvite = async (inviteId: string) => {
+    setActionLoading(true)
     try {
       const res = await fetch(`/api/admin/invites?id=${inviteId}`, {
         method: "DELETE",
@@ -223,6 +227,8 @@ export default function TeamTab({ orgId, onFeedback }: TeamTabProps) {
       }
     } catch {
       onFeedback("error", "Network error")
+    } finally {
+      setActionLoading(false)
     }
   }
 

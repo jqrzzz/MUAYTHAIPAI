@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,10 +19,7 @@ import {
   FileText,
   Mail,
   Plus,
-  Clock,
   CheckCircle,
-  Send,
-  ImageIcon,
 } from "lucide-react"
 
 interface SocialPost {
@@ -200,8 +197,6 @@ export default function ContentStudio({ mode }: ContentStudioProps) {
   }
 
   const filteredPosts = posts.filter((p) => activeFilter === "all" || p.status === activeFilter)
-
-  const PlatformIcon = PLATFORMS.find((p) => p.id === platform)?.icon || Instagram
 
   return (
     <div className="space-y-6">

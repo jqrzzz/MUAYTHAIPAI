@@ -128,7 +128,7 @@ export async function handleMessage(
           external_thread_id: msg.externalChatId,
           status: "open",
           last_message_at: msg.receivedAt,
-          last_message_preview: msg.text.slice(0, 200),
+          last_message_preview: (msg.text || "[Photo]").slice(0, 200),
         })
         .select("id")
         .single()
@@ -172,7 +172,7 @@ export async function handleMessage(
         .from("mtp_conversations")
         .update({
           last_message_at: msg.receivedAt,
-          last_message_preview: msg.text.slice(0, 200),
+          last_message_preview: (msg.text || "[Photo]").slice(0, 200),
           updated_at: new Date().toISOString(),
         })
         .eq("id", conversationId)
@@ -242,7 +242,11 @@ export async function handleMessage(
           userId: member.user_id as string,
           userMessage:
             msg.text ||
-            (storedMediaUrls.length > 0 ? "[Sent a photo]" : ""),
+            (msg.attachments?.some(
+              (a) => a.type === "image" || a.type === "video",
+            )
+              ? "[Sent a photo]"
+              : ""),
           currentMediaUrls:
             storedMediaUrls.length > 0 ? storedMediaUrls : undefined,
         })

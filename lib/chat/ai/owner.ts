@@ -445,7 +445,7 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
           .select("id, status")
           .single()
 
-        if (error) return { ok: false, error: error.message }
+        if (error || !post) return { ok: false, error: error?.message ?? "save failed" }
         return {
           ok: true,
           post_id: post.id,

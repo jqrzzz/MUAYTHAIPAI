@@ -48,6 +48,10 @@ export async function GET(request: Request) {
       .limit(12),
   ])
 
+  if (bookingsRes.error) {
+    return NextResponse.json({ error: bookingsRes.error.message }, { status: 500 })
+  }
+
   const bookings = bookingsRes.data || []
   const payouts = payoutsRes.data || []
 
