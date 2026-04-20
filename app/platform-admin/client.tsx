@@ -129,6 +129,8 @@ interface Props {
   }
 }
 
+const COMMISSION_RATE = 0.15
+
 export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<"overview" | "gyms" | "payouts" | "blacklist" | "ockock">("overview")
@@ -172,6 +174,13 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const [payoutNotes, setPayoutNotes] = useState("")
 
   const [subscriptionLoading, setSubscriptionLoading] = useState<string | null>(null)
+  const [expandedGyms, setExpandedGyms] = useState<Set<string>>(new Set())
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   useEffect(() => {
     if (activeTab === "payouts") {
@@ -192,9 +201,11 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
       if (res.ok) {
         const data = await res.json()
         setPayoutData(data)
+      } else {
+        showToast("Failed to load payouts", "error")
       }
-    } catch (error) {
-      console.error("Error fetching payouts:", error)
+    } catch {
+      showToast("Network error loading payouts", "error")
     }
     setPayoutLoading(false)
   }
@@ -238,7 +249,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
       const res = await fetch("/api/platform-admin/payouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.JSONStringify({
+        body: JSON.stringify({
           orgId: selectedGymPayout.gym.id,
           periodStart: payoutData.period.start,
           periodEnd: payoutData.period.end,
@@ -254,10 +265,13 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         setShowMarkPaid(false)
         setSelectedGymPayout(null)
         setPayoutNotes("")
+        showToast("Payout marked as paid")
         fetchPayouts()
+      } else {
+        showToast("Failed to mark payout as paid", "error")
       }
-    } catch (error) {
-      console.error("Error marking paid:", error)
+    } catch {
+      showToast("Network error saving payout", "error")
     }
     setLoading(false)
   }
@@ -271,7 +285,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     statement += `${"=".repeat(50)}\n\n`
     statement += `Online Bookings: ${gymPayout.summary.bookingCount}\n`
     statement += `Total Collected: $${gymPayout.summary.totalCollectedUsd.toFixed(2)} USD\n`
-    statement += `Platform Commission (15%): $${gymPayout.summary.commissionUsd.toFixed(2)} USD\n`
+    statement += `Platform Commission (${COMMISSION_RATE * 100}%): $${gymPayout.summary.commissionUsd.toFixed(2)} USD\n`
     statement += `Amount Due: $${gymPayout.summary.amountOwedUsd.toFixed(2)} USD\n`
     statement += `Exchange Rate: ${rate}\n`
     statement += `THB Amount: ฿${thbAmount.toLocaleString()}\n\n`
@@ -289,7 +303,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const copyStatement = (gymPayout: GymPayout) => {
     const statement = generateStatement(gymPayout)
     navigator.clipboard.writeText(statement)
-    alert("Statement copied to clipboard!")
+    showToast("Statement copied to clipboard")
   }
 
   const handleSignOut = async () => {
@@ -310,10 +324,14 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
       if (res.ok) {
         setShowAddGym(false)
         setGymForm({ name: "", slug: "", city: "", province: "", ownerEmail: "", ownerName: "" })
+        showToast("Gym added successfully")
         router.refresh()
+      } else {
+        const data = await res.json().catch(() => null)
+        showToast(data?.error || "Failed to add gym", "error")
       }
-    } catch (error) {
-      console.error("Error adding gym:", error)
+    } catch {
+      showToast("Network error adding gym", "error")
     }
     setLoading(false)
   }
@@ -330,10 +348,14 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
       if (res.ok) {
         setShowAddBlacklist(false)
         setBlacklistForm({ name: "", nationality: "", description: "" })
+        showToast("Added to blacklist")
         router.refresh()
+      } else {
+        const data = await res.json().catch(() => null)
+        showToast(data?.error || "Failed to add to blacklist", "error")
       }
-    } catch (error) {
-      console.error("Error adding to blacklist:", error)
+    } catch {
+      showToast("Network error adding to blacklist", "error")
     }
     setLoading(false)
   }
@@ -383,10 +405,13 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         body: JSON.stringify({ gymId, status: newStatus }),
       })
       if (res.ok) {
-        router.refresh() // Refresh to get updated gym data
+        showToast(`Subscription ${newStatus === "active" ? "activated" : "deactivated"}`)
+        router.refresh()
+      } else {
+        showToast("Failed to update subscription", "error")
       }
-    } catch (error) {
-      console.error("Error toggling subscription:", error)
+    } catch {
+      showToast("Network error updating subscription", "error")
     } finally {
       setSubscriptionLoading(null)
     }
@@ -594,12 +619,11 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() =>
-                              toggleSubscription(
-                                gym.id,
-                                gym.gym_subscriptions.status === "active" ? "inactive" : "active",
-                              )
-                            }
+                            onClick={() => {
+                              const sub = gym.gym_subscriptions
+                              if (!sub) return
+                              toggleSubscription(gym.id, sub.status === "active" ? "inactive" : "active")
+                            }}
                             className={`border-zinc-700 text-xs ${
                               gym.gym_subscriptions.status === "active"
                                 ? "text-red-500 hover:text-red-600"
@@ -830,23 +854,36 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                           </div>
                         </div>
 
-                        {/* Booking Details (collapsed by default, could add expand later) */}
                         {gymPayout.bookings.length > 0 && (
                           <div className="mt-4 border-t border-zinc-800 pt-4">
-                            <p className="mb-2 text-xs text-zinc-500">Booking Details:</p>
-                            <div className="space-y-1 text-sm">
-                              {gymPayout.bookings.slice(0, 5).map((b) => (
-                                <div key={b.id} className="flex justify-between text-zinc-400">
-                                  <span>
-                                    {new Date(b.date).toLocaleDateString()} - {b.customerName} - {b.service}
-                                  </span>
-                                  <span>${b.amountUsd?.toFixed(2) || "0.00"}</span>
-                                </div>
-                              ))}
-                              {gymPayout.bookings.length > 5 && (
-                                <p className="text-zinc-500">+ {gymPayout.bookings.length - 5} more</p>
-                              )}
-                            </div>
+                            <button
+                              onClick={() => {
+                                const next = new Set(expandedGyms)
+                                if (next.has(gymPayout.gym.id)) {
+                                  next.delete(gymPayout.gym.id)
+                                } else {
+                                  next.add(gymPayout.gym.id)
+                                }
+                                setExpandedGyms(next)
+                              }}
+                              className="mb-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                            >
+                              {expandedGyms.has(gymPayout.gym.id)
+                                ? "Hide details"
+                                : `Show ${gymPayout.bookings.length} booking${gymPayout.bookings.length === 1 ? "" : "s"}`}
+                            </button>
+                            {expandedGyms.has(gymPayout.gym.id) && (
+                              <div className="space-y-1 text-sm">
+                                {gymPayout.bookings.map((b) => (
+                                  <div key={b.id} className="flex justify-between text-zinc-400">
+                                    <span>
+                                      {new Date(b.date).toLocaleDateString()} - {b.customerName} - {b.service}
+                                    </span>
+                                    <span>${b.amountUsd?.toFixed(2) || "0.00"}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
@@ -954,7 +991,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                         height={80}
                         className="mb-4 rounded-full"
                       />
-                      <h3 className="mb-2 font-semibold">Hey Boss! I'm OckOck 🦬</h3>
+                      <h3 className="mb-2 font-semibold">Hey Boss! I&apos;m OckOck</h3>
                       <p className="mb-4 max-w-md text-sm text-zinc-400">
                         I help you manage the Muay Thai Network. Ask me about payouts, gym subscriptions, revenue, or
                         anything platform-related!
@@ -1182,6 +1219,24 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Toast notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-all ${
+            toast.type === "success"
+              ? "bg-green-500/90 text-white"
+              : "bg-red-500/90 text-white"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle className="h-4 w-4" />
+          ) : (
+            <AlertTriangle className="h-4 w-4" />
+          )}
+          {toast.message}
+        </div>
+      )}
 
       <Dialog open={showMarkPaid} onOpenChange={setShowMarkPaid}>
         <DialogContent className="border-zinc-800 bg-zinc-900 text-white">

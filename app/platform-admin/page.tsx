@@ -20,50 +20,56 @@ export default async function PlatformAdminPage() {
     redirect("/admin")
   }
 
-  // Fetch all gyms with subscriptions
-  const { data: gyms } = await supabase
-    .from("organizations")
-    .select(`
-      *,
-      gym_subscriptions (*),
-      org_members (
-        user_id,
-        role,
-        users (full_name, email)
-      )
-    `)
-    .order("created_at", { ascending: false })
+  const [gymsRes, blacklistRes, gymsCount, studentsCount, bookingsCount, activeSubsRes] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select(`
+        *,
+        gym_subscriptions (*),
+        org_members (
+          user_id,
+          role,
+          users (full_name, email)
+        )
+      `)
+      .order("created_at", { ascending: false }),
 
-  // Fetch blacklist
-  const { data: blacklist } = await supabase
-    .from("blacklist")
-    .select(`
-      *,
-      organizations:added_by_org_id (name),
-      blacklist_comments (
-        id,
-        comment,
-        created_at,
-        organizations:org_id (name)
-      )
-    `)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
+    supabase
+      .from("blacklist")
+      .select(`
+        *,
+        organizations:added_by_org_id (name),
+        blacklist_comments (
+          id,
+          comment,
+          created_at,
+          organizations:org_id (name)
+        )
+      `)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
 
-  // Platform stats
-  const { count: totalGyms } = await supabase.from("organizations").select("*", { count: "exact", head: true })
+    supabase.from("organizations").select("*", { count: "exact", head: true }),
 
-  const { count: totalStudents } = await supabase
-    .from("users")
-    .select("*", { count: "exact", head: true })
-    .eq("is_platform_admin", false)
+    supabase
+      .from("users")
+      .select("*", { count: "exact", head: true })
+      .eq("is_platform_admin", false),
 
-  const { count: totalBookings } = await supabase.from("bookings").select("*", { count: "exact", head: true })
+    supabase.from("bookings").select("*", { count: "exact", head: true }),
 
-  const { data: activeSubscriptions } = await supabase
-    .from("gym_subscriptions")
-    .select("*", { count: "exact" })
-    .eq("status", "active")
+    supabase
+      .from("gym_subscriptions")
+      .select("*", { count: "exact" })
+      .eq("status", "active"),
+  ])
+
+  const gyms = gymsRes.data
+  const blacklist = blacklistRes.data
+  const totalGyms = gymsCount.count
+  const totalStudents = studentsCount.count
+  const totalBookings = bookingsCount.count
+  const activeSubscriptions = activeSubsRes.data
 
   return (
     <PlatformAdminClient
