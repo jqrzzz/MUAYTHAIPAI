@@ -17,6 +17,7 @@ import SettingsTab from "@/components/admin/settings-tab"
 import ReportsTab from "@/components/admin/reports-tab"
 import EarningsTab from "@/components/admin/earnings-tab"
 import TeamTab from "@/components/admin/team-tab"
+import ContentStudio from "@/components/admin/content-studio"
 import TrainOckockTab from "@/components/admin/train-ockock-tab"
 import OckockChatTab from "@/components/admin/ockock-chat-tab"
 import MarketingTab from "@/components/admin/marketing-tab"
@@ -47,6 +48,7 @@ import {
   Link2,
   DollarSign,
   Shield,
+  Sparkles,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -195,7 +197,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "earnings" | "team" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses"
+    "today" | "recent" | "services" | "trainers" | "reports" | "earnings" | "team" | "content" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -324,6 +326,7 @@ export default function AdminDashboardClient({
       labelTh: "ผู้ช่วย AI",
       items: [
         { id: "marketing" as const, label: "Marketing", labelTh: "การตลาด", icon: Megaphone },
+        { id: "content" as const, label: "Content Studio", labelTh: "สตูดิโอ", icon: Sparkles },
         { id: "train-ockock" as const, label: "Train OckOck", labelTh: "สอน OckOck", icon: BookOpen },
         { id: "ockock" as const, label: "OckOck", labelTh: "OckOck", icon: null, isOckOck: true },
       ],
@@ -737,6 +740,8 @@ export default function AdminDashboardClient({
           )}
 
           {activeTab === "marketing" && <MarketingTab orgId={membership.org_id} />}
+
+          {activeTab === "content" && <ContentStudio mode="gym" />}
 
           {activeTab === "train-ockock" && <TrainOckockTab />}
 

@@ -27,11 +27,13 @@ import {
   Check,
   Send,
   Loader2,
+  Sparkles,
 } from "lucide-react"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { PlatformAnalytics } from "@/components/admin/platform-analytics"
+import ContentStudio from "@/components/admin/content-studio"
 import { PAYMENT_CONFIG, estimateStripeFee } from "@/lib/payment-config"
 
 interface GymPayout {
@@ -134,7 +136,7 @@ const COMMISSION_RATE = PAYMENT_CONFIG.platform.commissionRate
 
 export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"overview" | "gyms" | "payouts" | "blacklist" | "ockock">("overview")
+  const [activeTab, setActiveTab] = useState<"overview" | "gyms" | "payouts" | "blacklist" | "content" | "ockock">("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -496,6 +498,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             { id: "overview", label: "Overview", icon: Building2 },
             { id: "gyms", label: "Gyms", icon: Users },
             { id: "payouts", label: "Payouts", icon: DollarSign },
+            { id: "content", label: "Content", icon: Sparkles },
             { id: "blacklist", label: "Blacklist", icon: Shield },
             { id: "ockock", label: "OckOck", icon: MessageSquare },
           ].map((tab) => (
@@ -903,6 +906,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             )}
           </div>
         )}
+
+        {activeTab === "content" && <ContentStudio mode="platform" />}
 
         {/* Blacklist Tab */}
         {activeTab === "blacklist" && (
