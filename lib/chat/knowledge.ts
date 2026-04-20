@@ -177,6 +177,9 @@ export function renderKnowledgeBlock(kb: GymKnowledge): string {
   if (kb.facebook) contactBits.push(`Facebook: ${kb.facebook}`)
   if (kb.website) contactBits.push(`Website: ${kb.website}`)
   if (contactBits.length) lines.push(`Contact: ${contactBits.join(" · ")}`)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+  lines.push(`Booking page: ${siteUrl}/book?gym=${kb.slug}`)
+  lines.push(`Gym profile: ${siteUrl}/gyms/${kb.slug}`)
 
   if (kb.services.length > 0) {
     lines.push("", "## Services & Pricing")

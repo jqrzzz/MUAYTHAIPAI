@@ -9,7 +9,7 @@ import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 import { PAYMENT_CONFIG } from "@/lib/payment-config"
 
 const stripe = new Stripe(env.stripe.secretKey(), {
-  apiVersion: "2024-06-20",
+  apiVersion: "2025-08-27.basil",
 })
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
