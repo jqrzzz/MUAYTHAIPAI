@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { stripe } from "@/lib/stripe"
 import { NextResponse } from "next/server"
+import { PAYMENT_CONFIG } from "@/lib/payment-config"
 
 // Create a Stripe checkout session for gym subscription
 export async function POST(request: Request) {
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
             name: "Muay Thai Network - Gym Platform",
             description: "Monthly subscription for gym management platform",
           },
-          unit_amount: 2900, // $29 USD (~999 THB)
+          unit_amount: PAYMENT_CONFIG.platform.gymSubscriptionUsd * 100,
           recurring: {
             interval: "month",
           },

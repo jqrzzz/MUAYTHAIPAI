@@ -32,6 +32,7 @@ import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { PlatformAnalytics } from "@/components/admin/platform-analytics"
+import { PAYMENT_CONFIG, estimateStripeFee } from "@/lib/payment-config"
 
 interface GymPayout {
   gym: {
@@ -129,7 +130,7 @@ interface Props {
   }
 }
 
-const COMMISSION_RATE = 0.15
+const COMMISSION_RATE = PAYMENT_CONFIG.platform.commissionRate
 
 export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const router = useRouter()
@@ -280,14 +281,19 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     if (!payoutData) return ""
     const rate = Number.parseFloat(exchangeRate)
     const thbAmount = Math.round(gymPayout.summary.amountOwedUsd * rate)
+    const estimatedStripeFees = gymPayout.bookings.reduce(
+      (sum, b) => sum + estimateStripeFee(b.amountUsd || 0), 0
+    )
 
     let statement = `${gymPayout.gym.name} - ${payoutData.period.label} Statement\n`
     statement += `${"=".repeat(50)}\n\n`
     statement += `Online Bookings: ${gymPayout.summary.bookingCount}\n`
-    statement += `Total Collected: $${gymPayout.summary.totalCollectedUsd.toFixed(2)} USD\n`
-    statement += `Platform Commission (${COMMISSION_RATE * 100}%): $${gymPayout.summary.commissionUsd.toFixed(2)} USD\n`
-    statement += `Amount Due: $${gymPayout.summary.amountOwedUsd.toFixed(2)} USD\n`
-    statement += `Exchange Rate: ${rate}\n`
+    statement += `Total Collected: $${gymPayout.summary.totalCollectedUsd.toFixed(2)} USD\n\n`
+    statement += `Fee Breakdown:\n`
+    statement += `  Stripe Processing (~${PAYMENT_CONFIG.stripe.processingFeePercent * 100}% + $${PAYMENT_CONFIG.stripe.processingFeeFixedUsd}): -$${estimatedStripeFees.toFixed(2)} USD (absorbed by platform)\n`
+    statement += `  Platform Commission (${COMMISSION_RATE * 100}%): -$${gymPayout.summary.commissionUsd.toFixed(2)} USD\n\n`
+    statement += `Amount Due to Gym: $${gymPayout.summary.amountOwedUsd.toFixed(2)} USD\n`
+    statement += `Exchange Rate: ${rate} THB/USD\n`
     statement += `THB Amount: ฿${thbAmount.toLocaleString()}\n\n`
     statement += `Booking Details:\n`
     statement += `${"-".repeat(50)}\n`
@@ -296,6 +302,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
       const date = new Date(b.date).toLocaleDateString()
       statement += `${date}: ${b.customerName} - ${b.service} - $${b.amountUsd?.toFixed(2) || "0.00"} (commission $${b.commissionUsd?.toFixed(2) || "0.00"})\n`
     })
+
+    statement += `\nNote: Stripe processing fees are paid by the platform and\n`
+    statement += `are NOT deducted from the gym's payout.\n`
 
     return statement
   }

@@ -4,6 +4,14 @@ export const PAYMENT_CONFIG = {
   locale: "th-TH",
   stripe: {
     publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
+    processingFeePercent: 0.029,
+    processingFeeFixedUsd: 0.30,
+  },
+  platform: {
+    commissionRate: 0.15,
+    gymSubscriptionThb: 999,
+    gymSubscriptionUsd: 29,
+    trialDays: 30,
   },
   subscription: {
     studentMonthly: 299,
@@ -19,6 +27,10 @@ export const PAYMENT_CONFIG = {
     nagaCertFee: 2500,
   },
 } as const
+
+export function estimateStripeFee(amountUsd: number): number {
+  return Math.round((amountUsd * PAYMENT_CONFIG.stripe.processingFeePercent + PAYMENT_CONFIG.stripe.processingFeeFixedUsd) * 100) / 100
+}
 
 // Format price in Thai Baht
 export function formatPrice(amount: number): string {

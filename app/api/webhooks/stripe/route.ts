@@ -6,6 +6,7 @@ import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
 import { randomBytes } from "crypto"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { PAYMENT_CONFIG } from "@/lib/payment-config"
 
 const stripe = new Stripe(env.stripe.secretKey(), {
   apiVersion: "2024-06-20",
@@ -61,7 +62,7 @@ async function saveBookingToDatabase(data: {
       }
     }
 
-    const commissionRate = 0.15
+    const commissionRate = PAYMENT_CONFIG.platform.commissionRate
     const commissionAmount = Math.round(data.paymentAmountUsd * commissionRate * 100) / 100
 
     const { data: booking, error } = await supabase

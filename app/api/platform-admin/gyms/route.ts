@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
+import { PAYMENT_CONFIG } from "@/lib/payment-config"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
   await supabase.from("gym_subscriptions").insert({
     org_id: org.id,
     status: "trial",
-    price_thb: 999,
+    price_thb: PAYMENT_CONFIG.platform.gymSubscriptionThb,
   })
 
   // Create org settings

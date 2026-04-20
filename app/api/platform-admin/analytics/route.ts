@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { PAYMENT_CONFIG } from "@/lib/payment-config"
 
 const serviceClient = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -139,7 +140,7 @@ export async function GET(request: Request) {
       active: gymSubs.filter((s) => s.status === "active").length,
       trial: gymSubs.filter((s) => s.status === "trial").length,
       pastDue: gymSubs.filter((s) => s.status === "past_due").length,
-      mrr: gymSubs.filter((s) => s.status === "active").length * 999,
+      mrr: gymSubs.filter((s) => s.status === "active").length * PAYMENT_CONFIG.platform.gymSubscriptionThb,
     },
   })
 }
