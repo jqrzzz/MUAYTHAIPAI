@@ -48,7 +48,7 @@ export type ConciergeOutput = {
 }
 
 const MODEL = "openai/gpt-4o-mini"
-const MAX_TOOL_STEPS = 5
+const MAX_TOOL_STEPS = 6
 const MAX_OUTPUT_TOKENS = 600
 
 export async function runConciergeAI(
@@ -141,9 +141,34 @@ export async function runConciergeAI(
       },
     }),
 
+    generate_booking_link: tool({
+      description:
+        "Generate a direct booking link for the visitor. Use when the visitor wants to book a session, class, or program. Pick the service that best matches what they asked for. The link opens the booking page with the gym pre-selected.",
+      inputSchema: z.object({
+        service_name: z
+          .string()
+          .describe("Name of the service the visitor wants to book, exactly as it appears in the KB."),
+      }),
+      execute: async ({ service_name }) => {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+        const slug = input.kb.slug
+        const bookingUrl = `${siteUrl}/book?gym=${encodeURIComponent(slug)}`
+        const matched = input.kb.services.find(
+          (s) => s.name.toLowerCase() === service_name.toLowerCase(),
+        )
+        return {
+          booking_url: bookingUrl,
+          service: matched
+            ? { name: matched.name, price_thb: matched.price_thb, price_usd: matched.price_usd, duration_minutes: matched.duration_minutes }
+            : null,
+          note: "Share this booking link with the visitor. Tell them the price and what to expect, then give them the link.",
+        }
+      },
+    }),
+
     escalate_to_owner: tool({
       description:
-        "Hand the conversation to a human staff member. Use when: (1) the visitor is unhappy, (2) they ask about something not in the KB, (3) they want to book / pay / change an existing booking, (4) anything sensitive (medical, refunds, injuries), (5) you're less than 95% sure.",
+        "Hand the conversation to a human staff member. Use when: (1) the visitor is unhappy, (2) they ask about something not in the KB, (3) they want to change or cancel an existing booking, (4) anything sensitive (medical, refunds, injuries), (5) you're less than 95% sure.",
       inputSchema: z.object({
         reason: z
           .string()
@@ -226,7 +251,12 @@ function buildConciergeSystemPrompt(
 - Never reveal that you're an AI unless directly asked. If asked, be honest: "I'm the gym's AI assistant — a real person will jump in for anything I can't answer."
 
 # Tools
-Use tools liberally. Prefer calling get_services / get_schedule / search_faqs over answering from memory, even if you think you know. If the question is about booking, payment, refunds, injuries, or anything sensitive, call escalate_to_owner.
+Use tools liberally. Prefer calling get_services / get_schedule / search_faqs over answering from memory, even if you think you know.
+
+# Booking flow
+When the visitor wants to book, help them! Use get_services to find the right service, then use generate_booking_link to create a direct booking link. Share the link with the price and a brief "here's what to expect" message. Do NOT escalate booking requests — you can handle them.
+
+Only call escalate_to_owner for: (1) visitor is unhappy, (2) cancellations / changes to existing bookings, (3) refunds, injuries, or anything sensitive, (4) questions not answered by the KB or tools.
 
 # Session context
 - ${greetingHint}

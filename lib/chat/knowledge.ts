@@ -47,6 +47,7 @@ export type GymKnowledgeTrainer = {
 export type GymKnowledge = {
   orgId: string
   orgName: string
+  slug: string
   description: string | null
   city: string | null
   province: string | null
@@ -81,7 +82,7 @@ export async function loadGymKnowledge(
   const { data: org } = await supabase
     .from("organizations")
     .select(
-      "id, name, description, city, province, country, timezone, email, phone, whatsapp, instagram, facebook, website",
+      "id, name, slug, description, city, province, country, timezone, email, phone, whatsapp, instagram, facebook, website",
     )
     .eq("id", orgId)
     .maybeSingle()
@@ -135,6 +136,7 @@ export async function loadGymKnowledge(
   return {
     orgId: org.id,
     orgName: org.name,
+    slug: org.slug,
     description: org.description,
     city: org.city,
     province: org.province,
