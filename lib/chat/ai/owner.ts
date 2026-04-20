@@ -47,6 +47,8 @@ export type OwnerAIInput = {
   ownerConversationId: string
   userMessage: string
   history: OwnerAIHistoryEntry[]
+  /** URLs of media the owner sent in this message (already stored in Supabase). */
+  currentMediaUrls?: string[]
 }
 
 export type OwnerAIOutput = {
@@ -327,6 +329,180 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
         }
       },
     }),
+
+    get_gym_context: tool({
+      description:
+        "Load the gym's details for content creation: name, location, description, services, prices. Call this before writing social media content so you include accurate info.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const [{ data: org }, { data: services }] = await Promise.all([
+          supabase
+            .from("organizations")
+            .select("name, city, province, description")
+            .eq("id", orgId)
+            .single(),
+          supabase
+            .from("services")
+            .select("name, price_thb, category")
+            .eq("org_id", orgId)
+            .eq("is_active", true),
+        ])
+        return {
+          gym: org ?? { name: input.orgName },
+          services:
+            services?.map((s: { name: string; price_thb: number; category: string }) => ({
+              name: s.name,
+              price: `฿${s.price_thb}`,
+              category: s.category,
+            })) ?? [],
+        }
+      },
+    }),
+
+    get_recent_media: tool({
+      description:
+        "Get URLs of images/videos the owner recently shared in this chat. Use when the owner mentions 'this photo', 'that picture', or wants to use a previously shared image for content.",
+      inputSchema: z.object({
+        limit: z.number().min(1).max(10).default(5),
+      }),
+      execute: async ({ limit }) => {
+        const { data } = await supabase
+          .from("mtp_communication_log")
+          .select("id, metadata, created_at")
+          .eq("conversation_id", ownerConversationId)
+          .eq("direction", "inbound")
+          .order("created_at", { ascending: false })
+          .limit(limit * 3)
+
+        const mediaUrls: { url: string; timestamp: string }[] = []
+        for (const row of data ?? []) {
+          const meta = row.metadata as Record<string, unknown> | null
+          const urls = meta?.stored_media_urls
+          if (Array.isArray(urls)) {
+            for (const url of urls) {
+              if (typeof url === "string") {
+                mediaUrls.push({ url, timestamp: row.created_at })
+              }
+            }
+          }
+          if (mediaUrls.length >= limit) break
+        }
+        return { media: mediaUrls.slice(0, limit) }
+      },
+    }),
+
+    save_social_post: tool({
+      description:
+        "Save a social media post to the content calendar. You write the caption and hashtags. The post saves as a draft the owner can review in Content Studio or approve to queue.",
+      inputSchema: z.object({
+        caption: z
+          .string()
+          .min(1)
+          .max(2000)
+          .describe("The post caption/text you composed"),
+        hashtags: z
+          .array(z.string())
+          .default([])
+          .describe("Hashtags without the # symbol"),
+        platforms: z
+          .array(z.string())
+          .default(["instagram"])
+          .describe("Target platforms: instagram, facebook, tiktok"),
+        content_type: z
+          .enum(["post", "story", "reel", "blog", "email"])
+          .default("post"),
+        media_url: z
+          .string()
+          .optional()
+          .describe(
+            "URL of attached image/video. Use a URL from currentMediaUrls or get_recent_media.",
+          ),
+        campaign: z.string().optional(),
+      }),
+      execute: async ({
+        caption,
+        hashtags,
+        platforms,
+        content_type,
+        media_url,
+        campaign,
+      }) => {
+        const { data: post, error } = await supabase
+          .from("social_posts")
+          .insert({
+            org_id: orgId,
+            created_by: input.userId,
+            platform: platforms,
+            content_type,
+            caption,
+            hashtags,
+            media_url: media_url || null,
+            status: "draft",
+            campaign: campaign || null,
+            ai_generated: true,
+            ai_prompt: `Chat: ${input.userMessage.slice(0, 200)}`,
+          })
+          .select("id, status")
+          .single()
+
+        if (error) return { ok: false, error: error.message }
+        return {
+          ok: true,
+          post_id: post.id,
+          status: "draft",
+          note: "Saved as draft. Owner can review in Content Studio or say 'queue it' to schedule.",
+        }
+      },
+    }),
+
+    list_social_posts: tool({
+      description:
+        "List recent social media posts from the content calendar. Use when the owner asks about their posts, content, or what's scheduled.",
+      inputSchema: z.object({
+        status: z.enum(["draft", "scheduled", "posted"]).optional(),
+        limit: z.number().min(1).max(10).default(5),
+      }),
+      execute: async ({ status, limit }) => {
+        let query = supabase
+          .from("social_posts")
+          .select(
+            "id, platform, content_type, caption, status, created_at, campaign, media_url",
+          )
+          .eq("org_id", orgId)
+          .order("created_at", { ascending: false })
+          .limit(limit)
+
+        if (status) query = query.eq("status", status)
+
+        const { data } = await query
+        return {
+          count: data?.length ?? 0,
+          posts: (data ?? []).map(
+            (p: {
+              id: string
+              platform: string[]
+              content_type: string
+              caption: string
+              status: string
+              created_at: string
+              campaign: string | null
+              media_url: string | null
+            }) => ({
+              id: p.id,
+              platforms: p.platform,
+              type: p.content_type,
+              caption_preview:
+                p.caption.slice(0, 100) +
+                (p.caption.length > 100 ? "..." : ""),
+              status: p.status,
+              has_media: !!p.media_url,
+              campaign: p.campaign,
+              created: p.created_at,
+            }),
+          ),
+        }
+      },
+    }),
   }
 
   const messages = buildConversationMessages(input)
@@ -372,6 +548,11 @@ function buildOwnerSystemPrompt(input: OwnerAIInput): string {
     ? `You are assisting ${input.ownerDisplayName}`
     : "You are assisting the gym owner"
 
+  const mediaNote =
+    input.currentMediaUrls?.length
+      ? `\n\n# Media just shared\nThe owner just sent ${input.currentMediaUrls.length} image(s):\n${input.currentMediaUrls.map((url, i) => `${i + 1}. ${url}`).join("\n")}\nYou can attach these to social posts via save_social_post's media_url field.`
+      : ""
+
   return `You are the operator-side AI for ${input.orgName}. ${who}.
 
 # Mode
@@ -382,12 +563,31 @@ Operator-mode, not hospitality. No "Sawadee", no emoji pageantry. Be crisp, usef
 - Read a full conversation thread
 - Search recent conversations by text or status
 - Draft a reply to a visitor thread (draft-only)
-- Propose sending a draft: creates a single-tap confirm link the owner opens in a browser. The draft does not send until they tap the link.
+- Propose sending a draft: creates a single-tap confirm link the owner opens in a browser
 - Today's bookings
+- Create social media content: write captions, pick hashtags, attach photos, save to Content Studio
+- List and manage social media posts from the content calendar
+
+# Content creation flow
+When the owner wants to create a social media post:
+1. If they sent a photo, you already have the URL (see Media section below). If they mention old photos, call get_recent_media.
+2. Call get_gym_context to load gym details (services, location, etc.) for accurate content.
+3. Write a compelling caption in the right style for the platform (Instagram: hashtags + line breaks, TikTok: short + punchy, Facebook: conversational).
+4. Call save_social_post with the caption, hashtags, platforms, and media_url.
+5. Show the owner what you created. They can say "queue it" or "change X" or check Content Studio.
+
+When writing social media content:
+- Authentic voice, never corporate or salesy
+- Include a subtle call to action
+- Reference real gym details (services, location, prices) from get_gym_context
+- For Instagram: 3-8 relevant hashtags
+- For TikTok: short, hook-first, under 150 chars main line
+- For Facebook: conversational, 1-3 hashtags max
 
 # Safety
 - You never send customer replies directly. draft_reply stages the reply; propose_send_draft mints a confirm link; only the owner's tap actually sends it.
-- If the owner asks you to do something you can't yet (refunds, publishing, billing, schedule changes), tell them plainly and suggest the web console. More propose_* actions will arrive over time; when you're unsure if an action is supported, don't invent one.
+- Social posts save as drafts — never auto-publish. The owner reviews in Content Studio.
+- If the owner asks you to do something you can't yet (refunds, publishing to social platforms, billing, schedule changes), tell them plainly and suggest the web console.
 - Do not reveal other gyms' data. All tools are scoped to this org.
 - If you don't know, say so. Don't invent numbers, names, or bookings.
 
@@ -401,7 +601,7 @@ Operator-mode, not hospitality. No "Sawadee", no emoji pageantry. Be crisp, usef
 - Plain text suitable for a chat bubble.
 - Short. The owner is on a phone.
 - When you list items, use line breaks, not Markdown tables.
-- When you draft something, quote the draft back to the owner for a final look before they approve in the inbox.`
+- When you draft something, quote the draft back to the owner for a final look before they approve in the inbox.${mediaNote}`
 }
 
 function buildConversationMessages(

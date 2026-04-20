@@ -21,6 +21,7 @@ import { createClient } from "@supabase/supabase-js"
 import { runConciergeAI, type ConciergeHistoryEntry } from "./ai/concierge"
 import { runOwnerAI, type OwnerAIHistoryEntry } from "./ai/owner"
 import { loadGymKnowledge } from "./knowledge"
+import { downloadAndStoreAttachments } from "./media"
 import type {
   ChannelAdapter,
   HandleMessageResult,
@@ -177,6 +178,34 @@ export async function handleMessage(
         .eq("id", conversationId)
     }
 
+    // 4b. Download and store media for owner_assist (before AI runs)
+    let storedMediaUrls: string[] = []
+    if (
+      purpose === "owner_assist" &&
+      msg.attachments?.some((a) => a.type === "image" || a.type === "video")
+    ) {
+      storedMediaUrls = await downloadAndStoreAttachments(
+        supabase,
+        msg.attachments,
+        msg.platform,
+        orgId,
+      )
+      if (storedMediaUrls.length > 0) {
+        await supabase
+          .from("mtp_communication_log")
+          .update({
+            metadata: {
+              raw: msg.rawUpdate,
+              attachments: msg.attachments ?? [],
+              sender_display_name: msg.senderDisplayName,
+              is_direct_message: msg.isDirectMessage,
+              stored_media_urls: storedMediaUrls,
+            },
+          })
+          .eq("id", messageLogId)
+      }
+    }
+
     // 5. Run AI
     //    - public_inbox → concierge (Wave 8b)
     //    - owner_assist → owner AI, but only for bound owner/admin
@@ -211,7 +240,11 @@ export async function handleMessage(
           orgId,
           conversationId,
           userId: member.user_id as string,
-          userMessage: msg.text,
+          userMessage:
+            msg.text ||
+            (storedMediaUrls.length > 0 ? "[Sent a photo]" : ""),
+          currentMediaUrls:
+            storedMediaUrls.length > 0 ? storedMediaUrls : undefined,
         })
       }
     } else {
@@ -339,6 +372,7 @@ async function runOwnerAIForConversation(params: {
   conversationId: string
   userId: string
   userMessage: string
+  currentMediaUrls?: string[]
 }): Promise<AIOutput> {
   const { supabase, orgId, conversationId, userId, userMessage } = params
 
@@ -375,6 +409,7 @@ async function runOwnerAIForConversation(params: {
     ownerConversationId: conversationId,
     userMessage,
     history,
+    currentMediaUrls: params.currentMediaUrls,
   })
 }
 

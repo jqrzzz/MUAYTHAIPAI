@@ -232,7 +232,7 @@ HASHTAGS:
 }
 
 async function handleSave(
-  body: { caption: string; hashtags?: string[]; contentType?: string; platform?: string[]; campaign?: string; scheduledFor?: string; status?: string; aiGenerated?: boolean; aiPrompt?: string },
+  body: { caption: string; hashtags?: string[]; contentType?: string; platform?: string[]; campaign?: string; scheduledFor?: string; status?: string; aiGenerated?: boolean; aiPrompt?: string; mediaUrl?: string },
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   isPlatformAdmin: boolean,
@@ -247,6 +247,7 @@ async function handleSave(
       content_type: body.contentType || "post",
       caption: body.caption,
       hashtags: body.hashtags || [],
+      media_url: body.mediaUrl || null,
       status: body.status || "draft",
       scheduled_for: body.scheduledFor || null,
       campaign: body.campaign || null,

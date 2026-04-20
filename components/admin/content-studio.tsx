@@ -22,6 +22,7 @@ import {
   Clock,
   CheckCircle,
   Send,
+  ImageIcon,
 } from "lucide-react"
 
 interface SocialPost {
@@ -30,6 +31,7 @@ interface SocialPost {
   content_type: string
   caption: string
   hashtags: string[]
+  media_url: string | null
   status: string
   scheduled_for: string | null
   posted_at: string | null
@@ -428,6 +430,17 @@ export default function ContentStudio({ mode }: ContentStudioProps) {
             <Card key={post.id} className="bg-neutral-900/50 border-neutral-800">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
+                  {/* Media thumbnail */}
+                  {post.media_url && (
+                    <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-neutral-800 border border-neutral-700">
+                      <img
+                        src={post.media_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
                   <div className="flex-1 min-w-0 space-y-2">
                     {/* Status + platform + type badges */}
                     <div className="flex items-center gap-2 flex-wrap">
