@@ -75,11 +75,11 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
       <header className="sticky top-0 z-50 bg-neutral-950/80 backdrop-blur-sm border-b border-neutral-800">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link
-            href={user ? "/student" : "/"}
+            href={user ? "/student" : "/gyms"}
             className="inline-flex items-center text-sm text-neutral-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            {user ? "Back to Dashboard" : "Back"}
+            {user ? "Back to Dashboard" : "All Gyms"}
           </Link>
           {!user && (
             <Link href="/student/login">
@@ -90,6 +90,20 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
           )}
         </div>
       </header>
+
+      {/* Cover Image */}
+      {gym.cover_image_url && (
+        <div className="w-full h-48 sm:h-64 relative">
+          <Image
+            src={gym.cover_image_url}
+            alt={`${gym.name} cover`}
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 to-transparent" />
+        </div>
+      )}
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Gym Header */}
@@ -272,6 +286,35 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
                         {service.description && <p className="text-sm text-neutral-500 mt-1">{service.description}</p>}
                         {service.duration_days && (
                           <p className="text-xs text-neutral-500 mt-2">{service.duration_days} day program</p>
+                        )}
+                      </div>
+                      {showPrices && (
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-orange-400">฿{service.price_thb.toLocaleString()}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Other Services (accommodation, membership, etc.) */}
+        {otherServices.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4">More Services</h2>
+            <div className="grid gap-3">
+              {otherServices.map((service) => (
+                <Card key={service.id} className="bg-neutral-900/50 border-neutral-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-white">{service.name}</h3>
+                        {service.description && <p className="text-sm text-neutral-500 mt-1">{service.description}</p>}
+                        {service.duration_days && (
+                          <p className="text-xs text-neutral-500 mt-2">{service.duration_days} days</p>
                         )}
                       </div>
                       {showPrices && (
