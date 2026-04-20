@@ -455,6 +455,37 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
       },
     }),
 
+    get_earnings_summary: tool({
+      description:
+        "Get a revenue summary for the gym: total collected, your earnings after commission, number of bookings. Use when the owner asks about revenue, income, money, earnings, or 'how are we doing'.",
+      inputSchema: z.object({
+        days: z.number().min(1).max(365).default(30).describe("Look-back period in days (default 30)."),
+      }),
+      execute: async ({ days }) => {
+        const since = new Date()
+        since.setDate(since.getDate() - days)
+
+        const { data: bookings } = await supabase
+          .from("bookings")
+          .select("payment_amount_usd, commission_amount_usd, created_at")
+          .eq("org_id", orgId)
+          .in("payment_status", ["paid", "completed"])
+          .gte("created_at", since.toISOString())
+
+        const rows = bookings ?? []
+        const totalCollected = rows.reduce((s, b) => s + (b.payment_amount_usd || 0), 0)
+        const totalCommission = rows.reduce((s, b) => s + (b.commission_amount_usd || 0), 0)
+
+        return {
+          period_days: days,
+          booking_count: rows.length,
+          total_collected_usd: Math.round(totalCollected * 100) / 100,
+          your_earnings_usd: Math.round((totalCollected - totalCommission) * 100) / 100,
+          platform_fee_usd: Math.round(totalCommission * 100) / 100,
+        }
+      },
+    }),
+
     list_social_posts: tool({
       description:
         "List recent social media posts from the content calendar. Use when the owner asks about their posts, content, or what's scheduled.",
@@ -565,6 +596,7 @@ Operator-mode, not hospitality. No "Sawadee", no emoji pageantry. Be crisp, usef
 - Draft a reply to a visitor thread (draft-only)
 - Propose sending a draft: creates a single-tap confirm link the owner opens in a browser
 - Today's bookings
+- Revenue summary: total collected, your earnings, booking count for any period
 - Create social media content: write captions, pick hashtags, attach photos, save to Content Studio
 - List and manage social media posts from the content calendar
 
