@@ -31,6 +31,7 @@ import {
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import { PlatformAnalytics } from "@/components/admin/platform-analytics"
 
 interface GymPayout {
   gym: {
@@ -548,18 +549,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               </Card>
             </div>
 
-            {/* Monthly Revenue Estimate */}
-            <Card className="border-zinc-800 bg-zinc-900">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Monthly Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-green-500">
-                  ฿{(stats.activeSubscriptions * 999).toLocaleString()}
-                </p>
-                <p className="text-sm text-zinc-400">{stats.activeSubscriptions} gyms × ฿999/month</p>
-              </CardContent>
-            </Card>
+            {/* Analytics */}
+            <PlatformAnalytics />
           </div>
         )}
 
