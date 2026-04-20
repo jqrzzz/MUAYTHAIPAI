@@ -80,6 +80,8 @@ export async function POST(request: Request) {
         instagram: orgUpdates.instagram,
         facebook: orgUpdates.facebook,
         website: orgUpdates.website,
+        logo_url: orgUpdates.logo_url ?? undefined,
+        cover_image_url: orgUpdates.cover_image_url ?? undefined,
         updated_at: new Date().toISOString(),
       })
       .eq("id", membership.org_id)

@@ -35,7 +35,7 @@ export interface SettingsOrgSettings {
 }
 
 interface SettingsTabProps {
-  organization: { name: string; slug?: string }
+  organization: { name: string; slug?: string; logo_url?: string | null; cover_image_url?: string | null }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   orgSettings: any
   orgId: string
@@ -89,6 +89,8 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
     instagram: orgSettings?.instagram || "",
     facebook: orgSettings?.facebook || "",
     website: orgSettings?.website || "",
+    logo_url: organization?.logo_url || "",
+    cover_image_url: organization?.cover_image_url || "",
     booking_advance_days: orgSettings?.booking_advance_days ?? 1,
     booking_max_days_ahead: orgSettings?.booking_max_days_ahead ?? 60,
     allow_guest_bookings: orgSettings?.allow_guest_bookings ?? true,
@@ -144,6 +146,8 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
             instagram: settingsForm.instagram,
             facebook: settingsForm.facebook,
             website: settingsForm.website,
+            logo_url: settingsForm.logo_url || null,
+            cover_image_url: settingsForm.cover_image_url || null,
           },
           settings: {
             booking_advance_days: settingsForm.booking_advance_days,
@@ -273,6 +277,33 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
               placeholder="A brief description of your gym..."
               className="bg-neutral-800 border-neutral-700 text-white min-h-[80px]"
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-neutral-200">Logo URL</Label>
+              <Input
+                value={settingsForm.logo_url}
+                onChange={(e) => setSettingsForm((prev) => ({ ...prev, logo_url: e.target.value }))}
+                placeholder="https://example.com/logo.png"
+                className="bg-neutral-800 border-neutral-700 text-white"
+              />
+              {settingsForm.logo_url && (
+                <img src={settingsForm.logo_url} alt="Logo preview" className="h-12 w-12 rounded-lg object-cover border border-neutral-700" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-neutral-200">Cover Image URL</Label>
+              <Input
+                value={settingsForm.cover_image_url}
+                onChange={(e) => setSettingsForm((prev) => ({ ...prev, cover_image_url: e.target.value }))}
+                placeholder="https://example.com/cover.jpg"
+                className="bg-neutral-800 border-neutral-700 text-white"
+              />
+              {settingsForm.cover_image_url && (
+                <img src={settingsForm.cover_image_url} alt="Cover preview" className="h-20 w-full rounded-lg object-cover border border-neutral-700" />
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

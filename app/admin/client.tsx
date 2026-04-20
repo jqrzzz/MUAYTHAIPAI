@@ -16,6 +16,7 @@ import ProfileTab from "@/components/admin/profile-tab"
 import SettingsTab from "@/components/admin/settings-tab"
 import ReportsTab from "@/components/admin/reports-tab"
 import EarningsTab from "@/components/admin/earnings-tab"
+import TeamTab from "@/components/admin/team-tab"
 import TrainOckockTab from "@/components/admin/train-ockock-tab"
 import OckockChatTab from "@/components/admin/ockock-chat-tab"
 import MarketingTab from "@/components/admin/marketing-tab"
@@ -45,6 +46,7 @@ import {
   Inbox,
   Link2,
   DollarSign,
+  Shield,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -193,7 +195,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "earnings" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses"
+    "today" | "recent" | "services" | "trainers" | "reports" | "earnings" | "team" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -314,6 +316,7 @@ export default function AdminDashboardClient({
         { id: "services" as const, label: "Services", labelTh: "บริการ", icon: Dumbbell },
         { id: "time-slots" as const, label: "Time Slots", labelTh: "ช่วงเวลา", icon: Clock },
         { id: "trainers" as const, label: "Trainers", labelTh: "ครูมวย", icon: Users },
+        { id: "team" as const, label: "Team", labelTh: "ทีมงาน", icon: Shield },
       ],
     },
     {
@@ -613,6 +616,10 @@ export default function AdminDashboardClient({
           )}
 
           {activeTab === "earnings" && <EarningsTab />}
+
+          {activeTab === "team" && (
+            <TeamTab orgId={membership.org_id} onFeedback={showFeedback} />
+          )}
 
           {activeTab === "services" && (
             <ServicesTab
