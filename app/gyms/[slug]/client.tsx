@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Instagram, Clock, Dumbbell, BadgeCheck, MessageCircle } from "lucide-react"
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Instagram, Clock, Dumbbell, BadgeCheck, MessageCircle, QrCode, Map, Camera } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface GymPageClientProps {
@@ -25,6 +25,9 @@ interface GymPageClientProps {
     logo_url: string | null
     cover_image_url: string | null
     verified: boolean
+    promptpay_id: string | null
+    gallery_urls: string[] | null
+    google_maps_url: string | null
   }
   services: {
     id: string
@@ -194,6 +197,28 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
           )}
         </div>
 
+        {/* Photo Gallery */}
+        {gym.gallery_urls && gym.gallery_urls.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Camera className="w-5 h-5 text-neutral-400" />
+              Photos
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {gym.gallery_urls.map((url, i) => (
+                <Image
+                  key={i}
+                  src={url}
+                  alt={`${gym.name} photo ${i + 1}`}
+                  width={400}
+                  height={300}
+                  className="w-full h-40 object-cover rounded-lg border border-neutral-800"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Training Services */}
         {trainingServices.length > 0 && (
           <section className="mb-8">
@@ -310,6 +335,49 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
               ))}
             </div>
           </section>
+        )}
+
+        {/* Location Map */}
+        {gym.google_maps_url && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Map className="w-5 h-5 text-neutral-400" />
+              Location
+            </h2>
+            <Card className="bg-neutral-900/50 border-neutral-800 overflow-hidden">
+              <CardContent className="p-4">
+                {gym.address && (
+                  <p className="text-sm text-neutral-400 mb-3">{gym.address}{gym.city ? `, ${gym.city}` : ""}{gym.province ? `, ${gym.province}` : ""}</p>
+                )}
+                <a
+                  href={gym.google_maps_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  <MapPin className="w-4 h-4" />
+                  View on Google Maps
+                </a>
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* PromptPay Payment Option */}
+        {gym.promptpay_id && (
+          <Card className="bg-neutral-900/50 border-neutral-800 mb-8">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-blue-500/10 p-2">
+                  <QrCode className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">PromptPay Accepted</p>
+                  <p className="text-xs text-neutral-400">Pay locally via PromptPay — ask at the gym for details</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* CTA */}

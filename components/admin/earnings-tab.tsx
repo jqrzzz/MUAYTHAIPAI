@@ -10,6 +10,15 @@ import {
   Clock,
   Info,
 } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts"
 
 interface EarningsData {
   commissionRate: number
@@ -164,6 +173,42 @@ export default function EarningsTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Revenue Chart */}
+      {monthly.length > 0 && (
+        <Card className="bg-neutral-900/50 border-neutral-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-neutral-400">Revenue Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart
+                data={[...monthly].reverse().map((m) => ({
+                  month: new Date(m.month + "-01").toLocaleDateString("en-US", { month: "short" }),
+                  collected: Math.round(m.collected * 100) / 100,
+                  earnings: Math.round(m.owed * 100) / 100,
+                }))}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                <XAxis dataKey="month" tick={{ fill: "#737373", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#737373", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#171717", border: "1px solid #262626", borderRadius: 8, color: "#fff", fontSize: 13 }}
+                  formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name === "collected" ? "Collected" : "Your Earnings"]}
+                  labelStyle={{ color: "#a3a3a3" }}
+                />
+                <Bar dataKey="collected" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="earnings" fill="#22c55e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="flex justify-center gap-6 mt-2 text-xs text-neutral-400">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500" />Collected</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />Your Earnings</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Monthly breakdown */}
       {monthly.length > 0 && (

@@ -32,7 +32,6 @@ export default async function GymPage({ params }: GymPageProps) {
   const { slug } = await params
   const supabase = await createClient()
 
-  // Fetch gym details
   const { data: gym } = await supabase
     .from("organizations")
     .select("*")

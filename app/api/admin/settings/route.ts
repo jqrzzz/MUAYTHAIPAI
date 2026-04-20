@@ -82,6 +82,9 @@ export async function POST(request: Request) {
         website: orgUpdates.website,
         logo_url: orgUpdates.logo_url ?? undefined,
         cover_image_url: orgUpdates.cover_image_url ?? undefined,
+        promptpay_id: orgUpdates.promptpay_id ?? undefined,
+        gallery_urls: orgUpdates.gallery_urls ?? undefined,
+        google_maps_url: orgUpdates.google_maps_url ?? undefined,
         updated_at: new Date().toISOString(),
       })
       .eq("id", membership.org_id)

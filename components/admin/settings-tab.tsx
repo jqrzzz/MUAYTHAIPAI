@@ -35,7 +35,7 @@ export interface SettingsOrgSettings {
 }
 
 interface SettingsTabProps {
-  organization: { name: string; slug?: string; logo_url?: string | null; cover_image_url?: string | null }
+  organization: { name: string; slug?: string; logo_url?: string | null; cover_image_url?: string | null; promptpay_id?: string | null; gallery_urls?: string[] | null; google_maps_url?: string | null }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   orgSettings: any
   orgId: string
@@ -102,9 +102,13 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
     notification_emails: (orgSettings?.notification_emails as string[]) || [],
     show_prices: orgSettings?.show_prices ?? true,
     show_trainer_selection: orgSettings?.show_trainer_selection ?? true,
+    promptpay_id: organization?.promptpay_id || "",
+    gallery_urls: organization?.gallery_urls || [] as string[],
+    google_maps_url: organization?.google_maps_url || "",
   })
 
   const [newRecipientEmail, setNewRecipientEmail] = useState("")
+  const [newGalleryUrl, setNewGalleryUrl] = useState("")
 
   const addRecipient = () => {
     const email = newRecipientEmail.trim().toLowerCase()
@@ -121,6 +125,24 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
     setSettingsForm((prev) => ({
       ...prev,
       notification_emails: prev.notification_emails.filter((e) => e !== email),
+    }))
+  }
+
+  const addGalleryUrl = () => {
+    const url = newGalleryUrl.trim()
+    if (!url || !url.startsWith("http")) return
+    if (settingsForm.gallery_urls.includes(url)) return
+    setSettingsForm((prev) => ({
+      ...prev,
+      gallery_urls: [...prev.gallery_urls, url],
+    }))
+    setNewGalleryUrl("")
+  }
+
+  const removeGalleryUrl = (url: string) => {
+    setSettingsForm((prev) => ({
+      ...prev,
+      gallery_urls: prev.gallery_urls.filter((u) => u !== url),
     }))
   }
 
@@ -148,6 +170,9 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
             website: settingsForm.website,
             logo_url: settingsForm.logo_url || null,
             cover_image_url: settingsForm.cover_image_url || null,
+            promptpay_id: settingsForm.promptpay_id || null,
+            gallery_urls: settingsForm.gallery_urls.length > 0 ? settingsForm.gallery_urls : null,
+            google_maps_url: settingsForm.google_maps_url || null,
           },
           settings: {
             booking_advance_days: settingsForm.booking_advance_days,
@@ -372,6 +397,80 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
                 className="bg-neutral-800 border-neutral-700 text-white"
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment & Location */}
+      <Card className="bg-neutral-900/50 border-neutral-800">
+        <CardHeader>
+          <CardTitle className="text-white">Payment & Location</CardTitle>
+          <CardDescription>PromptPay for Thai customers and Google Maps for your gym</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-neutral-200">PromptPay ID</Label>
+              <Input
+                value={settingsForm.promptpay_id}
+                onChange={(e) => setSettingsForm((prev) => ({ ...prev, promptpay_id: e.target.value }))}
+                placeholder="Phone number or national ID"
+                className="bg-neutral-800 border-neutral-700 text-white"
+              />
+              <p className="text-xs text-neutral-500">Shown to customers as a local payment option</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-neutral-200">Google Maps URL</Label>
+              <Input
+                value={settingsForm.google_maps_url}
+                onChange={(e) => setSettingsForm((prev) => ({ ...prev, google_maps_url: e.target.value }))}
+                placeholder="https://maps.google.com/..."
+                className="bg-neutral-800 border-neutral-700 text-white"
+              />
+              <p className="text-xs text-neutral-500">Link to your gym on Google Maps</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Gym Photos */}
+      <Card className="bg-neutral-900/50 border-neutral-800">
+        <CardHeader>
+          <CardTitle className="text-white">Gym Photos</CardTitle>
+          <CardDescription>Add photos of your gym, ring, equipment, and facilities</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {settingsForm.gallery_urls.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {settingsForm.gallery_urls.map((url) => (
+                <div key={url} className="relative group">
+                  <img src={url} alt="Gym photo" className="w-full h-32 object-cover rounded-lg border border-neutral-700" />
+                  <button
+                    onClick={() => removeGalleryUrl(url)}
+                    className="absolute top-1.5 right-1.5 bg-black/70 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3.5 h-3.5 text-red-400" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={newGalleryUrl}
+              onChange={(e) => setNewGalleryUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGalleryUrl() } }}
+              placeholder="https://example.com/photo.jpg"
+              className="bg-neutral-800 border-neutral-700 text-white"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addGalleryUrl}
+              className="border-neutral-700 hover:bg-neutral-800 shrink-0"
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add
+            </Button>
           </div>
         </CardContent>
       </Card>
