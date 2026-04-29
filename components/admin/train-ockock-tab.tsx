@@ -9,6 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import {
   Plus,
   Pencil,
   ToggleLeft,
@@ -20,6 +28,8 @@ import {
   BookOpen,
   MessageSquare,
   Sprout,
+  Loader2,
+  Check,
 } from "lucide-react"
 
 const OckOckAvatar = ({ size = 32 }: { size?: number }) => (
@@ -54,6 +64,62 @@ export default function TrainOckockTab() {
   const [isGeneratingReply, setIsGeneratingReply] = useState(false)
   const [isSeeding, setIsSeeding] = useState(false)
   const [seedMessage, setSeedMessage] = useState<string | null>(null)
+  const [aiSuggestOpen, setAiSuggestOpen] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [aiSuggestions, setAiSuggestions] = useState<
+    Array<{ question: string; answer: string; category: string }>
+  >([])
+  const [aiPicked, setAiPicked] = useState<Set<number>>(new Set())
+  const [aiSaving, setAiSaving] = useState(false)
+  const [aiNotes, setAiNotes] = useState<string | null>(null)
+
+  const openAiSuggest = async () => {
+    setAiSuggestOpen(true)
+    setAiError(null)
+    setAiSuggestions([])
+    setAiPicked(new Set())
+    setAiNotes(null)
+    setAiLoading(true)
+    try {
+      const res = await fetch("/api/admin/faqs/ai-suggest", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        setAiError(data.error || "AI suggest failed")
+      } else {
+        setAiSuggestions(data.faqs || [])
+        setAiPicked(new Set((data.faqs || []).map((_: unknown, i: number) => i)))
+        setAiNotes(data.notes || null)
+      }
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Failed")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const acceptAiSuggestions = async () => {
+    if (aiPicked.size === 0) return
+    setAiSaving(true)
+    try {
+      const picked = aiSuggestions.filter((_, i) => aiPicked.has(i))
+      for (const f of picked) {
+        await fetch("/api/admin/faqs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: f.question,
+            answer: f.answer,
+            category: f.category || "general",
+          }),
+        })
+      }
+      setAiSuggestOpen(false)
+      fetchFaqs()
+    } finally {
+      setAiSaving(false)
+    }
+  }
 
   useEffect(() => {
     fetchFaqs()
@@ -182,24 +248,44 @@ export default function TrainOckockTab() {
                 </div>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSeedFaqs}
-              disabled={isSeeding}
-              className="border-neutral-700 bg-transparent shrink-0"
-              title="Import the canned Q&A from the public /faq page"
-            >
-              {isSeeding ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Seeding...
-                </>
-              ) : (
-                <>
-                  <Sprout className="w-4 h-4 mr-2" /> Seed from website FAQ
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2 flex-wrap shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openAiSuggest}
+                disabled={aiLoading}
+                className="border-orange-500/40 bg-transparent text-orange-300"
+                title="Generate FAQs from your gym's actual data — services, trainers, hours, certs"
+              >
+                {aiLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Drafting…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" /> AI suggest from your gym
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSeedFaqs}
+                disabled={isSeeding}
+                className="border-neutral-700 bg-transparent"
+                title="Import the canned Q&A from the public /faq page"
+              >
+                {isSeeding ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Seeding...
+                  </>
+                ) : (
+                  <>
+                    <Sprout className="w-4 h-4 mr-2" /> Seed from website FAQ
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
           {seedMessage && (
             <p className="text-sm text-neutral-400 mt-3">{seedMessage}</p>
@@ -465,6 +551,116 @@ export default function TrainOckockTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* AI suggested FAQs dialog */}
+      <Dialog open={aiSuggestOpen} onOpenChange={setAiSuggestOpen}>
+        <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-orange-400" />
+              AI suggested FAQs
+            </DialogTitle>
+            <DialogDescription>
+              Drafted from your gym&apos;s services, trainers, hours, and cert
+              activity. Pick the ones you want to keep.
+            </DialogDescription>
+          </DialogHeader>
+
+          {aiLoading ? (
+            <div className="text-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-orange-400" />
+              <p className="text-sm text-neutral-400 mt-3">
+                Reading your gym data and drafting Q&amp;A…
+              </p>
+            </div>
+          ) : aiError ? (
+            <div className="rounded bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300">
+              {aiError}
+            </div>
+          ) : aiSuggestions.length === 0 ? (
+            <p className="text-sm text-neutral-500 text-center py-6">
+              No new FAQs suggested. (You may already have most covered.)
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {aiNotes && (
+                <p className="text-xs text-neutral-400 italic mb-2">{aiNotes}</p>
+              )}
+              {aiSuggestions.map((f, i) => {
+                const picked = aiPicked.has(i)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setAiPicked((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(i)) next.delete(i)
+                        else next.add(i)
+                        return next
+                      })
+                    }}
+                    className={`w-full text-left rounded border p-3 transition ${
+                      picked
+                        ? "border-orange-500/60 bg-orange-500/5"
+                        : "border-neutral-700 bg-neutral-950 hover:bg-neutral-900"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={`h-4 w-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
+                          picked
+                            ? "border-orange-500 bg-orange-500"
+                            : "border-neutral-600"
+                        }`}
+                      >
+                        {picked && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-white">
+                            {f.question}
+                          </p>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-neutral-600 text-neutral-400 capitalize"
+                          >
+                            {f.category}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-neutral-300 mt-1 whitespace-pre-wrap">
+                          {f.answer}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  onClick={acceptAiSuggestions}
+                  disabled={aiSaving || aiPicked.size === 0}
+                  className="bg-orange-500 hover:bg-orange-600"
+                >
+                  {aiSaving ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Check className="w-3 h-3 mr-1" />
+                  )}
+                  Add {aiPicked.size} FAQ{aiPicked.size === 1 ? "" : "s"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setAiSuggestOpen(false)}
+                  disabled={aiSaving}
+                  className="text-neutral-400"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
