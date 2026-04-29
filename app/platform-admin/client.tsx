@@ -31,11 +31,13 @@ import {
   Sparkles,
   Map,
   GraduationCap,
+  UserCheck,
 } from "lucide-react"
 import CoursesTab from "@/components/admin/courses-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
+import TrainersTab from "@/components/platform-admin/trainers-tab"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -148,6 +150,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     | "command"
     | "network"
     | "students"
+    | "trainers"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -480,6 +483,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             { id: "command", label: "Command", icon: Sparkles },
             { id: "network", label: "Network", icon: Map },
             { id: "students", label: "Students", icon: GraduationCap },
+            { id: "trainers", label: "Trainers", icon: UserCheck },
             { id: "gyms", label: "Gyms", icon: Users },
             { id: "courses", label: "Courses", icon: BookOpen },
             { id: "payouts", label: "Payouts", icon: DollarSign },
@@ -516,6 +520,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
 
         {/* Students Tab — network-wide student passport */}
         {activeTab === "students" && <StudentsTab />}
+
+        {/* Trainers Tab — network-wide trainer passport */}
+        {activeTab === "trainers" && <TrainersTab />}
 
         {/* Courses Tab — author the platform-wide cert ladder */}
         {activeTab === "courses" && (

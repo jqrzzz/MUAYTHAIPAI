@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -120,6 +120,7 @@ export default function StudentsTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [passport, setPassport] = useState<Passport | null>(null)
   const [passportLoading, setPassportLoading] = useState(false)
+  const detailRef = useRef<HTMLDivElement>(null)
 
   const fetchStudents = useCallback(async () => {
     setLoading(true)
@@ -159,6 +160,11 @@ export default function StudentsTab() {
       .finally(() => {
         if (!cancelled) setPassportLoading(false)
       })
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      requestAnimationFrame(() => {
+        detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      })
+    }
     return () => {
       cancelled = true
     }
@@ -272,7 +278,9 @@ export default function StudentsTab() {
           </CardContent>
         </Card>
 
-        <PassportPanel passport={passport} loading={passportLoading} />
+        <div ref={detailRef}>
+          <PassportPanel passport={passport} loading={passportLoading} />
+        </div>
       </div>
     </div>
   )

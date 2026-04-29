@@ -18,7 +18,7 @@ const STARTER_PROMPTS = [
   "Find muay thai gyms in Phuket and add them.",
   "Pending discovered gyms in Chiang Mai?",
   "Passport for student@example.com",
-  "Students 1 skill from Phayra Nak?",
+  "Top trainers by signoffs this month",
   "Cert issuances by level in the last 90 days.",
 ]
 

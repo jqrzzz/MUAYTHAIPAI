@@ -259,6 +259,47 @@ export function buildPlatformTools(supabase: SupabaseClient) {
       },
     }),
 
+    trainer_passport: tool({
+      description:
+        "Look up a trainer by email and return their network footprint — total signoffs, students touched, gyms taught at, levels covered, recent activity.",
+      inputSchema: z.object({
+        email: z.string().describe("Trainer's email address"),
+      }),
+      execute: async ({ email }) => {
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, email, full_name")
+          .ilike("email", email.trim())
+          .maybeSingle()
+        if (!user) return { found: false, email }
+
+        const { data: signoffs } = await supabase
+          .from("skill_signoffs")
+          .select("student_id, org_id, level, signed_off_at")
+          .eq("signed_off_by", user.id)
+        if (!signoffs || signoffs.length === 0) {
+          return { found: true, no_signoffs: true, trainer: user }
+        }
+        const students = new Set(signoffs.map((s) => s.student_id))
+        const orgs = new Set(signoffs.map((s) => s.org_id))
+        const byLevel: Record<string, number> = {}
+        let lastAt: string | null = null
+        for (const s of signoffs) {
+          byLevel[s.level] = (byLevel[s.level] ?? 0) + 1
+          if (!lastAt || s.signed_off_at > lastAt) lastAt = s.signed_off_at
+        }
+        return {
+          found: true,
+          trainer: { id: user.id, email: user.email, name: user.full_name },
+          total_signoffs: signoffs.length,
+          students_touched: students.size,
+          gyms_taught_at: orgs.size,
+          by_level: byLevel,
+          last_signoff_at: lastAt,
+        }
+      },
+    }),
+
     student_passport: tool({
       description:
         "Look up a student by email and return their cert ladder progress, certs earned, gyms visited, and recent signoffs. Use whenever the operator asks about a specific student's journey.",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,7 @@ import {
   Copy,
   Map,
   QrCode,
+  Download,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -129,6 +130,7 @@ export default function NetworkTab() {
   const [sourceFilter, setSourceFilter] = useState("all")
   const [search, setSearch] = useState("")
   const [selected, setSelected] = useState<DiscoveredGymRow | null>(null)
+  const detailRef = useRef<HTMLDivElement>(null)
 
   // Discovery dialog state
   const [discoverOpen, setDiscoverOpen] = useState(false)
@@ -148,6 +150,11 @@ export default function NetworkTab() {
     provinces: Array<{ name: string; total: number; statuses: Record<string, number> }>
   } | null>(null)
 
+  // Bulk-enrich state
+  const [enrichPending, setEnrichPending] = useState(0)
+  const [enriching, setEnriching] = useState(false)
+  const [enrichMsg, setEnrichMsg] = useState<string | null>(null)
+
   const fetchCoverage = useCallback(async () => {
     try {
       const res = await fetch("/api/platform-admin/discovery/coverage")
@@ -159,6 +166,46 @@ export default function NetworkTab() {
       /* ignore */
     }
   }, [])
+
+  const fetchEnrichPending = useCallback(async () => {
+    try {
+      const res = await fetch("/api/platform-admin/discovery/enrich-batch")
+      if (res.ok) {
+        const data = await res.json()
+        setEnrichPending(data.pending || 0)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const runEnrichBatch = async () => {
+    setEnriching(true)
+    setEnrichMsg(null)
+    try {
+      const res = await fetch("/api/platform-admin/discovery/enrich-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 5 }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setEnrichMsg(data.error || "Enrich batch failed")
+      } else {
+        const failedCount = (data.failed || []).length
+        setEnrichMsg(
+          `Enriched ${data.succeeded}/${data.processed}${
+            failedCount ? ` • ${failedCount} failed` : ""
+          } • ${data.remaining} left`
+        )
+      }
+      await Promise.all([fetchGyms(), fetchEnrichPending()])
+    } catch (err) {
+      setEnrichMsg(err instanceof Error ? err.message : "Enrich batch failed")
+    } finally {
+      setEnriching(false)
+    }
+  }
 
   const fetchGyms = useCallback(async () => {
     setLoading(true)
@@ -183,9 +230,20 @@ export default function NetworkTab() {
     fetchGyms()
   }, [fetchGyms])
 
+  // Scroll the detail panel into view when a row is selected on mobile
+  useEffect(() => {
+    if (!selected) return
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      requestAnimationFrame(() => {
+        detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      })
+    }
+  }, [selected?.id])
+
   useEffect(() => {
     fetchCoverage()
-  }, [fetchCoverage, gyms.length])
+    fetchEnrichPending()
+  }, [fetchCoverage, fetchEnrichPending, gyms.length])
 
   const runDiscovery = async () => {
     if (discoverMode === "bulk") {
@@ -274,16 +332,41 @@ export default function NetworkTab() {
             </p>
           </div>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
             className="border-zinc-700 text-zinc-200"
             onClick={fetchGyms}
             disabled={loading}
+            title="Refresh"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
+          <a
+            href="/api/platform-admin/discovery/export"
+            className="inline-flex items-center gap-1 rounded-md border border-zinc-700 text-zinc-200 px-3 h-9 text-sm hover:bg-zinc-800"
+            title="Download CSV of all discovered gyms"
+          >
+            <Download className="h-4 w-4" /> CSV
+          </a>
+          {enrichPending > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-orange-500/40 text-orange-300"
+              onClick={runEnrichBatch}
+              disabled={enriching}
+              title="Firecrawl + Claude extract on the next 5 pending gyms"
+            >
+              {enriching ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Wrench className="h-4 w-4 mr-1" />
+              )}
+              Enrich {Math.min(enrichPending, 5)}/{enrichPending}
+            </Button>
+          )}
           <Button
             size="sm"
             className="bg-orange-500 hover:bg-orange-600"
@@ -296,6 +379,9 @@ export default function NetworkTab() {
           </Button>
         </div>
       </div>
+      {enrichMsg && (
+        <p className="text-xs text-zinc-400">{enrichMsg}</p>
+      )}
 
       {discoverOpen && (
         <Card className="border-orange-900 bg-zinc-950">
@@ -556,17 +642,19 @@ export default function NetworkTab() {
           </CardContent>
         </Card>
 
-        <DetailPanel
-          gym={selected}
-          onUpdated={(updated) => {
-            setSelected(updated)
-            fetchGyms()
-          }}
-          onDeleted={() => {
-            setSelected(null)
-            fetchGyms()
-          }}
-        />
+        <div ref={detailRef}>
+          <DetailPanel
+            gym={selected}
+            onUpdated={(updated) => {
+              setSelected(updated)
+              fetchGyms()
+            }}
+            onDeleted={() => {
+              setSelected(null)
+              fetchGyms()
+            }}
+          />
+        </div>
       </div>
     </div>
   )
