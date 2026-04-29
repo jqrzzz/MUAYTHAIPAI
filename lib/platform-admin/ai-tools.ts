@@ -259,6 +259,65 @@ export function buildPlatformTools(supabase: SupabaseClient) {
       },
     }),
 
+    student_passport: tool({
+      description:
+        "Look up a student by email and return their cert ladder progress, certs earned, gyms visited, and recent signoffs. Use whenever the operator asks about a specific student's journey.",
+      inputSchema: z.object({
+        email: z.string().describe("Student's email address"),
+      }),
+      execute: async ({ email }) => {
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, email, full_name")
+          .ilike("email", email.trim())
+          .maybeSingle()
+        if (!user) return { found: false, email }
+
+        const [signoffs, certs] = await Promise.all([
+          supabase
+            .from("skill_signoffs")
+            .select("level, skill_index, org_id, signed_off_at")
+            .eq("student_id", user.id),
+          supabase
+            .from("certificates")
+            .select("level, issued_at, certificate_number")
+            .eq("user_id", user.id)
+            .eq("status", "active"),
+        ])
+
+        const TOTAL_BY_LEVEL: Record<string, number> = Object.fromEntries(
+          CERTIFICATION_LEVELS.map((l) => [l.id, l.skills.length])
+        )
+        const byLevel: Record<string, { signed_off: Set<string>; orgs: Set<string> }> = {}
+        for (const s of signoffs.data || []) {
+          const cur = byLevel[s.level] || {
+            signed_off: new Set<string>(),
+            orgs: new Set<string>(),
+          }
+          cur.signed_off.add(`${s.org_id}:${s.skill_index}`)
+          cur.orgs.add(s.org_id)
+          byLevel[s.level] = cur
+        }
+        return {
+          found: true,
+          student: { id: user.id, email: user.email, name: user.full_name },
+          ladder: CERTIFICATION_LEVELS.map((l) => ({
+            level: l.id,
+            name: l.name,
+            signed_off: byLevel[l.id]?.signed_off.size ?? 0,
+            total_skills: TOTAL_BY_LEVEL[l.id] ?? 0,
+            gyms: byLevel[l.id]?.orgs.size ?? 0,
+            earned: (certs.data || []).some((c) => c.level === l.id),
+          })),
+          certs: (certs.data || []).map((c) => ({
+            level: c.level,
+            issued_at: c.issued_at,
+            certificate_number: c.certificate_number,
+          })),
+        }
+      },
+    }),
+
     /* ---------------- ACTION TOOLS (mutate state) ---------------- */
 
     run_google_discovery: tool({

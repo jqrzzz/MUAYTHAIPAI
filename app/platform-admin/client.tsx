@@ -30,10 +30,12 @@ import {
   BookOpen,
   Sparkles,
   Map,
+  GraduationCap,
 } from "lucide-react"
 import CoursesTab from "@/components/admin/courses-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
+import StudentsTab from "@/components/platform-admin/students-tab"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -137,7 +139,15 @@ interface Props {
 export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<
-    "overview" | "gyms" | "payouts" | "blacklist" | "ockock" | "courses" | "command" | "network"
+    | "overview"
+    | "gyms"
+    | "payouts"
+    | "blacklist"
+    | "ockock"
+    | "courses"
+    | "command"
+    | "network"
+    | "students"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -469,6 +479,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             { id: "overview", label: "Overview", icon: Building2 },
             { id: "command", label: "Command", icon: Sparkles },
             { id: "network", label: "Network", icon: Map },
+            { id: "students", label: "Students", icon: GraduationCap },
             { id: "gyms", label: "Gyms", icon: Users },
             { id: "courses", label: "Courses", icon: BookOpen },
             { id: "payouts", label: "Payouts", icon: DollarSign },
@@ -502,6 +513,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
 
         {/* Network Tab — discovered gyms, crawl + invite pipeline */}
         {activeTab === "network" && <NetworkTab />}
+
+        {/* Students Tab — network-wide student passport */}
+        {activeTab === "students" && <StudentsTab />}
 
         {/* Courses Tab — author the platform-wide cert ladder */}
         {activeTab === "courses" && (
