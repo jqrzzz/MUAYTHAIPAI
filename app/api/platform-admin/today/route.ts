@@ -27,12 +27,13 @@ export async function GET() {
     recentCerts,
     growthRows,
   ] = await Promise.all([
-    // Invited > 7 days ago, not claimed
+    // Invited > 7 days ago, not claimed, not snoozed within last 7 days
     supabase
       .from("discovered_gyms")
-      .select("id, name, city, province, invite_email, invited_at")
+      .select("id, name, city, province, invite_email, invited_at, last_nudged_at")
       .eq("status", "invited")
       .lt("invited_at", ago(7))
+      .or(`last_nudged_at.is.null,last_nudged_at.lt.${ago(7)}`)
       .order("invited_at", { ascending: true })
       .limit(20),
     // Verified but not crawled in 30+ days (Google source rows)

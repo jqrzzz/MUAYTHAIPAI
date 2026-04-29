@@ -6,6 +6,7 @@ const EDITABLE_FIELDS = [
   "phone", "email", "website", "instagram", "facebook", "line_id",
   "status", "duplicate_of", "linked_org_id", "notes",
   "ai_summary", "ai_tags",
+  "last_nudged_at",
 ]
 
 export async function GET(

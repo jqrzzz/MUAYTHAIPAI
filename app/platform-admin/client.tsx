@@ -470,10 +470,20 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               <p className="text-xs text-zinc-400">Muay Thai Network</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <a
+              href="/platform-admin/today"
+              className="hidden sm:inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-white border border-zinc-800 rounded-md px-2.5 py-1.5"
+              title="Mobile-optimized home — Today + Command bar"
+            >
+              <Sparkles className="h-3 w-3 text-orange-400" />
+              Today
+            </a>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 

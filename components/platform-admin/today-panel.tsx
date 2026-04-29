@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Clock, AlertTriangle, Mail, Trophy, CheckCircle2, BookOpen, RefreshCw } from "lucide-react"
+import {
+  Loader2,
+  Clock,
+  AlertTriangle,
+  Mail,
+  Trophy,
+  CheckCircle2,
+  BookOpen,
+  RefreshCw,
+  BellOff,
+} from "lucide-react"
 
 interface TodayData {
   pending_invites: Array<{
@@ -140,19 +150,41 @@ export default function TodayPanel() {
                 data.pending_invites.length === 1 ? "" : "s"
               } awaiting claim — sent over a week ago`}
             >
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {data.pending_invites.slice(0, 5).map((g) => (
-                  <li key={g.id} className="text-sm">
-                    <Link
-                      href={`/platform-admin/onboard/${g.id}`}
-                      className="text-amber-200 hover:underline"
+                  <li key={g.id} className="text-sm flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/platform-admin/onboard/${g.id}`}
+                        className="text-amber-200 hover:underline"
+                      >
+                        {g.name}
+                      </Link>
+                      <span className="text-zinc-500">
+                        {g.where ? ` · ${g.where}` : ""} · {g.days_since}d ago
+                        {g.invited_email ? ` · ${g.invited_email}` : ""}
+                      </span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await fetch(
+                          `/api/platform-admin/discovery/${g.id}`,
+                          {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              last_nudged_at: new Date().toISOString(),
+                            }),
+                          }
+                        )
+                        refresh()
+                      }}
+                      className="text-xs text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1 shrink-0"
+                      title="Snooze 7 days"
                     >
-                      {g.name}
-                    </Link>
-                    <span className="text-zinc-500">
-                      {g.where ? ` · ${g.where}` : ""} · {g.days_since}d ago
-                      {g.invited_email ? ` · ${g.invited_email}` : ""}
-                    </span>
+                      <BellOff className="h-3 w-3" />
+                      snooze
+                    </button>
                   </li>
                 ))}
                 {data.pending_invites.length > 5 && (
