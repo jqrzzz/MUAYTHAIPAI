@@ -21,6 +21,31 @@ export async function getPromoterAuth(supabase: Awaited<ReturnType<typeof create
 }
 
 /**
+ * Returns the current user along with their platform-admin status.
+ * Used by /platform-admin endpoints to gate access to platform-wide
+ * resources (e.g. the Naga–Garuda cert ladder, network-wide stats).
+ */
+export async function getPlatformAdmin() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { supabase, user: null, isPlatformAdmin: false }
+
+  const { data } = await supabase
+    .from("users")
+    .select("is_platform_admin")
+    .eq("id", user.id)
+    .single()
+
+  return {
+    supabase,
+    user,
+    isPlatformAdmin: !!data?.is_platform_admin,
+  }
+}
+
+/**
  * Verify that a fight_event belongs to the given org.
  */
 export async function verifyEventOwnership(

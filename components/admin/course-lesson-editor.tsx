@@ -76,12 +76,16 @@ export default function CourseLessonEditor({
   courseId,
   moduleId,
   onBack,
+  apiBase = "/api/admin/courses",
 }: {
   lessonId: string
   courseId: string
   moduleId: string
   onBack: () => void
+  apiBase?: string
 }) {
+  void courseId
+
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -120,7 +124,7 @@ export default function CourseLessonEditor({
   const fetchLesson = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/courses/lessons?module_id=${moduleId}`)
+      const res = await fetch(`${apiBase}/lessons?module_id=${moduleId}`)
       if (res.ok) {
         const data = await res.json()
         const found = (data.lessons || []).find((l: Lesson) => l.id === lessonId)
@@ -142,19 +146,19 @@ export default function CourseLessonEditor({
       }
     } catch { /* */ }
     setLoading(false)
-  }, [lessonId, moduleId])
+  }, [lessonId, moduleId, apiBase])
 
   const fetchQuestions = useCallback(async () => {
     setLoadingQuestions(true)
     try {
-      const res = await fetch(`/api/admin/courses/quiz-questions?lesson_id=${lessonId}`)
+      const res = await fetch(`${apiBase}/quiz-questions?lesson_id=${lessonId}`)
       if (res.ok) {
         const data = await res.json()
         setQuestions(data.questions || [])
       }
     } catch { /* */ }
     setLoadingQuestions(false)
-  }, [lessonId])
+  }, [lessonId, apiBase])
 
   useEffect(() => { fetchLesson() }, [fetchLesson])
   useEffect(() => {
@@ -187,7 +191,7 @@ export default function CourseLessonEditor({
         payload.drill_duration_minutes = form.drill_duration_minutes || null
       }
 
-      const res = await fetch("/api/admin/courses/lessons", {
+      const res = await fetch(`${apiBase}/lessons`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -259,7 +263,7 @@ export default function CourseLessonEditor({
 
       if (editingQuestion) {
         payload.id = editingQuestion.id
-        const res = await fetch("/api/admin/courses/quiz-questions", {
+        const res = await fetch(`${apiBase}/quiz-questions`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -268,7 +272,7 @@ export default function CourseLessonEditor({
       } else {
         payload.lesson_id = lessonId
         payload.question_order = questions.length
-        const res = await fetch("/api/admin/courses/quiz-questions", {
+        const res = await fetch(`${apiBase}/quiz-questions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -283,7 +287,7 @@ export default function CourseLessonEditor({
 
   const handleDeleteQuestion = async (id: string) => {
     if (!confirm("Delete this question?")) return
-    await fetch(`/api/admin/courses/quiz-questions?id=${id}`, { method: "DELETE" })
+    await fetch(`${apiBase}/quiz-questions?id=${id}`, { method: "DELETE" })
     fetchQuestions()
   }
 

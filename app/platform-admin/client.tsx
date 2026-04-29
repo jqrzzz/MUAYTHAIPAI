@@ -27,7 +27,11 @@ import {
   Check,
   Send,
   Loader2,
+  BookOpen,
+  Sparkles,
 } from "lucide-react"
+import CoursesTab from "@/components/admin/courses-tab"
+import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -130,7 +134,9 @@ interface Props {
 
 export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"overview" | "gyms" | "payouts" | "blacklist" | "ockock">("overview")
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "gyms" | "payouts" | "blacklist" | "ockock" | "courses" | "command"
+  >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -459,7 +465,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         <div className="mx-auto flex max-w-6xl gap-1 px-4">
           {[
             { id: "overview", label: "Overview", icon: Building2 },
+            { id: "command", label: "Command", icon: Sparkles },
             { id: "gyms", label: "Gyms", icon: Users },
+            { id: "courses", label: "Courses", icon: BookOpen },
             { id: "payouts", label: "Payouts", icon: DollarSign },
             { id: "blacklist", label: "Blacklist", icon: Shield },
             { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -486,6 +494,17 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
 
       {/* Content */}
       <main className="mx-auto max-w-6xl p-4">
+        {/* Command Tab — AI command bar over the network */}
+        {activeTab === "command" && <PlatformCommandBar />}
+
+        {/* Courses Tab — author the platform-wide cert ladder */}
+        {activeTab === "courses" && (
+          <CoursesTab
+            apiBase="/api/platform-admin/courses"
+            scopeLabel="Country-wide certification ladder (Naga → Garuda). Visible read-only to every gym."
+          />
+        )}
+
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">

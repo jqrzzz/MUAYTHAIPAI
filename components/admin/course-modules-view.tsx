@@ -78,9 +78,11 @@ const CONTENT_TYPE_ICONS: Record<string, typeof Video> = {
 export default function CourseModulesView({
   course,
   onBack,
+  apiBase = "/api/admin/courses",
 }: {
   course: Course
   onBack: () => void
+  apiBase?: string
 }) {
   const [modules, setModules] = useState<Module[]>([])
   const [loading, setLoading] = useState(true)
@@ -101,14 +103,14 @@ export default function CourseModulesView({
   const fetchModules = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/courses/modules?course_id=${course.id}`)
+      const res = await fetch(`${apiBase}/modules?course_id=${course.id}`)
       if (res.ok) {
         const data = await res.json()
         setModules(data.modules || [])
       }
     } catch { /* */ }
     setLoading(false)
-  }, [course.id])
+  }, [course.id, apiBase])
 
   useEffect(() => { fetchModules() }, [fetchModules])
 
@@ -139,7 +141,7 @@ export default function CourseModulesView({
     setSaving(true)
     setError("")
     try {
-      const url = "/api/admin/courses/modules"
+      const url = `${apiBase}/modules`
       if (editingModule) {
         const res = await fetch(url, {
           method: "PATCH",
@@ -175,7 +177,7 @@ export default function CourseModulesView({
 
   const handleDeleteModule = async (id: string) => {
     if (!confirm("Delete this module and all its lessons?")) return
-    await fetch(`/api/admin/courses/modules?id=${id}`, { method: "DELETE" })
+    await fetch(`${apiBase}/modules?id=${id}`, { method: "DELETE" })
     fetchModules()
   }
 
@@ -190,7 +192,7 @@ export default function CourseModulesView({
     setSavingLesson(true)
     try {
       const mod = modules.find((m) => m.id === lessonModuleId)
-      const res = await fetch("/api/admin/courses/lessons", {
+      const res = await fetch(`${apiBase}/lessons`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -211,7 +213,7 @@ export default function CourseModulesView({
 
   const handleDeleteLesson = async (lessonId: string) => {
     if (!confirm("Delete this lesson?")) return
-    await fetch(`/api/admin/courses/lessons?id=${lessonId}`, { method: "DELETE" })
+    await fetch(`${apiBase}/lessons?id=${lessonId}`, { method: "DELETE" })
     fetchModules()
   }
 
@@ -221,6 +223,7 @@ export default function CourseModulesView({
         lessonId={editingLesson.id}
         courseId={course.id}
         moduleId={editingLesson.moduleId}
+        apiBase={apiBase}
         onBack={() => { setEditingLesson(null); fetchModules() }}
       />
     )
