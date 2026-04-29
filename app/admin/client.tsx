@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import TodayTab from "@/components/admin/today-tab"
+import TodaySignalPanel from "@/components/admin/today-signal-panel"
 import RecentTab from "@/components/admin/recent-tab"
 import ServicesTab from "@/components/admin/services-tab"
 import TrainersTab from "@/components/admin/trainers-tab"
@@ -593,14 +594,19 @@ export default function AdminDashboardClient({
           )}
 
           {activeTab === "today" && (
-            <TodayTab
-              initialBookings={initialTodaysBookings}
-              services={services}
-              orgId={membership.org_id}
-              todayDate={todayDate}
-              onFeedback={showFeedback}
-              onRefresh={handleRefresh}
-            />
+            <div className="space-y-4">
+              <TodaySignalPanel
+                onNavigate={(tab) => handleNavClick(tab as typeof activeTab)}
+              />
+              <TodayTab
+                initialBookings={initialTodaysBookings}
+                services={services}
+                orgId={membership.org_id}
+                todayDate={todayDate}
+                onFeedback={showFeedback}
+                onRefresh={handleRefresh}
+              />
+            </div>
           )}
 
           {activeTab === "recent" && <RecentTab bookings={initialRecentBookings} />}
