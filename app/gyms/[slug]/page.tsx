@@ -44,8 +44,8 @@ export default async function GymPage({ params }: GymPageProps) {
     notFound()
   }
 
-  // Fetch services, trainers, and settings in parallel
-  const [servicesRes, trainersRes, settingsRes] = await Promise.all([
+  // Fetch services, trainers, settings, and cert-ladder activity in parallel
+  const [servicesRes, trainersRes, settingsRes, certsRes, enrollmentsRes] = await Promise.all([
     supabase
       .from("services")
       .select("*")
@@ -63,7 +63,30 @@ export default async function GymPage({ params }: GymPageProps) {
       .select("operating_hours, show_prices")
       .eq("org_id", gym.id)
       .single(),
+    supabase
+      .from("certificates")
+      .select("level")
+      .eq("org_id", gym.id)
+      .eq("status", "active"),
+    supabase
+      .from("certification_enrollments")
+      .select("level, status")
+      .eq("org_id", gym.id)
+      .eq("status", "active"),
   ])
+
+  // Aggregate cert ladder activity per level — used by the public page
+  // to show prospective students what this gym actually issues.
+  const issuedByLevel: Record<string, number> = {}
+  for (const c of certsRes.data || []) {
+    issuedByLevel[c.level] = (issuedByLevel[c.level] ?? 0) + 1
+  }
+  const enrolledByLevel: Record<string, number> = {}
+  for (const e of enrollmentsRes.data || []) {
+    enrolledByLevel[e.level] = (enrolledByLevel[e.level] ?? 0) + 1
+  }
+  const totalCerts = (certsRes.data || []).length
+  const totalEnrolled = (enrollmentsRes.data || []).length
 
   // Check if user is logged in
   const {
@@ -77,6 +100,12 @@ export default async function GymPage({ params }: GymPageProps) {
       trainers={trainersRes.data || []}
       settings={settingsRes.data}
       user={user}
+      certActivity={{
+        issuedByLevel,
+        enrolledByLevel,
+        totalCerts,
+        totalEnrolled,
+      }}
     />
   )
 }
