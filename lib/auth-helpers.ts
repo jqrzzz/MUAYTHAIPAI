@@ -46,6 +46,42 @@ export async function getPlatformAdmin() {
 }
 
 /**
+ * Allow access if the user is either a platform admin OR a gym
+ * owner/admin. Used by stateless AI authoring endpoints that don't
+ * write to a specific scope — saving still goes through the scoped
+ * course CRUD endpoints which enforce their own boundaries.
+ */
+export async function getCourseAuthorAccess() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { supabase, user: null, allowed: false, role: null }
+
+  const { data: u } = await supabase
+    .from("users")
+    .select("is_platform_admin")
+    .eq("id", user.id)
+    .single()
+  if (u?.is_platform_admin) {
+    return { supabase, user, allowed: true, role: "platform_admin" as const }
+  }
+
+  const { data: m } = await supabase
+    .from("org_members")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .in("role", ["owner", "admin"])
+    .maybeSingle()
+  if (m) {
+    return { supabase, user, allowed: true, role: m.role as "owner" | "admin" }
+  }
+
+  return { supabase, user, allowed: false, role: null }
+}
+
+/**
  * Verify that a fight_event belongs to the given org.
  */
 export async function verifyEventOwnership(
