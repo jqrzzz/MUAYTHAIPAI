@@ -38,6 +38,7 @@ import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
 import TrainersTab from "@/components/platform-admin/trainers-tab"
+import TodayPanel from "@/components/platform-admin/today-panel"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -535,6 +536,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* Today panel — operator's first-screen */}
+            <TodayPanel />
+
             {/* Stats */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="border-zinc-800 bg-zinc-900">

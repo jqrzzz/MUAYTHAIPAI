@@ -1,6 +1,5 @@
 import { tool } from "ai"
 import { z } from "zod"
-import { randomBytes } from "node:crypto"
 import type { createClient } from "@/lib/supabase/server"
 import { CERTIFICATION_LEVELS, LEVEL_IDS } from "@/lib/certification-levels"
 import {
@@ -12,7 +11,7 @@ import {
   upsertGooglePlace,
   insertResearchCandidate,
 } from "@/lib/discovery/upsert"
-import { sendDiscoveryInvite } from "@/lib/discovery/invite-email"
+import { signActionToken } from "@/lib/platform-admin/action-tokens"
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -460,29 +459,38 @@ export function buildPlatformTools(supabase: SupabaseClient) {
 
     update_gym_status: tool({
       description:
-        "Change the status of a discovered gym (verified, ignored, reviewed, duplicate). Use after the operator says things like 'mark X as verified' or 'ignore the duplicates from yesterday'.",
+        "Propose a status change for a discovered gym (verified, ignored, reviewed, duplicate). The operator must tap Confirm before this executes — DO NOT also ask for confirmation in your reply text.",
       inputSchema: z.object({
         gym_id: z.string().describe("UUID of the discovered_gym row"),
         status: z.enum(["pending", "reviewed", "verified", "ignored", "duplicate"]),
         notes: z.string().optional(),
       }),
       execute: async ({ gym_id, status, notes }) => {
-        const updates: Record<string, unknown> = { status }
-        if (notes) updates.notes = notes
-        const { data, error } = await supabase
+        const { data: gym } = await supabase
           .from("discovered_gyms")
-          .update(updates)
-          .eq("id", gym_id)
           .select("id, name, status")
-          .single()
-        if (error) return { ok: false, error: error.message }
-        return { ok: true, gym: data }
+          .eq("id", gym_id)
+          .maybeSingle()
+        if (!gym) return { proposed: false, error: "Gym not found" }
+
+        const { token } = signActionToken("update_gym_status", { gym_id, status, notes })
+        return {
+          proposed: true,
+          action: "update_gym_status",
+          action_token: token,
+          preview: {
+            gym_name: gym.name,
+            from_status: gym.status,
+            to_status: status,
+            notes: notes || null,
+          },
+        }
       },
     }),
 
     invite_gym: tool({
       description:
-        "Generate (or re-issue) a magic-link invite for a discovered gym, optionally emailing it. Returns the invite URL so you can share it inline if email isn't set up.",
+        "Propose a magic-link invite to a discovered gym. The operator must tap Confirm before this executes (which will email the invite if Resend is configured) — DO NOT also ask for confirmation in your reply text.",
       inputSchema: z.object({
         gym_id: z.string(),
         email: z.string().email().optional(),
@@ -491,48 +499,24 @@ export function buildPlatformTools(supabase: SupabaseClient) {
       execute: async ({ gym_id, email, send_email }) => {
         const { data: gym } = await supabase
           .from("discovered_gyms")
-          .select("id, name, email, city, province, invite_token, invited_at")
+          .select("id, name, email, city, province, status, invited_at")
           .eq("id", gym_id)
           .maybeSingle()
-        if (!gym) return { ok: false, error: "Gym not found" }
+        if (!gym) return { proposed: false, error: "Gym not found" }
 
-        const token = gym.invite_token || randomBytes(24).toString("base64url")
         const inviteEmail = email || gym.email || null
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-          "https://muaythaipai.com"
-        const inviteUrl = `${baseUrl}/signup?invite=${encodeURIComponent(token)}`
-
-        await supabase
-          .from("discovered_gyms")
-          .update({
-            invite_token: token,
-            invited_at: gym.invited_at || new Date().toISOString(),
-            invite_email: inviteEmail,
-            status: "invited",
-          })
-          .eq("id", gym_id)
-
-        let emailSent = false
-        let emailReason: string | undefined
-        if (send_email !== false && inviteEmail) {
-          const r = await sendDiscoveryInvite({
-            to: inviteEmail,
-            gymName: gym.name,
-            inviteUrl,
-            city: gym.city,
-            province: gym.province,
-          })
-          emailSent = r.sent
-          emailReason = r.reason
-        }
+        const { token } = signActionToken("invite_gym", { gym_id, email, send_email })
         return {
-          ok: true,
-          gym_id,
-          gym_name: gym.name,
-          invite_url: inviteUrl,
-          email: inviteEmail,
-          email_sent: emailSent,
-          email_reason: emailReason,
+          proposed: true,
+          action: "invite_gym",
+          action_token: token,
+          preview: {
+            gym_name: gym.name,
+            email: inviteEmail,
+            will_email: send_email !== false && !!inviteEmail,
+            re_invite: !!gym.invited_at,
+            current_status: gym.status,
+          },
         }
       },
     }),

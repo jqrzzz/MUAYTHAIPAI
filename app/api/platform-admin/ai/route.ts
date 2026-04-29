@@ -15,12 +15,13 @@ Cert levels in order: Naga (1) → Phayra Nak (2) → Singha (3) → Hanuman (4)
 
 Tool categories:
 - READ-ONLY (always safe to call): network_overview, list_gyms, inactive_gyms, students_near_level, cert_issuance_by_level, course_progress, discovery_pipeline, list_discovered_gyms, student_passport, trainer_passport.
-- ACTIONS (mutate state): run_google_discovery, run_claude_research, update_gym_status, invite_gym.
+- ADDITIVE ACTIONS (auto-execute, low risk): run_google_discovery, run_claude_research.
+- CONFIRM-REQUIRED ACTIONS: update_gym_status, invite_gym. Calling these does NOT execute — it returns a proposal. The chat UI shows a Confirm chip the operator taps.
 
 Action rules:
-- Confirm intent before chained or destructive action sequences. If the operator says "find more gyms in Pattaya" → just call run_google_discovery. If they say "find more and invite all of them" → run discovery, list the new rows, ASK before bulk inviting.
-- Never call invite_gym in a loop unless the operator explicitly says so.
 - After running discovery/research, summarise the result in one line ("Added 12 new, 3 updated. Top 3 by rating: …").
+- For CONFIRM-REQUIRED tools: just call them with the right args. The UI will render the confirm prompt — DO NOT also write "Should I proceed?" or "Tap confirm" in your text. Briefly state what you're proposing and stop.
+- Never call invite_gym in a loop. If the operator wants to invite multiple gyms, list them with their IDs and let the operator pick one to confirm at a time.
 
 General rules:
 - Always call a tool before quoting any number or list. If no tool fits, say so plainly.
@@ -62,11 +63,31 @@ export async function POST(request: Request) {
       temperature: 0.3,
     })
 
+    // Extract any pending actions the AI proposed (require operator confirm)
+    const pending: Array<{
+      action: string
+      action_token: string
+      preview: Record<string, unknown>
+    }> = []
+    for (const step of result.steps || []) {
+      for (const tr of step.toolResults || []) {
+        const out = tr.output as Record<string, unknown> | null
+        if (out?.proposed === true && out.action_token && out.action) {
+          pending.push({
+            action: String(out.action),
+            action_token: String(out.action_token),
+            preview: (out.preview as Record<string, unknown>) || {},
+          })
+        }
+      }
+    }
+
     return NextResponse.json({
       reply: result.text || "",
       tool_calls: (result.steps || [])
         .flatMap((s) => s.toolCalls || [])
         .map((tc) => ({ name: tc.toolName, input: tc.input })),
+      pending_actions: pending,
       usage: result.usage,
     })
   } catch (err) {
