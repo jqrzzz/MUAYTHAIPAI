@@ -165,6 +165,52 @@ export function buildPlatformTools(supabase: SupabaseClient) {
       },
     }),
 
+    discovery_pipeline: tool({
+      description:
+        "Counts of gyms in the discovery pipeline by status (pending, reviewed, verified, invited, onboarded, ignored, duplicate). Use to see how the network outreach is going.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const { data } = await supabase
+          .from("discovered_gyms")
+          .select("status")
+        const counts: Record<string, number> = {}
+        for (const row of data || []) {
+          const s = (row as { status: string }).status
+          counts[s] = (counts[s] ?? 0) + 1
+        }
+        return { total: (data || []).length, by_status: counts }
+      },
+    }),
+
+    list_discovered_gyms: tool({
+      description:
+        "List discovered gyms (the candidate pool). Filter by status, source, city, or province. Returns up to 50 rows.",
+      inputSchema: z.object({
+        status: z
+          .enum(["pending", "reviewed", "verified", "invited", "onboarded", "ignored", "duplicate"])
+          .optional(),
+        source: z.enum(["google", "firecrawl", "claude_research", "manual"]).optional(),
+        city: z.string().optional(),
+        province: z.string().optional(),
+      }),
+      execute: async ({ status, source, city, province }) => {
+        let query = supabase
+          .from("discovered_gyms")
+          .select(
+            "id, name, name_th, city, province, source, status, google_rating, " +
+              "google_review_count, website, ai_summary, invited_at, claimed_at"
+          )
+          .order("created_at", { ascending: false })
+          .limit(50)
+        if (status) query = query.eq("status", status)
+        if (source) query = query.eq("source", source)
+        if (city) query = query.ilike("city", `%${city}%`)
+        if (province) query = query.ilike("province", `%${province}%`)
+        const { data } = await query
+        return { count: (data || []).length, gyms: data || [] }
+      },
+    }),
+
     course_progress: tool({
       description:
         "Enrollment and progress stats for the platform-wide certification courses. Returns enrollments, completion rates per course.",

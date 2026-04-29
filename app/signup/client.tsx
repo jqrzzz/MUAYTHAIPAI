@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   Loader2,
   CheckCircle2,
@@ -10,6 +11,7 @@ import {
   User,
   MapPin,
   ArrowRight,
+  Sparkles,
 } from "lucide-react"
 
 interface SignupForm {
@@ -21,7 +23,21 @@ interface SignupForm {
   country: string
 }
 
+interface InvitePreview {
+  id: string
+  gymName: string
+  nameTh?: string | null
+  city?: string | null
+  province?: string | null
+  country?: string | null
+  website?: string | null
+  suggestedEmail?: string | null
+}
+
 export default function SignupClient() {
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get("invite")
+
   const [form, setForm] = useState<SignupForm>({
     gymName: "",
     ownerName: "",
@@ -30,9 +46,42 @@ export default function SignupClient() {
     province: "",
     country: "Thailand",
   })
+  const [invite, setInvite] = useState<InvitePreview | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // Pre-fill from invite token if present
+  useEffect(() => {
+    if (!inviteToken) return
+    let cancelled = false
+    fetch(`/api/discovery/invite-preview?token=${encodeURIComponent(inviteToken)}`)
+      .then(async (res) => {
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok) {
+          setInviteError(data.error || "Invite invalid")
+          return
+        }
+        const i: InvitePreview = data.invite
+        setInvite(i)
+        setForm((prev) => ({
+          ...prev,
+          gymName: prev.gymName || i.gymName || "",
+          ownerEmail: prev.ownerEmail || i.suggestedEmail || "",
+          city: prev.city || i.city || "",
+          province: prev.province || i.province || "",
+          country: prev.country || i.country || "Thailand",
+        }))
+      })
+      .catch((err) => {
+        if (!cancelled) setInviteError(err instanceof Error ? err.message : "Invite lookup failed")
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [inviteToken])
 
   const update = (field: keyof SignupForm, value: string) =>
     setForm({ ...form, [field]: value })
@@ -46,7 +95,7 @@ export default function SignupClient() {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, inviteToken }),
       })
 
       const data = await res.json()
@@ -95,6 +144,27 @@ export default function SignupClient() {
             Start managing bookings, trainers, and students in minutes
           </p>
         </div>
+
+        {invite && (
+          <div className="mb-4 rounded-xl border border-orange-500/40 bg-orange-500/10 p-4">
+            <div className="flex items-start gap-2">
+              <Sparkles className="h-4 w-4 text-orange-400 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-orange-200">
+                  You&apos;re claiming <span className="text-white">{invite.gymName}</span>
+                </p>
+                <p className="text-orange-200/80 text-xs mt-0.5">
+                  We pre-filled what we know — adjust anything that&apos;s wrong.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        {inviteError && (
+          <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+            Invite link issue: {inviteError}. You can still sign up below.
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

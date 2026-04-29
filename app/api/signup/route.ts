@@ -18,7 +18,7 @@ function generateSlug(name: string): string {
 
 export async function POST(request: Request) {
   try {
-    const { gymName, ownerName, ownerEmail, city, province, country } =
+    const { gymName, ownerName, ownerEmail, city, province, country, inviteToken } =
       await request.json()
 
     if (!gymName || !ownerName || !ownerEmail) {
@@ -26,6 +26,19 @@ export async function POST(request: Request) {
         { error: "Gym name, owner name, and email are required" },
         { status: 400 }
       )
+    }
+
+    // If signing up via a discovery invite, look up + validate the token
+    let discoveredGymId: string | null = null
+    if (inviteToken) {
+      const { data: discovered } = await supabase
+        .from("discovered_gyms")
+        .select("id, status, claimed_at")
+        .eq("invite_token", inviteToken)
+        .maybeSingle()
+      if (discovered && !discovered.claimed_at) {
+        discoveredGymId = discovered.id
+      }
     }
 
     // Generate a unique slug
@@ -90,6 +103,19 @@ export async function POST(request: Request) {
     await supabase.from("org_settings").insert({
       org_id: org.id,
     })
+
+    // Link discovery invite back to the new org so the network map flips
+    // this gym from 'invited' to 'onboarded'
+    if (discoveredGymId) {
+      await supabase
+        .from("discovered_gyms")
+        .update({
+          status: "onboarded",
+          linked_org_id: org.id,
+          claimed_at: new Date().toISOString(),
+        })
+        .eq("id", discoveredGymId)
+    }
 
     // Create trial subscription
     await supabase.from("gym_subscriptions").insert({
