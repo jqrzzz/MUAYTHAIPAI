@@ -28,6 +28,10 @@ import {
   Eye,
   CheckCircle,
   XCircle,
+  Sparkles,
+  Wand2,
+  Check,
+  Languages,
 } from "lucide-react"
 
 interface Lesson {
@@ -76,12 +80,16 @@ export default function CourseLessonEditor({
   courseId,
   moduleId,
   onBack,
+  apiBase = "/api/admin/courses",
 }: {
   lessonId: string
   courseId: string
   moduleId: string
   onBack: () => void
+  apiBase?: string
 }) {
+  void courseId
+
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -102,6 +110,23 @@ export default function CourseLessonEditor({
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [loadingQuestions, setLoadingQuestions] = useState(false)
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false)
+
+  // AI authoring state
+  const [improving, setImproving] = useState<null | "polish" | "expand" | "shorten" | "translate-th">(null)
+  const [improveError, setImproveError] = useState<string | null>(null)
+  const [generatingQuiz, setGeneratingQuiz] = useState(false)
+  const [quizSuggestions, setQuizSuggestions] = useState<
+    Array<{
+      question_text: string
+      options: { id: string; text: string; is_correct: boolean }[]
+      correct_answer: string
+      explanation: string
+    }>
+  >([])
+  const [quizPicked, setQuizPicked] = useState<Set<number>>(new Set())
+  const [quizSuggestOpen, setQuizSuggestOpen] = useState(false)
+  const [quizSaving, setQuizSaving] = useState(false)
+  const [quizError, setQuizError] = useState<string | null>(null)
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
   const [questionForm, setQuestionForm] = useState({
@@ -117,10 +142,96 @@ export default function CourseLessonEditor({
     explanation: "",
   })
 
+  const runImprove = async (mode: "polish" | "expand" | "shorten" | "translate-th") => {
+    const text = form.text_content?.trim()
+    if (!text) {
+      setImproveError("Text content is empty.")
+      return
+    }
+    setImproving(mode)
+    setImproveError(null)
+    try {
+      const res = await fetch("/api/admin/courses/ai/improve-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, mode, context: form.title }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setImproveError(data.error || "AI improve failed")
+      } else {
+        setForm((p) => ({ ...p, text_content: data.text }))
+      }
+    } catch (err) {
+      setImproveError(err instanceof Error ? err.message : "Failed")
+    } finally {
+      setImproving(null)
+    }
+  }
+
+  const generateQuiz = async () => {
+    setGeneratingQuiz(true)
+    setQuizError(null)
+    setQuizSuggestions([])
+    setQuizPicked(new Set())
+    setQuizSuggestOpen(true)
+    try {
+      const res = await fetch("/api/admin/courses/ai/generate-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lesson_title: form.title,
+          lesson_text: form.text_content || form.drill_instructions || form.description,
+          count: 4,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setQuizError(data.error || "Quiz generation failed")
+      } else {
+        setQuizSuggestions(data.questions || [])
+        setQuizPicked(new Set((data.questions || []).map((_: unknown, i: number) => i)))
+      }
+    } catch (err) {
+      setQuizError(err instanceof Error ? err.message : "Failed")
+    } finally {
+      setGeneratingQuiz(false)
+    }
+  }
+
+  const acceptQuizSuggestions = async () => {
+    if (quizPicked.size === 0) return
+    setQuizSaving(true)
+    try {
+      const startOrder = questions.length
+      const picked = quizSuggestions.filter((_, i) => quizPicked.has(i))
+      for (let i = 0; i < picked.length; i++) {
+        const q = picked[i]
+        await fetch(`${apiBase}/quiz-questions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lesson_id: lessonId,
+            question_text: q.question_text,
+            question_type: "multiple_choice",
+            options: q.options,
+            correct_answer: q.correct_answer,
+            explanation: q.explanation,
+            question_order: startOrder + i,
+          }),
+        })
+      }
+      setQuizSuggestOpen(false)
+      fetchQuestions()
+    } finally {
+      setQuizSaving(false)
+    }
+  }
+
   const fetchLesson = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/courses/lessons?module_id=${moduleId}`)
+      const res = await fetch(`${apiBase}/lessons?module_id=${moduleId}`)
       if (res.ok) {
         const data = await res.json()
         const found = (data.lessons || []).find((l: Lesson) => l.id === lessonId)
@@ -142,19 +253,19 @@ export default function CourseLessonEditor({
       }
     } catch { /* */ }
     setLoading(false)
-  }, [lessonId, moduleId])
+  }, [lessonId, moduleId, apiBase])
 
   const fetchQuestions = useCallback(async () => {
     setLoadingQuestions(true)
     try {
-      const res = await fetch(`/api/admin/courses/quiz-questions?lesson_id=${lessonId}`)
+      const res = await fetch(`${apiBase}/quiz-questions?lesson_id=${lessonId}`)
       if (res.ok) {
         const data = await res.json()
         setQuestions(data.questions || [])
       }
     } catch { /* */ }
     setLoadingQuestions(false)
-  }, [lessonId])
+  }, [lessonId, apiBase])
 
   useEffect(() => { fetchLesson() }, [fetchLesson])
   useEffect(() => {
@@ -187,7 +298,7 @@ export default function CourseLessonEditor({
         payload.drill_duration_minutes = form.drill_duration_minutes || null
       }
 
-      const res = await fetch("/api/admin/courses/lessons", {
+      const res = await fetch(`${apiBase}/lessons`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -259,7 +370,7 @@ export default function CourseLessonEditor({
 
       if (editingQuestion) {
         payload.id = editingQuestion.id
-        const res = await fetch("/api/admin/courses/quiz-questions", {
+        const res = await fetch(`${apiBase}/quiz-questions`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -268,7 +379,7 @@ export default function CourseLessonEditor({
       } else {
         payload.lesson_id = lessonId
         payload.question_order = questions.length
-        const res = await fetch("/api/admin/courses/quiz-questions", {
+        const res = await fetch(`${apiBase}/quiz-questions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -283,7 +394,7 @@ export default function CourseLessonEditor({
 
   const handleDeleteQuestion = async (id: string) => {
     if (!confirm("Delete this question?")) return
-    await fetch(`/api/admin/courses/quiz-questions?id=${id}`, { method: "DELETE" })
+    await fetch(`${apiBase}/quiz-questions?id=${id}`, { method: "DELETE" })
     fetchQuestions()
   }
 
@@ -400,9 +511,38 @@ export default function CourseLessonEditor({
           {form.content_type === "text" && (
             <Card className="bg-neutral-900/50 border-neutral-800">
               <CardContent className="p-4 space-y-4">
-                <h3 className="text-sm font-medium text-neutral-300 flex items-center gap-2">
-                  <FileText className="h-4 w-4" /> Text Content
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-neutral-300 flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Text Content
+                  </h3>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {([
+                      { mode: "polish" as const, label: "Polish", icon: Wand2 },
+                      { mode: "expand" as const, label: "Expand", icon: Sparkles },
+                      { mode: "shorten" as const, label: "Shorten", icon: Sparkles },
+                      { mode: "translate-th" as const, label: "→ ไทย", icon: Languages },
+                    ]).map(({ mode, label, icon: Icon }) => (
+                      <Button
+                        key={mode}
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => runImprove(mode)}
+                        disabled={improving !== null || !form.text_content?.trim()}
+                        className="text-orange-400 hover:text-orange-300 h-7 text-xs"
+                      >
+                        {improving === mode ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Icon className="h-3 w-3 mr-1" />
+                        )}
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                {improveError && (
+                  <p className="text-xs text-red-400">{improveError}</p>
+                )}
                 <div className="space-y-2">
                   <Label className="text-neutral-200">Content (Markdown)</Label>
                   <textarea
@@ -453,9 +593,25 @@ export default function CourseLessonEditor({
                   <h3 className="text-sm font-medium text-neutral-300 flex items-center gap-2">
                     <HelpCircle className="h-4 w-4" /> Quiz Questions
                   </h3>
-                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAddQuestion}>
-                    <Plus className="h-4 w-4 mr-1" /> Add Question
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
+                      onClick={generateQuiz}
+                      disabled={generatingQuiz}
+                    >
+                      {generatingQuiz ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <Sparkles className="h-3 w-3 mr-1" />
+                      )}
+                      AI generate
+                    </Button>
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAddQuestion}>
+                      <Plus className="h-4 w-4 mr-1" /> Add Question
+                    </Button>
+                  </div>
                 </div>
 
                 {loadingQuestions ? (
@@ -674,6 +830,118 @@ export default function CourseLessonEditor({
               {savingQuestion ? "Saving..." : editingQuestion ? "Update Question" : "Add Question"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI generated quiz suggestions */}
+      <Dialog open={quizSuggestOpen} onOpenChange={setQuizSuggestOpen}>
+        <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-orange-400" />
+              AI-generated quiz
+            </DialogTitle>
+            <DialogDescription>
+              Pick the questions to keep. Each will be saved as a separate question.
+            </DialogDescription>
+          </DialogHeader>
+          {generatingQuiz ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-400" />
+              <p className="text-sm text-neutral-400 mt-3">Drafting questions…</p>
+            </div>
+          ) : quizError ? (
+            <div className="rounded bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300">
+              {quizError}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {quizSuggestions.map((q, i) => {
+                const picked = quizPicked.has(i)
+                const correct = q.options.find((o) => o.is_correct)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setQuizPicked((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(i)) next.delete(i)
+                        else next.add(i)
+                        return next
+                      })
+                    }}
+                    className={`w-full text-left rounded border p-3 transition ${
+                      picked
+                        ? "border-orange-500/60 bg-orange-500/5"
+                        : "border-neutral-700 bg-neutral-950 hover:bg-neutral-900"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={`h-4 w-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
+                          picked ? "border-orange-500 bg-orange-500" : "border-neutral-600"
+                        }`}
+                      >
+                        {picked && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-white font-medium">
+                          <span className="text-neutral-500 font-mono mr-2">Q{i + 1}.</span>
+                          {q.question_text}
+                        </p>
+                        <ul className="mt-2 space-y-1">
+                          {q.options.map((o) => (
+                            <li
+                              key={o.id}
+                              className={`text-xs flex items-start gap-1.5 ${
+                                o.is_correct ? "text-emerald-400" : "text-neutral-400"
+                              }`}
+                            >
+                              <span className="font-mono">{o.id}.</span>
+                              <span>{o.text}</span>
+                              {o.is_correct && <CheckCircle className="h-3 w-3 mt-0.5" />}
+                            </li>
+                          ))}
+                        </ul>
+                        {q.explanation && (
+                          <p className="text-xs text-neutral-500 mt-2 italic">
+                            {q.explanation}
+                          </p>
+                        )}
+                        {!correct && (
+                          <p className="text-xs text-red-400 mt-1">
+                            Warning: no correct answer flagged
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  onClick={acceptQuizSuggestions}
+                  disabled={quizSaving || quizPicked.size === 0}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {quizSaving ? (
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  ) : (
+                    <Check className="h-3 w-3 mr-1" />
+                  )}
+                  Add {quizPicked.size} question{quizPicked.size === 1 ? "" : "s"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setQuizSuggestOpen(false)}
+                  disabled={quizSaving}
+                  className="text-neutral-400"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

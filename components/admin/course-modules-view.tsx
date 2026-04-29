@@ -27,8 +27,19 @@ import {
   HelpCircle,
   Dumbbell,
   Eye,
+  Sparkles,
+  Check,
 } from "lucide-react"
 import CourseLessonEditor from "./course-lesson-editor"
+
+interface SuggestedLesson {
+  title: string
+  description?: string
+  content_type: "video" | "text" | "quiz" | "drill"
+  estimated_minutes: number
+  suggested_text?: string
+  drill_instructions?: string
+}
 
 interface Course {
   id: string
@@ -78,9 +89,11 @@ const CONTENT_TYPE_ICONS: Record<string, typeof Video> = {
 export default function CourseModulesView({
   course,
   onBack,
+  apiBase = "/api/admin/courses",
 }: {
   course: Course
   onBack: () => void
+  apiBase?: string
 }) {
   const [modules, setModules] = useState<Module[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,17 +111,101 @@ export default function CourseModulesView({
 
   const [editingLesson, setEditingLesson] = useState<{ id: string; moduleId: string } | null>(null)
 
+  // AI suggest state
+  const [suggestOpen, setSuggestOpen] = useState(false)
+  const [suggestModule, setSuggestModule] = useState<Module | null>(null)
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [suggestions, setSuggestions] = useState<SuggestedLesson[]>([])
+  const [suggestPicked, setSuggestPicked] = useState<Set<number>>(new Set())
+  const [suggestError, setSuggestError] = useState<string | null>(null)
+  const [suggestSaving, setSuggestSaving] = useState(false)
+
+  const openSuggest = async (mod: Module) => {
+    setSuggestModule(mod)
+    setSuggestOpen(true)
+    setSuggestions([])
+    setSuggestPicked(new Set())
+    setSuggestError(null)
+    setSuggestLoading(true)
+    try {
+      const res = await fetch("/api/admin/courses/ai/expand-module", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          course_title: course.title,
+          module_title: mod.title,
+          module_description: mod.description,
+          cert_level: course.certificate_level,
+          audience: course.difficulty,
+          count: 4,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSuggestError(data.error || "AI suggestion failed")
+      } else {
+        setSuggestions(data.lessons || [])
+        // Pre-pick all by default
+        setSuggestPicked(new Set((data.lessons || []).map((_: unknown, i: number) => i)))
+      }
+    } catch (err) {
+      setSuggestError(err instanceof Error ? err.message : "Failed")
+    } finally {
+      setSuggestLoading(false)
+    }
+  }
+
+  const togglePick = (idx: number) => {
+    setSuggestPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
+  const acceptSuggestions = async () => {
+    if (!suggestModule || suggestPicked.size === 0) return
+    setSuggestSaving(true)
+    try {
+      const startOrder = suggestModule.lessons.length
+      const picked = suggestions.filter((_, i) => suggestPicked.has(i))
+      for (let i = 0; i < picked.length; i++) {
+        const s = picked[i]
+        await fetch(`${apiBase}/lessons`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            module_id: suggestModule.id,
+            course_id: course.id,
+            title: s.title,
+            description: s.description || null,
+            content_type: s.content_type,
+            text_content: s.suggested_text || null,
+            drill_instructions: s.drill_instructions || null,
+            estimated_minutes: s.estimated_minutes,
+            lesson_order: startOrder + i,
+          }),
+        })
+      }
+      setSuggestOpen(false)
+      fetchModules()
+    } finally {
+      setSuggestSaving(false)
+    }
+  }
+
   const fetchModules = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/courses/modules?course_id=${course.id}`)
+      const res = await fetch(`${apiBase}/modules?course_id=${course.id}`)
       if (res.ok) {
         const data = await res.json()
         setModules(data.modules || [])
       }
     } catch { /* */ }
     setLoading(false)
-  }, [course.id])
+  }, [course.id, apiBase])
 
   useEffect(() => { fetchModules() }, [fetchModules])
 
@@ -139,7 +236,7 @@ export default function CourseModulesView({
     setSaving(true)
     setError("")
     try {
-      const url = "/api/admin/courses/modules"
+      const url = `${apiBase}/modules`
       if (editingModule) {
         const res = await fetch(url, {
           method: "PATCH",
@@ -175,7 +272,7 @@ export default function CourseModulesView({
 
   const handleDeleteModule = async (id: string) => {
     if (!confirm("Delete this module and all its lessons?")) return
-    await fetch(`/api/admin/courses/modules?id=${id}`, { method: "DELETE" })
+    await fetch(`${apiBase}/modules?id=${id}`, { method: "DELETE" })
     fetchModules()
   }
 
@@ -190,7 +287,7 @@ export default function CourseModulesView({
     setSavingLesson(true)
     try {
       const mod = modules.find((m) => m.id === lessonModuleId)
-      const res = await fetch("/api/admin/courses/lessons", {
+      const res = await fetch(`${apiBase}/lessons`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -211,7 +308,7 @@ export default function CourseModulesView({
 
   const handleDeleteLesson = async (lessonId: string) => {
     if (!confirm("Delete this lesson?")) return
-    await fetch(`/api/admin/courses/lessons?id=${lessonId}`, { method: "DELETE" })
+    await fetch(`${apiBase}/lessons?id=${lessonId}`, { method: "DELETE" })
     fetchModules()
   }
 
@@ -221,6 +318,7 @@ export default function CourseModulesView({
         lessonId={editingLesson.id}
         courseId={course.id}
         moduleId={editingLesson.moduleId}
+        apiBase={apiBase}
         onBack={() => { setEditingLesson(null); fetchModules() }}
       />
     )
@@ -282,7 +380,10 @@ export default function CourseModulesView({
                     )}
                   </div>
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="ghost" onClick={() => openAddLesson(mod.id)} className="text-neutral-400 hover:text-white h-8 w-8 p-0">
+                    <Button size="sm" variant="ghost" onClick={() => openSuggest(mod)} className="text-orange-400 hover:text-orange-300 h-8 w-8 p-0" title="AI suggest lessons">
+                      <Sparkles className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => openAddLesson(mod.id)} className="text-neutral-400 hover:text-white h-8 w-8 p-0" title="Add lesson">
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => openEditModule(mod)} className="text-neutral-400 hover:text-white h-8 w-8 p-0">
@@ -424,6 +525,103 @@ export default function CourseModulesView({
               {savingLesson ? "Creating..." : "Create Lesson"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Suggest Lessons Dialog */}
+      <Dialog open={suggestOpen} onOpenChange={setSuggestOpen}>
+        <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-orange-400" />
+              Suggest lessons{suggestModule ? ` for "${suggestModule.title}"` : ""}
+            </DialogTitle>
+            <DialogDescription>
+              AI drafts a sequence of lessons. Pick the ones you want to keep.
+            </DialogDescription>
+          </DialogHeader>
+
+          {suggestLoading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-400" />
+              <p className="text-sm text-neutral-400 mt-3">Drafting lessons…</p>
+            </div>
+          ) : suggestError ? (
+            <div className="rounded bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300">
+              {suggestError}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {suggestions.map((s, i) => {
+                const picked = suggestPicked.has(i)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => togglePick(i)}
+                    className={`w-full text-left rounded border p-3 transition ${
+                      picked
+                        ? "border-orange-500/60 bg-orange-500/5"
+                        : "border-neutral-700 bg-neutral-950 hover:bg-neutral-900"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={`h-4 w-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
+                          picked
+                            ? "border-orange-500 bg-orange-500"
+                            : "border-neutral-600"
+                        }`}
+                      >
+                        {picked && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-white">{s.title}</p>
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-neutral-600 text-neutral-400"
+                          >
+                            {s.content_type}
+                          </Badge>
+                          <span className="text-xs text-neutral-500">{s.estimated_minutes}m</span>
+                        </div>
+                        {s.description && (
+                          <p className="text-sm text-neutral-400 mt-1">{s.description}</p>
+                        )}
+                        {s.suggested_text && (
+                          <p className="text-xs text-neutral-500 mt-2 line-clamp-3 whitespace-pre-wrap">
+                            {s.suggested_text}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  onClick={acceptSuggestions}
+                  disabled={suggestSaving || suggestPicked.size === 0}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {suggestSaving ? (
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  ) : (
+                    <Check className="h-3 w-3 mr-1" />
+                  )}
+                  Add {suggestPicked.size} lesson{suggestPicked.size === 1 ? "" : "s"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setSuggestOpen(false)}
+                  disabled={suggestSaving}
+                  className="text-neutral-400"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

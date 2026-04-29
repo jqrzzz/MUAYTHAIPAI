@@ -66,7 +66,17 @@ function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
 }
 
-export default function CoursesTab({ orgId }: { orgId: string }) {
+export default function CoursesTab({
+  orgId,
+  apiBase = "/api/admin/courses",
+  scopeLabel,
+}: {
+  orgId?: string
+  apiBase?: string
+  scopeLabel?: string
+}) {
+  void orgId
+
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
@@ -83,14 +93,14 @@ export default function CoursesTab({ orgId }: { orgId: string }) {
   const fetchCourses = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/admin/courses")
+      const res = await fetch(apiBase)
       if (res.ok) {
         const data = await res.json()
         setCourses(data.courses || [])
       }
     } catch { /* */ }
     setLoading(false)
-  }, [])
+  }, [apiBase])
 
   useEffect(() => { fetchCourses() }, [fetchCourses])
 
@@ -139,7 +149,7 @@ export default function CoursesTab({ orgId }: { orgId: string }) {
         short_description: form.short_description || null,
       }
 
-      const url = "/api/admin/courses"
+      const url = apiBase
       const method = editing ? "PATCH" : "POST"
       const body = editing ? { id: editing.id, ...payload } : payload
 
@@ -163,13 +173,13 @@ export default function CoursesTab({ orgId }: { orgId: string }) {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this course and all its content?")) return
-    await fetch(`/api/admin/courses?id=${id}`, { method: "DELETE" })
+    await fetch(`${apiBase}?id=${id}`, { method: "DELETE" })
     fetchCourses()
   }
 
   const togglePublish = async (course: Course) => {
     const newStatus = course.status === "published" ? "draft" : "published"
-    await fetch("/api/admin/courses", {
+    await fetch(apiBase, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: course.id, status: newStatus }),
@@ -181,6 +191,7 @@ export default function CoursesTab({ orgId }: { orgId: string }) {
     return (
       <CourseModulesView
         course={selectedCourse}
+        apiBase={apiBase}
         onBack={() => { setSelectedCourse(null); fetchCourses() }}
       />
     )
@@ -191,7 +202,7 @@ export default function CoursesTab({ orgId }: { orgId: string }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white">Courses</h2>
-          <p className="text-sm text-neutral-400">Manage your training curriculum</p>
+          <p className="text-sm text-neutral-400">{scopeLabel || "Manage your training curriculum"}</p>
         </div>
         <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAdd}>
           <Plus className="h-4 w-4 mr-1" /> Add Course

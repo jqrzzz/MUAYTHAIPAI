@@ -27,7 +27,21 @@ import {
   Check,
   Send,
   Loader2,
+  BookOpen,
+  Sparkles,
+  Map,
+  GraduationCap,
+  UserCheck,
+  Megaphone,
 } from "lucide-react"
+import CoursesTab from "@/components/admin/courses-tab"
+import PlatformCommandBar from "@/components/platform-admin/command-bar"
+import NetworkTab from "@/components/platform-admin/network-tab"
+import StudentsTab from "@/components/platform-admin/students-tab"
+import TrainersTab from "@/components/platform-admin/trainers-tab"
+import TodayPanel from "@/components/platform-admin/today-panel"
+import CampaignsTab from "@/components/platform-admin/campaigns-tab"
+import HealthCard from "@/components/platform-admin/health-card"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -130,7 +144,19 @@ interface Props {
 
 export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"overview" | "gyms" | "payouts" | "blacklist" | "ockock">("overview")
+  const [activeTab, setActiveTab] = useState<
+    | "overview"
+    | "gyms"
+    | "payouts"
+    | "blacklist"
+    | "ockock"
+    | "courses"
+    | "command"
+    | "network"
+    | "students"
+    | "trainers"
+    | "campaigns"
+  >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -448,10 +474,20 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               <p className="text-xs text-zinc-400">Muay Thai Network</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <a
+              href="/platform-admin/today"
+              className="hidden sm:inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-white border border-zinc-800 rounded-md px-2.5 py-1.5"
+              title="Mobile-optimized home — Today + Command bar"
+            >
+              <Sparkles className="h-3 w-3 text-orange-400" />
+              Today
+            </a>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -459,7 +495,13 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         <div className="mx-auto flex max-w-6xl gap-1 px-4">
           {[
             { id: "overview", label: "Overview", icon: Building2 },
+            { id: "command", label: "Command", icon: Sparkles },
+            { id: "network", label: "Network", icon: Map },
+            { id: "campaigns", label: "Campaigns", icon: Megaphone },
+            { id: "students", label: "Students", icon: GraduationCap },
+            { id: "trainers", label: "Trainers", icon: UserCheck },
             { id: "gyms", label: "Gyms", icon: Users },
+            { id: "courses", label: "Courses", icon: BookOpen },
             { id: "payouts", label: "Payouts", icon: DollarSign },
             { id: "blacklist", label: "Blacklist", icon: Shield },
             { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -486,9 +528,38 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
 
       {/* Content */}
       <main className="mx-auto max-w-6xl p-4">
+        {/* Command Tab — AI command bar over the network */}
+        {activeTab === "command" && <PlatformCommandBar />}
+
+        {/* Network Tab — discovered gyms, crawl + invite pipeline */}
+        {activeTab === "network" && <NetworkTab />}
+
+        {/* Students Tab — network-wide student passport */}
+        {activeTab === "students" && <StudentsTab />}
+
+        {/* Trainers Tab — network-wide trainer passport */}
+        {activeTab === "trainers" && <TrainersTab />}
+
+        {/* Campaigns Tab — AI-personalized outreach to discovered gyms */}
+        {activeTab === "campaigns" && <CampaignsTab />}
+
+        {/* Courses Tab — author the platform-wide cert ladder */}
+        {activeTab === "courses" && (
+          <CoursesTab
+            apiBase="/api/platform-admin/courses"
+            scopeLabel="Country-wide certification ladder (Naga → Garuda). Visible read-only to every gym."
+          />
+        )}
+
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* Health — quietly green when all systems go */}
+            <HealthCard />
+
+            {/* Today panel — operator's first-screen */}
+            <TodayPanel />
+
             {/* Stats */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="border-zinc-800 bg-zinc-900">

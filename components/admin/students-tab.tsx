@@ -9,12 +9,28 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Minus, RefreshCw, GraduationCap, History } from "lucide-react"
+import { Plus, Minus, RefreshCw, GraduationCap, History, Award, Eye } from "lucide-react"
+import StudentPassportDialog from "./student-passport-dialog"
 
 interface StudentCredit {
   id: string
   credit_type: string
   credits_remaining: number
+}
+
+interface CertProgressLevel {
+  level: string
+  signed_off: number
+  total: number
+  earned: boolean
+  enrolled: boolean
+  last_signoff_at: string | null
+}
+
+interface CertProgress {
+  levels: CertProgressLevel[]
+  earned_count: number
+  current: CertProgressLevel | null
 }
 
 interface Student {
@@ -24,6 +40,7 @@ interface Student {
   display_name: string | null
   phone: string | null
   credits?: StudentCredit[]
+  cert_progress?: CertProgress
 }
 
 export interface CreditTransaction {
@@ -77,6 +94,7 @@ export default function StudentsTab({
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
   const [isAddCreditsOpen, setIsAddCreditsOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [passportStudentId, setPassportStudentId] = useState<string | null>(null)
   const [studentError, setStudentError] = useState("")
   const [isSaving, setIsSaving] = useState(false)
 
@@ -304,28 +322,97 @@ export default function StudentsTab({
           {students.map((student) => (
             <Card key={student.id} className="bg-neutral-900 border-neutral-800">
               <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold text-white">
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-white truncate">
                       {student.full_name || student.display_name || "Unknown"}
                     </h3>
-                    <p className="text-sm text-neutral-400">{student.email}</p>
+                    <p className="text-sm text-neutral-400 truncate">{student.email}</p>
                     {student.phone && <p className="text-xs text-neutral-500">{student.phone}</p>}
                   </div>
-                  {student.credits && student.credits.length > 0 && (
-                    <Badge
-                      className={
-                        student.credits.some((c) => c.credits_remaining > 3)
-                          ? "bg-green-600"
-                          : student.credits.some((c) => c.credits_remaining > 0)
-                            ? "bg-yellow-600"
-                            : "bg-red-600"
-                      }
-                    >
-                      {student.credits.reduce((sum, c) => sum + c.credits_remaining, 0)} Credits
-                    </Badge>
-                  )}
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {student.credits && student.credits.length > 0 && (
+                      <Badge
+                        className={
+                          student.credits.some((c) => c.credits_remaining > 3)
+                            ? "bg-green-600"
+                            : student.credits.some((c) => c.credits_remaining > 0)
+                              ? "bg-yellow-600"
+                              : "bg-red-600"
+                        }
+                      >
+                        {student.credits.reduce((sum, c) => sum + c.credits_remaining, 0)} Credits
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+
+                {student.cert_progress && (student.cert_progress.current || student.cert_progress.earned_count > 0) && (
+                  <button
+                    onClick={() => setPassportStudentId(student.id)}
+                    className="w-full mb-3 rounded-md border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-left hover:border-orange-500/40 transition group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Award
+                        className={`h-3.5 w-3.5 shrink-0 ${
+                          student.cert_progress.earned_count > 0
+                            ? "text-orange-400"
+                            : "text-amber-400"
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        {student.cert_progress.current ? (
+                          <>
+                            <p className="text-xs text-neutral-300 capitalize">
+                              {student.cert_progress.current.level}{" "}
+                              <span className="text-neutral-500 font-mono">
+                                {student.cert_progress.current.signed_off}/
+                                {student.cert_progress.current.total}
+                              </span>
+                              {student.cert_progress.current.signed_off >=
+                                student.cert_progress.current.total &&
+                                student.cert_progress.current.total > 0 && (
+                                  <span className="ml-1 text-emerald-400">
+                                    · ready
+                                  </span>
+                                )}
+                            </p>
+                            <div className="h-1 mt-1 rounded-full bg-neutral-800 overflow-hidden">
+                              <div
+                                className="h-full bg-amber-500"
+                                style={{
+                                  width: `${
+                                    student.cert_progress.current.total > 0
+                                      ? Math.round(
+                                          (student.cert_progress.current.signed_off /
+                                            student.cert_progress.current.total) *
+                                            100
+                                        )
+                                      : 0
+                                  }%`,
+                                }}
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs text-neutral-300">
+                            {student.cert_progress.earned_count} cert
+                            {student.cert_progress.earned_count === 1 ? "" : "s"} earned
+                          </p>
+                        )}
+                      </div>
+                      <Eye className="h-3 w-3 text-neutral-600 group-hover:text-orange-400 shrink-0" />
+                    </div>
+                  </button>
+                )}
+                {student.cert_progress && student.cert_progress.levels.length === 0 && (
+                  <button
+                    onClick={() => setPassportStudentId(student.id)}
+                    className="w-full mb-3 rounded-md border border-dashed border-neutral-800 px-2.5 py-1.5 text-left hover:border-orange-500/40 transition text-xs text-neutral-500"
+                  >
+                    No cert progress yet · open passport
+                  </button>
+                )}
 
                 {student.credits && student.credits.length > 0 && (
                   <>
@@ -517,6 +604,14 @@ export default function StudentsTab({
           </div>
         </DialogContent>
       </Dialog>
+
+      <StudentPassportDialog
+        studentId={passportStudentId}
+        open={!!passportStudentId}
+        onOpenChange={(open) => {
+          if (!open) setPassportStudentId(null)
+        }}
+      />
     </div>
   )
 }

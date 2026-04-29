@@ -5,8 +5,24 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Instagram, Clock, Dumbbell, BadgeCheck, MessageCircle } from "lucide-react"
+import {
+  ArrowLeft,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+  Instagram,
+  Clock,
+  Dumbbell,
+  BadgeCheck,
+  MessageCircle,
+  Award,
+  Trophy,
+  Users,
+  ShieldCheck,
+} from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 
 interface GymPageClientProps {
   gym: {
@@ -50,6 +66,12 @@ interface GymPageClientProps {
     show_prices: boolean
   } | null
   user: SupabaseUser | null
+  certActivity?: {
+    issuedByLevel: Record<string, number>
+    enrolledByLevel: Record<string, number>
+    totalCerts: number
+    totalEnrolled: number
+  }
 }
 
 const DAY_LABELS: Record<string, string> = {
@@ -58,7 +80,14 @@ const DAY_LABELS: Record<string, string> = {
 }
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-export default function GymPageClient({ gym, services, trainers, settings, user }: GymPageClientProps) {
+export default function GymPageClient({
+  gym,
+  services,
+  trainers,
+  settings,
+  user,
+  certActivity,
+}: GymPageClientProps) {
   const showPrices = settings?.show_prices !== false
   const operatingHours = settings?.operating_hours
   // Group services by category
@@ -232,6 +261,94 @@ export default function GymPageClient({ gym, services, trainers, settings, user 
             </div>
           </section>
         )}
+
+        {/* Cert ladder — what this gym actively issues */}
+        {certActivity &&
+          (certActivity.totalCerts > 0 || certActivity.totalEnrolled > 0) && (
+            <section className="mb-8">
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <h2 className="text-lg font-semibold text-white">
+                  Naga–Garuda Certification Ladder
+                </h2>
+                <Badge className="bg-orange-600/20 text-orange-300 border-orange-500/30 gap-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  MUAYTHAIPAI Network
+                </Badge>
+              </div>
+              <p className="text-sm text-neutral-400 mb-3">
+                {gym.name} issues Thailand&apos;s national Muay Thai certification —
+                Naga (Level 1) through Garuda (Level 5).{" "}
+                {certActivity.totalCerts > 0 && (
+                  <span className="text-neutral-300">
+                    {certActivity.totalCerts} certificate
+                    {certActivity.totalCerts === 1 ? "" : "s"} issued.
+                  </span>
+                )}
+                {certActivity.totalEnrolled > 0 && (
+                  <span className="text-neutral-300">
+                    {" "}
+                    {certActivity.totalEnrolled} active enrolment
+                    {certActivity.totalEnrolled === 1 ? "" : "s"}.
+                  </span>
+                )}
+              </p>
+              <div className="grid grid-cols-5 gap-2">
+                {CERTIFICATION_LEVELS.map((lvl) => {
+                  const issued = certActivity.issuedByLevel[lvl.id] ?? 0
+                  const enrolled = certActivity.enrolledByLevel[lvl.id] ?? 0
+                  const offered = issued > 0 || enrolled > 0
+                  return (
+                    <div
+                      key={lvl.id}
+                      className={`rounded-lg border p-2.5 text-center ${
+                        offered
+                          ? "border-orange-500/40 bg-orange-500/5"
+                          : "border-neutral-800 bg-neutral-900/50"
+                      }`}
+                      title={lvl.creature}
+                    >
+                      <div
+                        className={`text-2xl mb-1 ${offered ? "" : "opacity-30 grayscale"}`}
+                      >
+                        {lvl.icon}
+                      </div>
+                      <p
+                        className={`text-xs font-medium ${
+                          offered ? "text-white" : "text-neutral-500"
+                        }`}
+                      >
+                        {lvl.name}
+                      </p>
+                      <p className="text-[10px] text-neutral-500 mt-0.5">
+                        Lv. {lvl.number}
+                      </p>
+                      {offered && (
+                        <div className="mt-1.5 space-y-0.5 text-[10px]">
+                          {issued > 0 && (
+                            <p className="text-orange-400 inline-flex items-center gap-0.5">
+                              <Trophy className="h-2.5 w-2.5" />
+                              {issued}
+                            </p>
+                          )}
+                          {enrolled > 0 && (
+                            <p className="text-amber-400 inline-flex items-center gap-0.5">
+                              <Users className="h-2.5 w-2.5" />
+                              {enrolled}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-neutral-500 mt-3 inline-flex items-center gap-1.5">
+                <Award className="h-3 w-3" />
+                Certificates verifiable at{" "}
+                <code className="text-neutral-400">/verify/[cert-number]</code>
+              </p>
+            </section>
+          )}
 
         {/* Certificate Programs */}
         {certificateServices.length > 0 && (

@@ -22,8 +22,10 @@ import {
   UserPlus,
   MoreVertical,
   Eye,
+  Sparkles,
 } from "lucide-react"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import BulkSignoffDialog from "./bulk-signoff-dialog"
 
 interface Certificate {
   id: string
@@ -74,6 +76,7 @@ export default function CertificatesTab({ role }: { role: string }) {
   const [revoking, setRevoking] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [showEnrollDialog, setShowEnrollDialog] = useState(false)
+  const [showBulkSignoff, setShowBulkSignoff] = useState(false)
   const [enrollForm, setEnrollForm] = useState({ student_email: "", level: "naga", notes: "" })
   const [enrolling, setEnrolling] = useState(false)
   const [showIssueCertDialog, setShowIssueCertDialog] = useState(false)
@@ -320,13 +323,21 @@ export default function CertificatesTab({ role }: { role: string }) {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setShowEnrollDialog(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium transition-colors"
         >
           <UserPlus className="w-4 h-4" />
           Enroll Student
+        </button>
+        <button
+          onClick={() => setShowBulkSignoff(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-medium border border-orange-500/40 transition-colors"
+          title="Sign off the same skill for many students at once"
+        >
+          <Sparkles className="w-4 h-4 text-orange-400" />
+          Bulk signoff
         </button>
         {isOwnerOrAdmin && (
           <button
@@ -688,6 +699,13 @@ export default function CertificatesTab({ role }: { role: string }) {
           )}
         </DialogContent>
       </Dialog>
+
+      <BulkSignoffDialog
+        open={showBulkSignoff}
+        onOpenChange={setShowBulkSignoff}
+        enrollments={enrollments}
+        onSuccess={fetchData}
+      />
     </div>
   )
 }

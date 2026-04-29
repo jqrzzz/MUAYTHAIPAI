@@ -176,7 +176,10 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
   }
 
   useEffect(() => {
-    if (activeView === "certificates" && certProgress.length === 0) {
+    if (
+      (activeView === "certificates" || activeView === "home") &&
+      certProgress.length === 0
+    ) {
       fetchCertProgress()
     }
   }, [activeView])
@@ -375,6 +378,102 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                 </Card>
               </button>
             </div>
+
+            {/* Current cert journey */}
+            {(() => {
+              if (certProgress.length === 0) return null
+              // Pick the level the student is most actively working on:
+              //   1. enrolled-but-not-earned (most recent enrolment)
+              //   2. highest level with signoffs but unearned
+              //   3. highest level earned (showing achievement)
+              const inProgress = certProgress
+                .filter((l) => l.enrolled && !l.earned)
+                .sort((a, b) => b.number - a.number)[0]
+              const partial = certProgress
+                .filter((l) => !l.earned && l.skillsSignedOff > 0)
+                .sort((a, b) => b.number - a.number)[0]
+              const earnedLatest = certProgress
+                .filter((l) => l.earned)
+                .sort((a, b) => b.number - a.number)[0]
+              const current = inProgress || partial || earnedLatest
+              if (!current) return null
+              const remaining = current.skillsTotal - current.skillsSignedOff
+              const pct =
+                current.skillsTotal > 0
+                  ? Math.round(
+                      (current.skillsSignedOff / current.skillsTotal) * 100
+                    )
+                  : 0
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-medium text-neutral-400">
+                      Cert Journey
+                    </h2>
+                    <button
+                      onClick={() => setActiveView("certificates")}
+                      className="text-xs text-orange-500 hover:text-orange-400"
+                    >
+                      View Ladder
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setActiveView("certificates")}
+                    className="w-full text-left"
+                  >
+                    <Card
+                      className={`bg-gradient-to-br ${current.color} border-0 overflow-hidden hover:opacity-95 transition`}
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex items-start gap-4">
+                          <div className="text-4xl">{current.icon}</div>
+                          <div className="min-w-0 flex-1">
+                            <Badge className="bg-white/20 text-white border-0 text-xs mb-1">
+                              Level {current.number}
+                            </Badge>
+                            <h3 className="text-lg font-bold text-white capitalize truncate">
+                              {current.name}
+                            </h3>
+                            {current.earned ? (
+                              <p className="text-white/80 text-xs">
+                                Earned · cert #{current.certificateNumber}
+                              </p>
+                            ) : current.enrolled ? (
+                              <p className="text-white/80 text-xs">
+                                Enrolled
+                                {current.enrolledGym
+                                  ? ` at ${current.enrolledGym}`
+                                  : ""}
+                              </p>
+                            ) : (
+                              <p className="text-white/80 text-xs">
+                                In progress
+                              </p>
+                            )}
+                            {!current.earned && (
+                              <>
+                                <div className="mt-2 h-1.5 rounded-full bg-black/30 overflow-hidden">
+                                  <div
+                                    className="h-full bg-white"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-white/80 mt-1.5">
+                                  {current.skillsSignedOff}/{current.skillsTotal} skills ·{" "}
+                                  {remaining > 0
+                                    ? `${remaining} to go`
+                                    : "ready for assessment"}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </button>
+                </div>
+              )
+            })()}
 
             {/* Next Session Card */}
             {upcomingBookings.length > 0 ? (
