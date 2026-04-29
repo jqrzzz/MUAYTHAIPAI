@@ -1,7 +1,18 @@
 import { tool } from "ai"
 import { z } from "zod"
+import { randomBytes } from "node:crypto"
 import type { createClient } from "@/lib/supabase/server"
 import { CERTIFICATION_LEVELS, LEVEL_IDS } from "@/lib/certification-levels"
+import {
+  searchText,
+  GooglePlacesNotConfiguredError,
+} from "@/lib/discovery/google-places"
+import { researchRegion } from "@/lib/discovery/research"
+import {
+  upsertGooglePlace,
+  insertResearchCandidate,
+} from "@/lib/discovery/upsert"
+import { sendDiscoveryInvite } from "@/lib/discovery/invite-email"
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -245,6 +256,184 @@ export function buildPlatformTools(supabase: SupabaseClient) {
           })
         }
         return { courses: result }
+      },
+    }),
+
+    /* ---------------- ACTION TOOLS (mutate state) ---------------- */
+
+    run_google_discovery: tool({
+      description:
+        "Run a Google Places text search and upsert results into the discovery pipeline. Use when the operator asks to 'find more gyms in <region>', 'discover gyms near X', or to add a specific search query. Returns counts of new vs updated rows.",
+      inputSchema: z.object({
+        query: z
+          .string()
+          .describe("Free-text query, e.g. 'muay thai gym chiang mai' or 'pattaya muay thai'"),
+        max_results: z.number().int().min(1).max(20).optional(),
+      }),
+      execute: async ({ query, max_results }) => {
+        try {
+          const places = await searchText({ query, maxResultCount: max_results })
+          let inserted = 0
+          let updated = 0
+          for (const p of places) {
+            const r = await upsertGooglePlace({ supabase, place: p, sourceQuery: query })
+            if (r.id) {
+              if (r.inserted) inserted++
+              else updated++
+            }
+          }
+          return {
+            ok: true,
+            query,
+            total_found: places.length,
+            inserted,
+            updated,
+          }
+        } catch (err) {
+          if (err instanceof GooglePlacesNotConfiguredError) {
+            return { ok: false, error: "GOOGLE_PLACES_API_KEY not configured" }
+          }
+          return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        }
+      },
+    }),
+
+    run_claude_research: tool({
+      description:
+        "Use Claude's training-data knowledge to suggest candidate gyms in a region, then verify each via Google Places before storing. Useful when Google search misses well-known camps. Returns counts.",
+      inputSchema: z.object({
+        region: z.string().describe("e.g. 'Phuket', 'Pai, Mae Hong Son', 'Buriram'"),
+        hint: z
+          .string()
+          .optional()
+          .describe("Optional flavour, e.g. 'fight team only' or 'tourist-friendly'"),
+        limit: z.number().int().min(1).max(20).optional(),
+      }),
+      execute: async ({ region, hint, limit }) => {
+        try {
+          const research = await researchRegion({ region, hint, limit })
+          let verified = 0
+          let unverified = 0
+          for (const c of research.candidates) {
+            try {
+              const places = await searchText({
+                query: `${c.name} ${c.city} muay thai`,
+                maxResultCount: 3,
+              })
+              const match = places[0]
+              if (match) {
+                await upsertGooglePlace({
+                  supabase,
+                  place: match,
+                  sourceQuery: `find-more:${region}`,
+                })
+                verified++
+                continue
+              }
+            } catch {
+              /* fall through */
+            }
+            await insertResearchCandidate({
+              supabase,
+              name: c.name,
+              name_th: c.name_th,
+              city: c.city,
+              province: c.province,
+              notes: [c.notable_for, `confidence:${c.confidence}`].filter(Boolean).join(" — "),
+              source_query: `find-more:${region}`,
+            })
+            unverified++
+          }
+          return {
+            ok: true,
+            region,
+            candidates: research.candidates.length,
+            verified,
+            unverified,
+            notes: research.notes,
+          }
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        }
+      },
+    }),
+
+    update_gym_status: tool({
+      description:
+        "Change the status of a discovered gym (verified, ignored, reviewed, duplicate). Use after the operator says things like 'mark X as verified' or 'ignore the duplicates from yesterday'.",
+      inputSchema: z.object({
+        gym_id: z.string().describe("UUID of the discovered_gym row"),
+        status: z.enum(["pending", "reviewed", "verified", "ignored", "duplicate"]),
+        notes: z.string().optional(),
+      }),
+      execute: async ({ gym_id, status, notes }) => {
+        const updates: Record<string, unknown> = { status }
+        if (notes) updates.notes = notes
+        const { data, error } = await supabase
+          .from("discovered_gyms")
+          .update(updates)
+          .eq("id", gym_id)
+          .select("id, name, status")
+          .single()
+        if (error) return { ok: false, error: error.message }
+        return { ok: true, gym: data }
+      },
+    }),
+
+    invite_gym: tool({
+      description:
+        "Generate (or re-issue) a magic-link invite for a discovered gym, optionally emailing it. Returns the invite URL so you can share it inline if email isn't set up.",
+      inputSchema: z.object({
+        gym_id: z.string(),
+        email: z.string().email().optional(),
+        send_email: z.boolean().optional().default(true),
+      }),
+      execute: async ({ gym_id, email, send_email }) => {
+        const { data: gym } = await supabase
+          .from("discovered_gyms")
+          .select("id, name, email, city, province, invite_token, invited_at")
+          .eq("id", gym_id)
+          .maybeSingle()
+        if (!gym) return { ok: false, error: "Gym not found" }
+
+        const token = gym.invite_token || randomBytes(24).toString("base64url")
+        const inviteEmail = email || gym.email || null
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+          "https://muaythaipai.com"
+        const inviteUrl = `${baseUrl}/signup?invite=${encodeURIComponent(token)}`
+
+        await supabase
+          .from("discovered_gyms")
+          .update({
+            invite_token: token,
+            invited_at: gym.invited_at || new Date().toISOString(),
+            invite_email: inviteEmail,
+            status: "invited",
+          })
+          .eq("id", gym_id)
+
+        let emailSent = false
+        let emailReason: string | undefined
+        if (send_email !== false && inviteEmail) {
+          const r = await sendDiscoveryInvite({
+            to: inviteEmail,
+            gymName: gym.name,
+            inviteUrl,
+            city: gym.city,
+            province: gym.province,
+          })
+          emailSent = r.sent
+          emailReason = r.reason
+        }
+        return {
+          ok: true,
+          gym_id,
+          gym_name: gym.name,
+          invite_url: inviteUrl,
+          email: inviteEmail,
+          email_sent: emailSent,
+          email_reason: emailReason,
+        }
       },
     }),
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { randomBytes } from "node:crypto"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
+import { sendDiscoveryInvite } from "@/lib/discovery/invite-email"
 
 function generateToken() {
   return randomBytes(24).toString("base64url")
@@ -22,13 +23,14 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const id = body.id as string | undefined
   const email = (body.email as string | undefined)?.trim() || undefined
+  const sendEmail = body.send_email !== false  // default: try to send
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 })
   }
 
   const { data: gym, error: fetchErr } = await supabase
     .from("discovered_gyms")
-    .select("id, name, email, invite_token, invited_at")
+    .select("id, name, email, city, province, invite_token, invited_at")
     .eq("id", id)
     .single()
   if (fetchErr || !gym) {
@@ -56,12 +58,27 @@ export async function POST(request: Request) {
   const baseUrl = getBaseUrl(request)
   const inviteUrl = `${baseUrl}/signup?invite=${encodeURIComponent(token)}`
 
+  let emailResult: { sent: boolean; reason?: string; id?: string } = { sent: false, reason: "skipped" }
+  if (sendEmail && inviteEmail) {
+    emailResult = await sendDiscoveryInvite({
+      to: inviteEmail,
+      gymName: gym.name,
+      inviteUrl,
+      city: gym.city,
+      province: gym.province,
+    })
+  }
+
   return NextResponse.json({
     token,
     invite_url: inviteUrl,
     email: inviteEmail,
-    message: inviteEmail
-      ? "Invite ready. Email delivery will be wired when Resend keys are confirmed for outbound."
-      : "Invite ready. No email on file — share the link manually.",
+    email_sent: emailResult.sent,
+    email_reason: emailResult.reason,
+    message: emailResult.sent
+      ? `Invite emailed to ${inviteEmail}.`
+      : inviteEmail
+        ? `Invite ready (email not sent: ${emailResult.reason || "unknown"}). Share the link manually.`
+        : "Invite ready. No email on file — share the link manually.",
   })
 }

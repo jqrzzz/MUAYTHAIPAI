@@ -15,10 +15,11 @@ type Turn = {
 
 const STARTER_PROMPTS = [
   "How is the network doing this month?",
+  "Find muay thai gyms in Phuket and add them.",
+  "Pending discovered gyms in Chiang Mai?",
   "Which gyms haven't signed off anyone in 30 days?",
-  "Show me students 1 skill from Phayra Nak.",
+  "Students 1 skill from Phayra Nak?",
   "Cert issuances by level in the last 90 days.",
-  "What's the completion rate on the Naga course?",
 ]
 
 export default function PlatformCommandBar() {

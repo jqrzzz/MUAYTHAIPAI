@@ -41,6 +41,12 @@ type DiscoveryStatus =
   | "ignored"
   | "duplicate"
 
+interface GooglePhoto {
+  name?: string
+  width?: number
+  height?: number
+}
+
 interface DiscoveredGymRow {
   id: string
   source: string
@@ -53,10 +59,15 @@ interface DiscoveredGymRow {
   lat: number | null
   lng: number | null
   phone: string | null
+  email: string | null
   website: string | null
+  instagram: string | null
+  facebook: string | null
+  line_id: string | null
   google_place_id: string | null
   google_rating: number | null
   google_review_count: number | null
+  google_photos: GooglePhoto[] | null
   ai_summary: string | null
   ai_tags: string[] | null
   status: DiscoveryStatus
@@ -68,6 +79,15 @@ interface DiscoveredGymRow {
   notes: string | null
   created_at: string
   updated_at: string
+}
+
+const STALE_DAYS = 30
+
+function isStale(gym: { last_crawled_at: string | null; source: string }) {
+  if (gym.source === "manual" || gym.source === "claude_research") return false
+  if (!gym.last_crawled_at) return true
+  const ageMs = Date.now() - new Date(gym.last_crawled_at).getTime()
+  return ageMs > STALE_DAYS * 86400_000
 }
 
 const STATUS_COLORS: Record<DiscoveryStatus, string> = {
@@ -110,9 +130,10 @@ export default function NetworkTab() {
 
   // Discovery dialog state
   const [discoverOpen, setDiscoverOpen] = useState(false)
-  const [discoverMode, setDiscoverMode] = useState<"google" | "research">("google")
+  const [discoverMode, setDiscoverMode] = useState<"google" | "research" | "bulk">("google")
   const [discoverQuery, setDiscoverQuery] = useState("")
   const [discoverHint, setDiscoverHint] = useState("")
+  const [bulkText, setBulkText] = useState("")
   const [discovering, setDiscovering] = useState(false)
   const [discoverResult, setDiscoverResult] = useState<string | null>(null)
 
@@ -140,6 +161,40 @@ export default function NetworkTab() {
   }, [fetchGyms])
 
   const runDiscovery = async () => {
+    if (discoverMode === "bulk") {
+      const items = bulkText
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      if (items.length === 0) return
+      setDiscovering(true)
+      setDiscoverResult(null)
+      try {
+        const res = await fetch("/api/platform-admin/discovery/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setDiscoverResult(data.error || "Bulk import failed")
+        } else {
+          const errors = (data.results || []).filter((r: { ok: boolean }) => !r.ok)
+          setDiscoverResult(
+            `${data.processed} processed • ${data.added} new • ${data.updated} updated${
+              errors.length ? ` • ${errors.length} errors` : ""
+            }`
+          )
+        }
+        fetchGyms()
+      } catch (err) {
+        setDiscoverResult(err instanceof Error ? err.message : "Bulk import failed")
+      } finally {
+        setDiscovering(false)
+      }
+      return
+    }
+
     if (!discoverQuery.trim()) return
     setDiscovering(true)
     setDiscoverResult(null)
@@ -219,7 +274,7 @@ export default function NetworkTab() {
         <Card className="border-orange-900 bg-zinc-950">
           <CardContent className="p-4 space-y-3">
             <div className="flex gap-2 text-xs">
-              {(["google", "research"] as const).map((m) => (
+              {(["google", "research", "bulk"] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setDiscoverMode(m)}
@@ -229,7 +284,11 @@ export default function NetworkTab() {
                       : "bg-zinc-800 text-zinc-400 hover:text-white"
                   }`}
                 >
-                  {m === "google" ? "Google Places" : "Claude research"}
+                  {m === "google"
+                    ? "Google Places"
+                    : m === "research"
+                      ? "Claude research"
+                      : "Bulk paste"}
                 </button>
               ))}
               <button
@@ -239,29 +298,44 @@ export default function NetworkTab() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <Input
-              value={discoverQuery}
-              onChange={(e) => setDiscoverQuery(e.target.value)}
-              placeholder={
-                discoverMode === "google"
-                  ? 'e.g. "muay thai gym chiang mai"'
-                  : 'e.g. "Phuket" or "Pai, Mae Hong Son"'
-              }
-              className="bg-zinc-900 border-zinc-700 text-white"
-            />
-            {discoverMode === "research" && (
-              <Input
-                value={discoverHint}
-                onChange={(e) => setDiscoverHint(e.target.value)}
-                placeholder="Optional hint (e.g. 'fight team only', 'tourist area')"
-                className="bg-zinc-900 border-zinc-700 text-white"
+            {discoverMode === "bulk" ? (
+              <Textarea
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                rows={6}
+                placeholder={`One per line — queries OR website URLs:\nmuay thai gym chiang mai\nmuay thai phuket\nhttps://tigermuaythai.com\nhttps://example-gym.com`}
+                className="bg-zinc-900 border-zinc-700 text-white text-sm font-mono"
               />
+            ) : (
+              <>
+                <Input
+                  value={discoverQuery}
+                  onChange={(e) => setDiscoverQuery(e.target.value)}
+                  placeholder={
+                    discoverMode === "google"
+                      ? 'e.g. "muay thai gym chiang mai"'
+                      : 'e.g. "Phuket" or "Pai, Mae Hong Son"'
+                  }
+                  className="bg-zinc-900 border-zinc-700 text-white"
+                />
+                {discoverMode === "research" && (
+                  <Input
+                    value={discoverHint}
+                    onChange={(e) => setDiscoverHint(e.target.value)}
+                    placeholder="Optional hint (e.g. 'fight team only', 'tourist area')"
+                    className="bg-zinc-900 border-zinc-700 text-white"
+                  />
+                )}
+              </>
             )}
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 onClick={runDiscovery}
-                disabled={discovering || !discoverQuery.trim()}
+                disabled={
+                  discovering ||
+                  (discoverMode === "bulk" ? !bulkText.trim() : !discoverQuery.trim())
+                }
                 className="bg-orange-500 hover:bg-orange-600"
               >
                 {discovering ? (
@@ -371,6 +445,15 @@ export default function NetworkTab() {
                             </span>
                           )}
                           <span className="text-zinc-600">{gym.source}</span>
+                          {isStale(gym) && (
+                            <span
+                              title={`Last crawled ${gym.last_crawled_at ? new Date(gym.last_crawled_at).toLocaleDateString() : "never"}`}
+                              className="inline-flex items-center gap-1 text-amber-500/80"
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                              stale
+                            </span>
+                          )}
                         </p>
                         {gym.ai_summary && (
                           <p className="text-xs text-zinc-400 mt-1 line-clamp-1">
@@ -614,6 +697,24 @@ function DetailPanel({
             </a>
           )}
         </div>
+
+        {gym.google_photos && gym.google_photos.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {gym.google_photos.slice(0, 6).map((photo, i) =>
+              photo.name ? (
+                <img
+                  key={i}
+                  src={`/api/platform-admin/discovery/photo?name=${encodeURIComponent(
+                    photo.name
+                  )}&w=240`}
+                  alt=""
+                  className="h-20 w-28 object-cover rounded border border-zinc-800 shrink-0 bg-zinc-950"
+                  loading="lazy"
+                />
+              ) : null
+            )}
+          </div>
+        )}
 
         {gym.ai_summary && (
           <div className="rounded bg-zinc-950 border border-zinc-800 p-3">
