@@ -30,7 +30,9 @@ import {
   Link as LinkIcon,
   Copy,
   Map,
+  QrCode,
 } from "lucide-react"
+import Link from "next/link"
 
 type DiscoveryStatus =
   | "pending"
@@ -137,6 +139,27 @@ export default function NetworkTab() {
   const [discovering, setDiscovering] = useState(false)
   const [discoverResult, setDiscoverResult] = useState<string | null>(null)
 
+  // Coverage panel state
+  const [coverageOpen, setCoverageOpen] = useState(true)
+  const [coverage, setCoverage] = useState<{
+    total: number
+    by_status: Record<string, number>
+    by_source: Record<string, number>
+    provinces: Array<{ name: string; total: number; statuses: Record<string, number> }>
+  } | null>(null)
+
+  const fetchCoverage = useCallback(async () => {
+    try {
+      const res = await fetch("/api/platform-admin/discovery/coverage")
+      if (res.ok) {
+        const data = await res.json()
+        setCoverage(data)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
   const fetchGyms = useCallback(async () => {
     setLoading(true)
     try {
@@ -159,6 +182,10 @@ export default function NetworkTab() {
   useEffect(() => {
     fetchGyms()
   }, [fetchGyms])
+
+  useEffect(() => {
+    fetchCoverage()
+  }, [fetchCoverage, gyms.length])
 
   const runDiscovery = async () => {
     if (discoverMode === "bulk") {
@@ -350,6 +377,66 @@ export default function NetworkTab() {
                 <p className="text-sm text-zinc-300 whitespace-pre-wrap">{discoverResult}</p>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {coverage && coverage.total > 0 && (
+        <Card className="border-zinc-800 bg-zinc-900">
+          <CardContent className="p-3">
+            <button
+              onClick={() => setCoverageOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 text-left"
+            >
+              <div className="flex flex-wrap gap-3 items-center text-sm">
+                <span className="text-zinc-400">Coverage</span>
+                <span className="text-white font-medium">{coverage.total} gyms</span>
+                <span className="text-zinc-500">·</span>
+                <span className="text-zinc-300">
+                  {coverage.provinces.length} province{coverage.provinces.length === 1 ? "" : "s"}
+                </span>
+                <span className="text-zinc-500">·</span>
+                {(["pending", "verified", "invited", "onboarded"] as const).map((s) =>
+                  coverage.by_status[s] ? (
+                    <span
+                      key={s}
+                      className={`px-1.5 py-0.5 rounded text-xs ${STATUS_COLORS[s]}`}
+                    >
+                      {coverage.by_status[s]} {s}
+                    </span>
+                  ) : null
+                )}
+              </div>
+              <span className="text-zinc-500 text-xs">
+                {coverageOpen ? "hide" : "show"}
+              </span>
+            </button>
+            {coverageOpen && (
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {coverage.provinces.slice(0, 16).map((p) => (
+                  <button
+                    key={p.name}
+                    onClick={() => setSearch(p.name === "(unknown)" ? "" : p.name)}
+                    className="text-left rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 hover:bg-zinc-900 transition"
+                    title={`Click to filter by ${p.name}`}
+                  >
+                    <p className="text-xs text-zinc-300 truncate">{p.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-zinc-500">
+                      <span className="text-zinc-300">{p.total}</span>
+                      {p.statuses.onboarded ? (
+                        <span className="text-orange-400">·{p.statuses.onboarded}🥊</span>
+                      ) : null}
+                      {p.statuses.verified ? (
+                        <span className="text-emerald-400">·{p.statuses.verified}✓</span>
+                      ) : null}
+                      {p.statuses.invited ? (
+                        <span className="text-amber-400">·{p.statuses.invited}✉</span>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -788,6 +875,13 @@ function DetailPanel({
             <X className="h-3 w-3 mr-1" /> Ignore
           </Button>
         </div>
+
+        <Link
+          href={`/platform-admin/onboard/${gym.id}`}
+          className="flex items-center justify-center gap-1.5 rounded-md bg-orange-500 hover:bg-orange-600 text-white py-2 text-sm font-medium"
+        >
+          <QrCode className="h-4 w-4" /> Onboard from backpack
+        </Link>
 
         <div className="space-y-2 border-t border-zinc-800 pt-3">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Invite</p>
