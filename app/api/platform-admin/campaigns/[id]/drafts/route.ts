@@ -1,0 +1,221 @@
+import { NextResponse } from "next/server"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
+import { applyTargetFilter, resolveAddress } from "@/lib/campaigns/target-filter"
+import { personalizeDraft } from "@/lib/campaigns/personalize"
+import type { TargetFilter, CampaignChannel } from "@/lib/campaigns/types"
+
+/**
+ * GET — list this campaign's existing campaign_sends with their gym info.
+ * POST — generate the next batch of drafts (Claude-personalized) for
+ *        gyms that match the filter and aren't already in the campaign.
+ *        Capped at 5 per call so we stay under serverless timeouts.
+ */
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params
+  const { supabase, isPlatformAdmin } = await getPlatformAdmin()
+  if (!isPlatformAdmin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(_request.url)
+  const status = searchParams.get("status")
+
+  let query = supabase
+    .from("campaign_sends")
+    .select(
+      "id, gym_id, channel, to_address, subject, body, status, " +
+        "drafted_at, approved_at, sent_at, error, " +
+        "discovered_gyms:gym_id(name, name_th, city, province, ai_summary)"
+    )
+    .eq("campaign_id", id)
+    .order("drafted_at", { ascending: false })
+    .limit(500)
+
+  if (status) query = query.eq("status", status)
+
+  const { data, error } = await query
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  const sends = (data || []).map((s) => {
+    const g = s.discovered_gyms as unknown as {
+      name?: string
+      name_th?: string | null
+      city?: string | null
+      province?: string | null
+      ai_summary?: string | null
+    } | null
+    return {
+      id: s.id,
+      gym_id: s.gym_id,
+      gym_name: g?.name || "?",
+      gym_city: g?.city || null,
+      gym_province: g?.province || null,
+      gym_ai_summary: g?.ai_summary || null,
+      channel: s.channel,
+      to_address: s.to_address,
+      subject: s.subject,
+      body: s.body,
+      status: s.status,
+      drafted_at: s.drafted_at,
+      approved_at: s.approved_at,
+      sent_at: s.sent_at,
+      error: s.error,
+    }
+  })
+
+  return NextResponse.json({ sends })
+}
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params
+  const { supabase, isPlatformAdmin } = await getPlatformAdmin()
+  if (!isPlatformAdmin) {
+    return NextResponse.json({ error: "Permission denied" }, { status: 403 })
+  }
+
+  const body = await request.json().catch(() => ({}))
+  const limit = Math.max(1, Math.min(Number(body.limit) || 5, 10))
+
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select(
+      "id, channel, target_filter, subject_template, body_template, " +
+        "personalize_prompt, personalize, status"
+    )
+    .eq("id", id)
+    .single()
+  if (!campaign) {
+    return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
+  }
+
+  // Mark campaign drafting (purely informational)
+  if (campaign.status === "draft") {
+    await supabase.from("campaigns").update({ status: "drafting" }).eq("id", id)
+  }
+
+  const filter = ((campaign.target_filter || {}) as TargetFilter) || {}
+  const channel = campaign.channel as CampaignChannel
+
+  const { rows } = await applyTargetFilter(
+    supabase,
+    { ...filter, limit: limit + 5 }, // tiny over-fetch in case some are skipped
+    {
+      campaignId: campaign.id,
+      selectColumns:
+        "id, name, name_th, city, province, country, website, " +
+          "email, phone, line_id, ai_summary, ai_tags, last_extracted_at",
+    }
+  )
+
+  let generated = 0
+  let skipped = 0
+  const failures: Array<{ gym_id: string; gym_name: string; reason: string }> = []
+  const newSends: string[] = []
+
+  for (const row of rows) {
+    if (generated >= limit) break
+
+    const gymId = row.id as string
+    const address = resolveAddress(channel, {
+      email: row.email as string | null,
+      line_id: row.line_id as string | null,
+      phone: row.phone as string | null,
+    })
+    if (!address) {
+      // Record as skipped so the operator can see it
+      await supabase.from("campaign_sends").insert({
+        campaign_id: campaign.id,
+        gym_id: gymId,
+        channel,
+        to_address: null,
+        status: "skipped",
+        error: `No ${channel} address available`,
+      })
+      skipped++
+      continue
+    }
+
+    try {
+      const draft = await personalizeDraft({
+        gym: {
+          name: row.name as string,
+          name_th: row.name_th as string | null,
+          city: row.city as string | null,
+          province: row.province as string | null,
+          country: row.country as string | null,
+          website: row.website as string | null,
+          ai_summary: row.ai_summary as string | null,
+          ai_tags: row.ai_tags as string[] | null,
+        },
+        channel,
+        subject_template: campaign.subject_template,
+        body_template: campaign.body_template,
+        personalize_prompt: campaign.personalize_prompt,
+        personalize: campaign.personalize ?? true,
+      })
+
+      const { data: send, error } = await supabase
+        .from("campaign_sends")
+        .insert({
+          campaign_id: campaign.id,
+          gym_id: gymId,
+          channel,
+          to_address: address,
+          subject: draft.subject,
+          body: draft.body,
+          status: "draft",
+        })
+        .select("id")
+        .single()
+
+      if (error) {
+        failures.push({
+          gym_id: gymId,
+          gym_name: (row.name as string) || gymId,
+          reason: error.message,
+        })
+      } else {
+        if (send) newSends.push(send.id)
+        generated++
+      }
+    } catch (err) {
+      failures.push({
+        gym_id: gymId,
+        gym_name: (row.name as string) || gymId,
+        reason: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
+
+  // Refresh cached counts; flip to review when drafts exist
+  const { count } = await supabase
+    .from("campaign_sends")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", id)
+  const updates: Record<string, unknown> = { total_drafted: count ?? 0 }
+  if ((count ?? 0) > 0 && campaign.status === "drafting") {
+    updates.status = "review"
+  }
+  await supabase.from("campaigns").update(updates).eq("id", id)
+
+  // Estimate remaining (rough — count of filter-eligible minus already-in-campaign)
+  const { rows: remainingRows } = await applyTargetFilter(supabase, filter, {
+    campaignId: campaign.id,
+  })
+
+  return NextResponse.json({
+    generated,
+    skipped,
+    failures,
+    new_send_ids: newSends,
+    remaining: remainingRows.length,
+  })
+}

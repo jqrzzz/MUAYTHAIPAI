@@ -258,6 +258,48 @@ export function buildPlatformTools(supabase: SupabaseClient) {
       },
     }),
 
+    campaigns_overview: tool({
+      description:
+        "Summary of all outreach campaigns: counts by status, total drafted/sent/claimed across the network. Use when the operator asks how outreach is going.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const { data: campaigns } = await supabase
+          .from("campaigns")
+          .select("id, name, status, total_targets, total_drafted, total_sent, total_claimed, created_at")
+          .order("created_at", { ascending: false })
+          .limit(50)
+        const list = campaigns || []
+        const byStatus: Record<string, number> = {}
+        let totDrafted = 0,
+          totSent = 0,
+          totClaimed = 0
+        for (const c of list) {
+          byStatus[c.status] = (byStatus[c.status] ?? 0) + 1
+          totDrafted += c.total_drafted ?? 0
+          totSent += c.total_sent ?? 0
+          totClaimed += c.total_claimed ?? 0
+        }
+        return {
+          total_campaigns: list.length,
+          by_status: byStatus,
+          totals: {
+            drafted: totDrafted,
+            sent: totSent,
+            claimed: totClaimed,
+            claim_rate:
+              totSent > 0 ? Math.round((totClaimed / totSent) * 100) / 100 : 0,
+          },
+          recent: list.slice(0, 10).map((c) => ({
+            id: c.id,
+            name: c.name,
+            status: c.status,
+            sent: c.total_sent,
+            claimed: c.total_claimed,
+          })),
+        }
+      },
+    }),
+
     trainer_passport: tool({
       description:
         "Look up a trainer by email and return their network footprint — total signoffs, students touched, gyms taught at, levels covered, recent activity.",

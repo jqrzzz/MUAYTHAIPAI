@@ -32,6 +32,7 @@ import {
   Map,
   GraduationCap,
   UserCheck,
+  Megaphone,
 } from "lucide-react"
 import CoursesTab from "@/components/admin/courses-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
@@ -39,6 +40,7 @@ import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
 import TrainersTab from "@/components/platform-admin/trainers-tab"
 import TodayPanel from "@/components/platform-admin/today-panel"
+import CampaignsTab from "@/components/platform-admin/campaigns-tab"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -152,6 +154,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     | "network"
     | "students"
     | "trainers"
+    | "campaigns"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -493,6 +496,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             { id: "overview", label: "Overview", icon: Building2 },
             { id: "command", label: "Command", icon: Sparkles },
             { id: "network", label: "Network", icon: Map },
+            { id: "campaigns", label: "Campaigns", icon: Megaphone },
             { id: "students", label: "Students", icon: GraduationCap },
             { id: "trainers", label: "Trainers", icon: UserCheck },
             { id: "gyms", label: "Gyms", icon: Users },
@@ -534,6 +538,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
 
         {/* Trainers Tab — network-wide trainer passport */}
         {activeTab === "trainers" && <TrainersTab />}
+
+        {/* Campaigns Tab — AI-personalized outreach to discovered gyms */}
+        {activeTab === "campaigns" && <CampaignsTab />}
 
         {/* Courses Tab — author the platform-wide cert ladder */}
         {activeTab === "courses" && (
