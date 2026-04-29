@@ -29,6 +29,8 @@ interface PersonalizeInput {
   body_template: string
   personalize_prompt: string | null
   personalize: boolean
+  /** If provided, replaces {{invite_url}} in the body. */
+  inviteUrl?: string | null
 }
 
 export interface PersonalizedDraft {
@@ -41,7 +43,11 @@ const FillSchema = z.object({
   body: z.string(),
 })
 
-function fillPlaceholders(text: string, gym: PersonalizeInput["gym"]): string {
+function fillPlaceholders(
+  text: string,
+  gym: PersonalizeInput["gym"],
+  inviteUrl?: string | null
+): string {
   return text
     .replace(/\{\{\s*gym_name\s*\}\}/gi, gym.name || "")
     .replace(/\{\{\s*name_th\s*\}\}/gi, gym.name_th || gym.name || "")
@@ -51,15 +57,20 @@ function fillPlaceholders(text: string, gym: PersonalizeInput["gym"]): string {
     .replace(/\{\{\s*ai_summary\s*\}\}/gi, gym.ai_summary || "")
     .replace(/\{\{\s*ai_tags\s*\}\}/gi, (gym.ai_tags || []).join(", "))
     .replace(/\{\{\s*website\s*\}\}/gi, gym.website || "")
+    .replace(/\{\{\s*invite_url\s*\}\}/gi, inviteUrl || "")
 }
 
 export async function personalizeDraft(
   input: PersonalizeInput
 ): Promise<PersonalizedDraft> {
   const subjectFilled = input.subject_template
-    ? fillPlaceholders(input.subject_template, input.gym)
+    ? fillPlaceholders(input.subject_template, input.gym, input.inviteUrl)
     : null
-  const bodyFilled = fillPlaceholders(input.body_template, input.gym)
+  const bodyFilled = fillPlaceholders(
+    input.body_template,
+    input.gym,
+    input.inviteUrl
+  )
 
   if (!input.personalize) {
     return { subject: subjectFilled, body: bodyFilled }
@@ -74,7 +85,9 @@ export async function personalizeDraft(
           ? "This is a WhatsApp message — short, casual, no HTML."
           : "This is a test message."
 
-  const system = `You polish outreach messages to Muay Thai gym owners in Thailand for the MUAYTHAIPAI network platform. The operator gives you a template that's been placeholder-filled. Rewrite it so the message reads naturally for THIS specific gym, weaving in their specifics (city, summary, tags) where they fit. Keep the operator's intent, voice, and call-to-action. Do not invent facts about the gym — only use what's provided. Keep it short and warm. ${channelHint}`
+  const system = `You polish outreach messages to Muay Thai gym owners in Thailand for the MUAYTHAIPAI network platform. The operator gives you a template that's been placeholder-filled. Rewrite it so the message reads naturally for THIS specific gym, weaving in their specifics (city, summary, tags) where they fit. Keep the operator's intent, voice, and call-to-action. Do not invent facts about the gym — only use what's provided. Keep it short and warm.
+
+CRITICAL: preserve any URLs verbatim. Do not rewrite, paraphrase, shorten, or remove URLs in the body. The call-to-action link must remain exactly as written. ${channelHint}`
 
   const userPrompt = `${input.personalize_prompt ? `Operator note: ${input.personalize_prompt}\n\n` : ""}Target gym facts:
 - Name: ${input.gym.name}${input.gym.name_th ? ` (${input.gym.name_th})` : ""}
@@ -93,11 +106,16 @@ Output the polished version.`
       prompt: userPrompt,
       temperature: 0.4,
     })
+    let body = result.object.body.trim()
+    // Safety net: if the AI dropped the invite link, append it.
+    if (input.inviteUrl && !body.includes(input.inviteUrl)) {
+      body = `${body}\n\n${input.inviteUrl}`
+    }
     return {
       subject: subjectFilled
         ? result.object.subject?.trim() || subjectFilled
         : null,
-      body: result.object.body.trim(),
+      body,
     }
   } catch (err) {
     // Fall back to placeholder-filled version on AI failure

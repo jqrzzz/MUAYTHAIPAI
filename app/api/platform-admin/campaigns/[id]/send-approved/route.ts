@@ -94,15 +94,28 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     })
 
     if (result.ok) {
+      const sentAt = new Date().toISOString()
       await supabase
         .from("campaign_sends")
         .update({
           status: "sent",
-          sent_at: new Date().toISOString(),
+          sent_at: sentAt,
           provider_id: result.provider_id || null,
           error: null,
         })
         .eq("id", s.id)
+      // Reflect the campaign send in the discovery pipeline: the gym
+      // has now been actively contacted, so the Network UI shouldn't
+      // show it as "pending" anymore.
+      await supabase
+        .from("discovered_gyms")
+        .update({
+          status: "invited",
+          invited_at: sentAt,
+          invite_email: s.to_address,
+        })
+        .eq("id", s.gym_id)
+        .neq("status", "onboarded")
       sent++
     } else {
       await supabase

@@ -105,16 +105,27 @@ export async function POST(request: Request) {
     })
 
     // Link discovery invite back to the new org so the network map flips
-    // this gym from 'invited' to 'onboarded'
+    // this gym from 'invited' to 'onboarded', and mark any campaign_sends
+    // pointing at this gym as 'claimed' for attribution.
     if (discoveredGymId) {
+      const claimedAt = new Date().toISOString()
       await supabase
         .from("discovered_gyms")
         .update({
           status: "onboarded",
           linked_org_id: org.id,
-          claimed_at: new Date().toISOString(),
+          claimed_at: claimedAt,
         })
         .eq("id", discoveredGymId)
+
+      // Mark every send pointing at this gym (across all campaigns) as
+      // claimed. We don't know which specific campaign drove the claim,
+      // so we credit every campaign that contacted them.
+      await supabase
+        .from("campaign_sends")
+        .update({ status: "claimed", claimed_at: claimedAt })
+        .eq("gym_id", discoveredGymId)
+        .in("status", ["sent", "opened", "clicked"])
     }
 
     // Create trial subscription
