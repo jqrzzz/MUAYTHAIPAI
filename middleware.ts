@@ -37,7 +37,6 @@ const redirects: Record<string, string> = {
 
   // Programs and certification
   "/programs": "/certificate-programs",
-  "/courses": "/certificate-programs",
   "/certification": "/certificate-programs",
   "/levels": "/certificate-programs",
   "/belts": "/certificate-programs",
@@ -47,7 +46,6 @@ const redirects: Record<string, string> = {
   "/packages": "/train-and-stay",
   "/stay-and-train": "/train-and-stay",
   "/booking": "/train-and-stay",
-  "/book": "/train-and-stay",
   "/reserve": "/train-and-stay",
 
   // Location and contact
@@ -87,8 +85,7 @@ const redirects: Record<string, string> = {
   "/images": "/fighters",
   "/media": "/fighters",
 
-  // FAQ and support
-  "/faq": "/faq",
+  // FAQ aliases (the real page lives at /faq)
   "/help": "/faq",
   "/support": "/faq",
   "/questions": "/faq",
@@ -135,10 +132,12 @@ const redirects: Record<string, string> = {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname.toLowerCase()
 
-  // Handle redirects first
-  if (redirects[pathname]) {
+  // Handle redirects first. Skip self-redirects so a stale entry can't
+  // create an infinite 301 loop that takes the page down.
+  const target = redirects[pathname]
+  if (target && target !== pathname) {
     const url = request.nextUrl.clone()
-    url.pathname = redirects[pathname]
+    url.pathname = target
     return NextResponse.redirect(url, 301)
   }
 
