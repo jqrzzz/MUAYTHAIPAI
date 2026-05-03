@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { z } from "zod"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { getLevelById } from "@/lib/certification-levels"
 import { notifyCourseCompleted } from "@/lib/notifications"
+import { getOrgMember } from "@/lib/auth-helpers"
 
 const serviceClient = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,6 +12,13 @@ const serviceClient = createServiceClient(
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+
+const BulkSignoffSchema = z.object({
+  level: z.string().min(1),
+  skill_index: z.number().int().min(0),
+  student_ids: z.array(z.string().uuid()).min(1).max(100),
+  notes: z.string().optional(),
+})
 
 /**
  * Bulk sign off the SAME skill for many students at once.
@@ -21,51 +29,26 @@ export const dynamic = "force-dynamic"
  * student that crossed the threshold with this signoff.
  */
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  const { supabase, user, membership } = await getOrgMember()
+  if (!user || !membership) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  const { data: membership } = await supabase
-    .from("org_members")
-    .select("org_id, role")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .single()
-  if (!membership || !["owner", "admin", "trainer"].includes(membership.role)) {
+  if (!["owner", "admin", "trainer"].includes(String(membership.role))) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 })
   }
 
-  const body = await request.json().catch(() => null)
-  if (!body) {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 })
-  }
-
-  const { level, skill_index, student_ids, notes } = body as {
-    level?: string
-    skill_index?: number
-    student_ids?: string[]
-    notes?: string
-  }
-
-  if (!level || skill_index === undefined || !Array.isArray(student_ids)) {
+  const parsed = BulkSignoffSchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "level, skill_index, and student_ids[] are required" },
+      { error: "Invalid body", details: parsed.error.flatten() },
       { status: 400 }
     )
   }
+  const { level, skill_index, student_ids, notes } = parsed.data
   const ids = student_ids
-    .filter((s): s is string => typeof s === "string" && s.length > 0)
-    .slice(0, 100)
-  if (ids.length === 0) {
-    return NextResponse.json({ error: "student_ids must be non-empty" }, { status: 400 })
-  }
 
   const levelConfig = getLevelById(level)
-  if (!levelConfig || skill_index < 0 || skill_index >= levelConfig.skills.length) {
+  if (!levelConfig || skill_index >= levelConfig.skills.length) {
     return NextResponse.json({ error: "Invalid level or skill_index" }, { status: 400 })
   }
 
@@ -120,33 +103,32 @@ export async function POST(request: Request) {
 
   // Fire completion notifications (best-effort, non-blocking on failure)
   if (completedNow.length > 0) {
-    try {
-      const { data: profiles } = await serviceClient
-        .from("users")
-        .select("id, full_name")
-        .in("id", completedNow)
-      const nameById = new Map<string, string>()
-      for (const p of profiles || []) {
-        nameById.set(p.id, p.full_name || "Student")
-      }
-      await Promise.all(
-        completedNow.map((sid) =>
-          notifyCourseCompleted({
-            orgId: membership.org_id,
-            studentId: sid,
-            studentName: nameById.get(sid) || "Student",
-            courseTitle: "Skill Assessment",
-            courseId: "",
-            certificateLevel: level,
-            levelName: levelConfig.name,
-          }).catch((err) => {
-            console.warn("[skills/bulk] notify failed for", sid, err)
-          })
-        )
-      )
-    } catch {
-      /* swallow — notifications are best-effort */
+    const { data: profiles, error: profilesError } = await serviceClient
+      .from("users")
+      .select("id, full_name")
+      .in("id", completedNow)
+    if (profilesError) {
+      console.warn("[skills/bulk] profile lookup failed", profilesError)
     }
+    const nameById = new Map<string, string>()
+    for (const p of profiles || []) {
+      nameById.set(p.id, p.full_name || "Student")
+    }
+    await Promise.all(
+      completedNow.map((sid) =>
+        notifyCourseCompleted({
+          orgId: membership.org_id,
+          studentId: sid,
+          studentName: nameById.get(sid) || "Student",
+          courseTitle: "Skill Assessment",
+          courseId: "",
+          certificateLevel: level,
+          levelName: levelConfig.name,
+        }).catch((err) => {
+          console.warn("[skills/bulk] notify failed for", sid, err)
+        })
+      )
+    )
   }
 
   return NextResponse.json({

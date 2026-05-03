@@ -1,6 +1,29 @@
 import { createClient } from "@/lib/supabase/server"
 
 /**
+ * Look up the active org membership for the current user.
+ * Returns `{ supabase, user, membership }` — `user` is null if not signed in,
+ * `membership` is null if the user has no active org membership.
+ * Callers apply their own role gate.
+ */
+export async function getOrgMember() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { supabase, user: null, membership: null }
+
+  const { data: membership } = await supabase
+    .from("org_members")
+    .select("org_id, role")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .single()
+
+  return { supabase, user, membership }
+}
+
+/**
  * Check if the current user has promoter-level access (owner, admin, or promoter role).
  * Returns org info or null if unauthorized.
  */

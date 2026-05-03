@@ -1,23 +1,8 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { getOrgMember } from "@/lib/auth-helpers"
 
 const DAY = 86400_000
-
-async function getMembership() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { supabase, membership: null }
-  const { data: membership } = await supabase
-    .from("org_members")
-    .select("org_id, role")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .single()
-  return { supabase, membership }
-}
 
 /**
  * Gym-scoped reports — cert pipeline, student growth, services
@@ -26,7 +11,7 @@ async function getMembership() {
  * passed by the parent page).
  */
 export async function GET() {
-  const { supabase, membership } = await getMembership()
+  const { supabase, membership } = await getOrgMember()
   if (!membership) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
@@ -39,7 +24,6 @@ export async function GET() {
     certsRes,
     bookings90Res,
     studentsRes,
-    servicesMonthRes,
     signoffsRes,
   ] = await Promise.all([
     supabase
@@ -59,16 +43,14 @@ export async function GET() {
       .eq("org_id", orgId)
       .gte("booking_date", ago(90).slice(0, 10))
       .order("booking_date", { ascending: false }),
-    // All students who've ever booked at this gym (for growth + active)
+    // Bookings within the last year — used for first-seen / active-30d
+    // student aggregation. Bounded so a busy gym doesn't load every row ever.
     supabase
       .from("bookings")
       .select("user_id, booking_date")
       .eq("org_id", orgId)
-      .not("user_id", "is", null),
-    supabase
-      .from("services")
-      .select("id, name, category, is_active")
-      .eq("org_id", orgId),
+      .not("user_id", "is", null)
+      .gte("booking_date", ago(365).slice(0, 10)),
     supabase
       .from("skill_signoffs")
       .select("signed_off_by, signed_off_at")
@@ -200,6 +182,5 @@ export async function GET() {
     top_services: topServices,
     sparkline_30d: sparkline,
     top_trainers_30d: topTrainers,
-    services_count: (servicesMonthRes.data || []).filter((s) => s.is_active).length,
   })
 }

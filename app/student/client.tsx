@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -316,6 +316,36 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
   const userName = profile?.full_name || user.email?.split("@")[0] || "Fighter"
   const greeting = getGreeting()
 
+  // Pick the level the student is most actively working on:
+  //   1. enrolled-but-not-earned (most recent enrolment)
+  //   2. highest level with signoffs but unearned
+  //   3. highest level earned (showing achievement)
+  const currentJourney = useMemo(() => {
+    if (certProgress.length === 0) return null
+    let inProgress: typeof certProgress[number] | null = null
+    let partial: typeof certProgress[number] | null = null
+    let earnedLatest: typeof certProgress[number] | null = null
+    for (const lvl of certProgress) {
+      if (lvl.enrolled && !lvl.earned && (!inProgress || lvl.number > inProgress.number)) {
+        inProgress = lvl
+      }
+      if (!lvl.earned && lvl.skillsSignedOff > 0 && (!partial || lvl.number > partial.number)) {
+        partial = lvl
+      }
+      if (lvl.earned && (!earnedLatest || lvl.number > earnedLatest.number)) {
+        earnedLatest = lvl
+      }
+    }
+    const current = inProgress || partial || earnedLatest
+    if (!current) return null
+    const remaining = current.skillsTotal - current.skillsSignedOff
+    const pct =
+      current.skillsTotal > 0
+        ? Math.round((current.skillsSignedOff / current.skillsTotal) * 100)
+        : 0
+    return { current, remaining, pct }
+  }, [certProgress])
+
   return (
     <div className="min-h-screen bg-neutral-950">
       {/* App-style Header */}
@@ -380,30 +410,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             </div>
 
             {/* Current cert journey */}
-            {(() => {
-              if (certProgress.length === 0) return null
-              // Pick the level the student is most actively working on:
-              //   1. enrolled-but-not-earned (most recent enrolment)
-              //   2. highest level with signoffs but unearned
-              //   3. highest level earned (showing achievement)
-              const inProgress = certProgress
-                .filter((l) => l.enrolled && !l.earned)
-                .sort((a, b) => b.number - a.number)[0]
-              const partial = certProgress
-                .filter((l) => !l.earned && l.skillsSignedOff > 0)
-                .sort((a, b) => b.number - a.number)[0]
-              const earnedLatest = certProgress
-                .filter((l) => l.earned)
-                .sort((a, b) => b.number - a.number)[0]
-              const current = inProgress || partial || earnedLatest
-              if (!current) return null
-              const remaining = current.skillsTotal - current.skillsSignedOff
-              const pct =
-                current.skillsTotal > 0
-                  ? Math.round(
-                      (current.skillsSignedOff / current.skillsTotal) * 100
-                    )
-                  : 0
+            {currentJourney && (() => {
+              const { current, remaining, pct } = currentJourney
               return (
                 <div>
                   <div className="flex items-center justify-between mb-3">

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { generateObject } from "ai"
 import { z } from "zod"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { FAQ_CATEGORY_VALUES } from "@/lib/chat/faq-categories"
+import { getOrgMember } from "@/lib/auth-helpers"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -15,17 +16,7 @@ const SuggestionSchema = z.object({
       z.object({
         question: z.string(),
         answer: z.string(),
-        category: z
-          .enum([
-            "general",
-            "training",
-            "pricing",
-            "accommodation",
-            "certification",
-            "logistics",
-            "culture",
-          ])
-          .default("general"),
+        category: z.enum(FAQ_CATEGORY_VALUES).default("general"),
       })
     )
     .min(1)
@@ -40,30 +31,18 @@ const SuggestionSchema = z.object({
  * inserted via the existing /api/admin/faqs POST.
  */
 export async function POST() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  const { supabase, membership } = await getOrgMember()
+  if (!membership) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  const { data: membership } = await supabase
-    .from("org_members")
-    .select("org_id, role")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .single()
-
-  if (!membership || !["owner", "admin"].includes(String(membership.role))) {
+  if (!["owner", "admin"].includes(String(membership.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const orgId = membership.org_id
 
   // Pull what we know about the gym
-  const [orgRes, servicesRes, trainersRes, settingsRes, certsRes] =
+  const [orgRes, servicesRes, trainersRes, settingsRes, certsRes, existingRes] =
     await Promise.all([
       supabase
         .from("organizations")
@@ -90,6 +69,7 @@ export async function POST() {
         .select("level")
         .eq("org_id", orgId)
         .eq("status", "active"),
+      supabase.from("gym_faqs").select("question").eq("org_id", orgId),
     ])
 
   const org = orgRes.data
@@ -97,12 +77,7 @@ export async function POST() {
     return NextResponse.json({ error: "Gym not found" }, { status: 404 })
   }
 
-  // Existing FAQ questions — we'll tell the AI to skip these
-  const { data: existing } = await supabase
-    .from("gym_faqs")
-    .select("question")
-    .eq("org_id", orgId)
-  const existingQuestions = (existing || []).map((r) => r.question.trim())
+  const existingQuestions = (existingRes.data || []).map((r) => r.question.trim())
 
   const certLevelsIssued = new Set((certsRes.data || []).map((c) => c.level))
   const certLevelsLine = CERTIFICATION_LEVELS.filter((l) => certLevelsIssued.has(l.id))

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Banknote,
@@ -47,8 +47,16 @@ interface ReportData {
   top_services: Array<{ name: string; bookings: number; revenue: number }>
   sparkline_30d: Array<{ date: string; bookings: number; paid: number }>
   top_trainers_30d: Array<{ id: string; name: string; signoffs: number }>
-  services_count: number
 }
+
+const TONE_COLOR = {
+  amber: "text-amber-400",
+  emerald: "text-emerald-400",
+  orange: "text-orange-400",
+  blue: "text-blue-400",
+} as const
+
+type Tone = keyof typeof TONE_COLOR
 
 function calculatePeriodStats(bookings: AnalyticsBooking[], days: number) {
   const cutoff = new Date()
@@ -142,16 +150,9 @@ function StatCard({
   label: string
   value: string | number
   sub?: string
-  tone?: "amber" | "emerald" | "orange" | "blue"
+  tone?: Tone
 }) {
-  const color =
-    tone === "emerald"
-      ? "text-emerald-400"
-      : tone === "orange"
-        ? "text-orange-400"
-        : tone === "blue"
-          ? "text-blue-400"
-          : "text-amber-400"
+  const color = TONE_COLOR[tone]
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
       <div className="flex items-center gap-2 text-xs text-neutral-400">
@@ -185,23 +186,27 @@ export default function ReportsTab({ analyticsBookings, todayDate }: ReportsTabP
     refresh()
   }, [refresh])
 
-  const weekStats = calculatePeriodStats(analyticsBookings, 7)
-  const monthStats = calculatePeriodStats(analyticsBookings, 30)
+  const weekStats = useMemo(() => calculatePeriodStats(analyticsBookings, 7), [analyticsBookings])
+  const monthStats = useMemo(() => calculatePeriodStats(analyticsBookings, 30), [analyticsBookings])
 
-  const todayBookings = analyticsBookings.filter((b) => b.booking_date === todayDate)
-  const todayPaid = todayBookings.filter((b) => b.payment_status === "paid")
-  const todayCash = todayPaid.filter((b) => b.payment_method === "cash")
-  const todayCard = todayPaid.filter((b) => b.payment_method === "stripe" || b.payment_method === "card")
-  const sum = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_thb || 0), 0)
-  const sumUsd = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_usd || 0), 0)
-  const todayStats = {
-    total: todayBookings.length,
-    paid: todayPaid.length,
-    cashCount: todayCash.length,
-    cardCount: todayCard.length,
-    cashRevenue: sum(todayCash),
-    cardRevenue: sumUsd(todayCard),
-  }
+  const todayStats = useMemo(() => {
+    const todayBookings = analyticsBookings.filter((b) => b.booking_date === todayDate)
+    const todayPaid = todayBookings.filter((b) => b.payment_status === "paid")
+    const todayCash = todayPaid.filter((b) => b.payment_method === "cash")
+    const todayCard = todayPaid.filter(
+      (b) => b.payment_method === "stripe" || b.payment_method === "card"
+    )
+    const sum = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_thb || 0), 0)
+    const sumUsd = (arr: AnalyticsBooking[]) => arr.reduce((s, b) => s + (b.payment_amount_usd || 0), 0)
+    return {
+      total: todayBookings.length,
+      paid: todayPaid.length,
+      cashCount: todayCash.length,
+      cardCount: todayCard.length,
+      cashRevenue: sum(todayCash),
+      cardRevenue: sumUsd(todayCard),
+    }
+  }, [analyticsBookings, todayDate])
 
   const sparklineMax = report
     ? Math.max(...report.sparkline_30d.map((d) => d.bookings), 1)
