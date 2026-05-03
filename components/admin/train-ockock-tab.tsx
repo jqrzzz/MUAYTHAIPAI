@@ -31,6 +31,7 @@ import {
   Loader2,
   Check,
 } from "lucide-react"
+import { FAQ_CATEGORIES } from "@/lib/chat/faq-categories"
 
 const OckOckAvatar = ({ size = 32 }: { size?: number }) => (
   <Image src="/images/ockock-avatar.png" alt="OckOck" width={size} height={size} className="rounded-full" />
@@ -43,15 +44,6 @@ interface FAQ {
   category: string
   is_active: boolean
 }
-
-const FAQ_CATEGORIES = [
-  { value: "pricing", label: "Pricing" },
-  { value: "schedule", label: "Schedule" },
-  { value: "location", label: "Location" },
-  { value: "training", label: "Training" },
-  { value: "booking", label: "Booking" },
-  { value: "general", label: "General" },
-]
 
 export default function TrainOckockTab() {
   const [faqs, setFaqs] = useState<FAQ[]>([])
@@ -101,21 +93,32 @@ export default function TrainOckockTab() {
   const acceptAiSuggestions = async () => {
     if (aiPicked.size === 0) return
     setAiSaving(true)
+    setAiError(null)
     try {
       const picked = aiSuggestions.filter((_, i) => aiPicked.has(i))
-      for (const f of picked) {
-        await fetch("/api/admin/faqs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question: f.question,
-            answer: f.answer,
-            category: f.category || "general",
-          }),
-        })
-      }
-      setAiSuggestOpen(false)
+      const results = await Promise.allSettled(
+        picked.map((f) =>
+          fetch("/api/admin/faqs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              question: f.question,
+              answer: f.answer,
+              category: f.category || "general",
+            }),
+          }).then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            return res
+          })
+        )
+      )
+      const failed = results.filter((r) => r.status === "rejected").length
       fetchFaqs()
+      if (failed === 0) {
+        setAiSuggestOpen(false)
+      } else {
+        setAiError(`Added ${picked.length - failed} of ${picked.length}. ${failed} failed — try again.`)
+      }
     } finally {
       setAiSaving(false)
     }

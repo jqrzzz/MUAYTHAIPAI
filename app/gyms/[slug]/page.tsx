@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { aggregateCertActivity } from "@/lib/certification-levels"
 import GymPageClient from "./client"
 
 interface GymPageProps {
@@ -75,18 +76,7 @@ export default async function GymPage({ params }: GymPageProps) {
       .eq("status", "active"),
   ])
 
-  // Aggregate cert ladder activity per level — used by the public page
-  // to show prospective students what this gym actually issues.
-  const issuedByLevel: Record<string, number> = {}
-  for (const c of certsRes.data || []) {
-    issuedByLevel[c.level] = (issuedByLevel[c.level] ?? 0) + 1
-  }
-  const enrolledByLevel: Record<string, number> = {}
-  for (const e of enrollmentsRes.data || []) {
-    enrolledByLevel[e.level] = (enrolledByLevel[e.level] ?? 0) + 1
-  }
-  const totalCerts = (certsRes.data || []).length
-  const totalEnrolled = (enrollmentsRes.data || []).length
+  const certActivity = aggregateCertActivity(certsRes.data, enrollmentsRes.data)
 
   // Check if user is logged in
   const {
@@ -100,12 +90,7 @@ export default async function GymPage({ params }: GymPageProps) {
       trainers={trainersRes.data || []}
       settings={settingsRes.data}
       user={user}
-      certActivity={{
-        issuedByLevel,
-        enrolledByLevel,
-        totalCerts,
-        totalEnrolled,
-      }}
+      certActivity={certActivity}
     />
   )
 }

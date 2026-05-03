@@ -148,3 +148,33 @@ export function getPreviousLevel(id: string): CertificationLevel | undefined {
   const idx = getLevelIndex(id)
   return idx > 0 ? CERTIFICATION_LEVELS[idx - 1] : undefined
 }
+
+/**
+ * Tally certificates and active enrolments by level. Used by the gym
+ * admin reports tab and the public gym page to render cert-ladder
+ * activity. Both inputs are nullable to match Supabase result shapes.
+ */
+export function aggregateCertActivity(
+  certificates: ReadonlyArray<{ level: string }> | null | undefined,
+  enrollments: ReadonlyArray<{ level: string }> | null | undefined
+): {
+  issuedByLevel: Record<string, number>
+  enrolledByLevel: Record<string, number>
+  totalCerts: number
+  totalEnrolled: number
+} {
+  const issuedByLevel: Record<string, number> = {}
+  for (const c of certificates || []) {
+    issuedByLevel[c.level] = (issuedByLevel[c.level] ?? 0) + 1
+  }
+  const enrolledByLevel: Record<string, number> = {}
+  for (const e of enrollments || []) {
+    enrolledByLevel[e.level] = (enrolledByLevel[e.level] ?? 0) + 1
+  }
+  return {
+    issuedByLevel,
+    enrolledByLevel,
+    totalCerts: (certificates || []).length,
+    totalEnrolled: (enrollments || []).length,
+  }
+}
