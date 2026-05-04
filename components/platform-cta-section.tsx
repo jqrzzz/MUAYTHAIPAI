@@ -106,18 +106,18 @@ export function PlatformCtaSection() {
                 : "bg-orange-500 text-white hover:bg-orange-600"
             }`}
           >
-            List your gym — free 30-day trial
+            Start free 30-day trial
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
-            href="/gyms"
+            href="/for-gyms"
             className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold transition-colors ${
               isDark
                 ? "border border-white/20 text-white hover:bg-white/5"
                 : "border border-gray-300 text-gray-700 hover:bg-gray-50"
             }`}
           >
-            Browse the network
+            Learn more
           </Link>
         </div>
 

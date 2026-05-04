@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, GraduationCap } from "lucide-react"
+import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, GraduationCap, Building2 } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 
@@ -76,6 +76,12 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
   ]
 
   const loginItems = [
+    {
+      icon: Building2,
+      label: "For Gym Owners",
+      href: "/for-gyms",
+      description: "Run your Muay Thai gym with OckOck — free 30-day trial",
+    },
     {
       icon: User,
       label: "Member Login",
