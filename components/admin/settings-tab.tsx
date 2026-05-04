@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Save, Clock, Bell, Plus, X } from "lucide-react"
+import EmbedSnippetCard from "@/components/admin/embed-snippet-card"
 
 export interface SettingsOrgSettings {
   description?: string | null
@@ -634,6 +635,9 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
           </div>
         </CardContent>
       </Card>
+
+      {/* Embed widget snippet — only renders if we have a slug */}
+      {organization.slug && <EmbedSnippetCard slug={organization.slug} />}
 
       {/* Save Button */}
       <div className="flex items-center gap-4">

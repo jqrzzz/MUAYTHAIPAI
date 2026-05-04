@@ -29,7 +29,7 @@ interface OckOckChatWidgetProps {
   orgSlug: string
 }
 
-const HIDDEN_PREFIXES = ["/admin", "/login", "/signup", "/ockock", "/a/"]
+const HIDDEN_PREFIXES = ["/admin", "/login", "/signup", "/ockock", "/a/", "/embed"]
 
 export default function OckOckChatWidget({ orgSlug }: OckOckChatWidgetProps) {
   const pathname = usePathname()
