@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
+import { ensureChatGroups } from "@/lib/chat/bootstrap"
 
 // Use service role to create orgs (no auth required for signup)
 const supabase = createClient(
@@ -134,6 +135,10 @@ export async function POST(request: Request) {
       status: "trial",
       price_thb: 0,
     })
+
+    // Bootstrap the OckOck chat groups (public_inbox + owner_assist) so
+    // OckOck works on day one without a "Chat is not set up yet" detour.
+    await ensureChatGroups(supabase, org.id)
 
     // Create invite token for the owner
     const token = crypto.randomUUID()

@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import OckOckChatWidget from "@/components/public/ockock-chat-widget"
 
 interface GymPageClientProps {
   gym: {
@@ -440,6 +441,11 @@ export default function GymPageClient({
           </CardContent>
         </Card>
       </main>
+
+      {/* OckOck for THIS gym — speaks for the gym whose page you're on,
+          not the global Wisarut demo widget. forceVisible because the
+          global widget hides on /gyms paths. */}
+      <OckOckChatWidget orgSlug={gym.slug} forceVisible />
     </div>
   )
 }

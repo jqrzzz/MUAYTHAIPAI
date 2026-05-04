@@ -27,11 +27,31 @@ function getSessionId(): string {
 
 interface OckOckChatWidgetProps {
   orgSlug: string
+  /**
+   * Skip the global hidden-prefixes check. Set to true when mounting the
+   * widget directly inside a page (e.g. /gyms/[slug]) where we want the
+   * widget to appear regardless of the auto-hide rules used by the global
+   * mount in app/layout.tsx.
+   */
+  forceVisible?: boolean
 }
 
-const HIDDEN_PREFIXES = ["/admin", "/login", "/signup", "/ockock", "/a/", "/embed"]
+// The global widget mounted in app/layout.tsx represents Wisarut Family
+// Gym (the canonical demo OckOck). We hide it on routes where another
+// OckOck instance owns the page — gym admin (no public widget), the
+// embed view (its own OckOck), and individual gym pages (each gym
+// renders its own widget pointing at its own slug, with forceVisible).
+const HIDDEN_PREFIXES = [
+  "/admin",
+  "/login",
+  "/signup",
+  "/ockock",
+  "/a/",
+  "/embed",
+  "/gyms",
+]
 
-export default function OckOckChatWidget({ orgSlug }: OckOckChatWidgetProps) {
+export default function OckOckChatWidget({ orgSlug, forceVisible = false }: OckOckChatWidgetProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -39,7 +59,7 @@ export default function OckOckChatWidget({ orgSlug }: OckOckChatWidgetProps) {
   const [loading, setLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  if (HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) return null
+  if (!forceVisible && HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) return null
 
   useEffect(() => {
     if (scrollRef.current) {
