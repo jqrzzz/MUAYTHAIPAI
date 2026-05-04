@@ -380,7 +380,7 @@ export default function CourseModulesView({
                     )}
                   </div>
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="ghost" onClick={() => openSuggest(mod)} className="text-orange-400 hover:text-orange-300 h-8 w-8 p-0" title="AI suggest lessons">
+                    <Button size="sm" variant="ghost" onClick={() => openSuggest(mod)} className="text-orange-400 hover:text-orange-300 h-8 w-8 p-0" title="OckOck suggests lessons">
                       <Sparkles className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => openAddLesson(mod.id)} className="text-neutral-400 hover:text-white h-8 w-8 p-0" title="Add lesson">
@@ -528,16 +528,16 @@ export default function CourseModulesView({
         </DialogContent>
       </Dialog>
 
-      {/* AI Suggest Lessons Dialog */}
+      {/* OckOck Suggest Lessons Dialog */}
       <Dialog open={suggestOpen} onOpenChange={setSuggestOpen}>
         <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-orange-400" />
-              Suggest lessons{suggestModule ? ` for "${suggestModule.title}"` : ""}
+              OckOck suggests lessons{suggestModule ? ` for "${suggestModule.title}"` : ""}
             </DialogTitle>
             <DialogDescription>
-              AI drafts a sequence of lessons. Pick the ones you want to keep.
+              OckOck drafts a sequence of lessons. Pick the ones you want to keep.
             </DialogDescription>
           </DialogHeader>
 

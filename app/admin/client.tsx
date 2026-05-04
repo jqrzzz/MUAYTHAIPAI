@@ -315,8 +315,8 @@ export default function AdminDashboardClient({
       ],
     },
     {
-      label: "AI Assistant",
-      labelTh: "ผู้ช่วย AI",
+      label: "OckOck",
+      labelTh: "อ๊อกอ๊อก",
       items: [
         { id: "marketing" as const, label: "Marketing", labelTh: "การตลาด", icon: Megaphone },
         { id: "train-ockock" as const, label: "Train OckOck", labelTh: "สอน OckOck", icon: BookOpen },

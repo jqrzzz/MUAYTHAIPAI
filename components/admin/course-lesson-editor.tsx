@@ -606,7 +606,7 @@ export default function CourseLessonEditor({
                       ) : (
                         <Sparkles className="h-3 w-3 mr-1" />
                       )}
-                      AI generate
+                      OckOck generates
                     </Button>
                     <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAddQuestion}>
                       <Plus className="h-4 w-4 mr-1" /> Add Question
@@ -833,13 +833,13 @@ export default function CourseLessonEditor({
         </DialogContent>
       </Dialog>
 
-      {/* AI generated quiz suggestions */}
+      {/* OckOck-generated quiz suggestions */}
       <Dialog open={quizSuggestOpen} onOpenChange={setQuizSuggestOpen}>
         <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-orange-400" />
-              AI-generated quiz
+              OckOck drafted a quiz
             </DialogTitle>
             <DialogDescription>
               Pick the questions to keep. Each will be saved as a separate question.

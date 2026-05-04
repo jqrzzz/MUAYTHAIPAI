@@ -141,8 +141,9 @@ export default function SignupClient() {
             List your gym on MUAYTHAIPAI
           </h1>
           <p className="text-neutral-400">
-            AI-native gym management — bookings, students, the Naga–Garuda cert
-            ladder, and an AI receptionist that knows your gym.
+            The friendliest way to run a Muay Thai gym — bookings, the
+            Naga–Garuda cert ladder, and OckOck answering your customers
+            in your voice.
           </p>
         </div>
 

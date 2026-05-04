@@ -4,7 +4,7 @@ import SignupClient from "./client"
 export const metadata: Metadata = {
   title: "List your gym | MUAYTHAIPAI",
   description:
-    "AI-native gym management for Muay Thai gyms — bookings, students, the Naga–Garuda cert ladder, and an AI receptionist that knows your gym. Free 30-day trial.",
+    "Run your Muay Thai gym with OckOck — bookings, students, the Naga–Garuda cert ladder, and OckOck answering your customers in your voice. Free 30-day trial.",
 }
 
 export default function SignupPage() {

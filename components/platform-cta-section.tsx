@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Award, Calendar, Sparkles, ArrowRight } from "lucide-react"
+import { Award, Calendar, MessageCircle, ArrowRight } from "lucide-react"
 import { useTheme } from "next-themes"
 
 export function PlatformCtaSection() {
@@ -25,7 +25,7 @@ export function PlatformCtaSection() {
               : "bg-orange-50 text-orange-700 border border-orange-200"
           }`}
         >
-          <Sparkles className="h-3 w-3" />
+          <span className="text-base leading-none">🐃</span>
           For Muay Thai gym owners
         </div>
 
@@ -34,17 +34,16 @@ export function PlatformCtaSection() {
             isDark ? "text-white" : "text-gray-900"
           }`}
         >
-          AI-native gym management,
-          <br className="hidden sm:block" /> built for Muay Thai
+          Run your gym with OckOck
         </h2>
         <p
           className={`mb-8 max-w-xl mx-auto ${
             isDark ? "text-neutral-400" : "text-gray-600"
           }`}
         >
-          Bookings, students, the Naga–Garuda cert ladder, and an AI receptionist
-          that knows your gym — all in one place. Join the MUAYTHAIPAI network
-          of gyms across Thailand.
+          The friendliest way to manage a Muay Thai gym — bookings, the
+          Naga–Garuda cert ladder, and OckOck answering your customers in your
+          gym&apos;s voice.
         </p>
 
         {/* Features */}
@@ -61,9 +60,9 @@ export function PlatformCtaSection() {
               desc: "Issue Naga–Garuda certifications. Students' progress is portable across the network.",
             },
             {
-              icon: Sparkles,
-              title: "AI receptionist",
-              desc: "OckOck answers customer questions in your gym's voice — pricing, schedule, what to bring.",
+              icon: MessageCircle,
+              title: "OckOck answers",
+              desc: "Your gym's friendly receptionist. Knows your services, hours, prices, and trainers — replies in your voice.",
             },
           ].map((feature) => (
             <div

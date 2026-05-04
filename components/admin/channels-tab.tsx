@@ -404,7 +404,7 @@ function GroupPanel({
     variant === "public"
       ? "For all visitor & student messages"
       : variant === "owner"
-        ? "Private — owner's AI assistant"
+        ? "Private — owner's OckOck channel"
         : "Internal staff channel"
 
   return (
