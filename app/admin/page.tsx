@@ -36,6 +36,20 @@ export default async function AdminPage() {
     redirect("/admin/login?error=no_access")
   }
 
+  // First-time setup: owners/admins with no services yet get sent to the
+  // onboarding wizard. Mirrors the inverse check in /onboarding/page.tsx
+  // (which sends users back here once they have any services).
+  if (membership.role === "owner" || membership.role === "admin") {
+    const { count: serviceCount } = await supabase
+      .from("services")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", membership.org_id)
+
+    if (!serviceCount) {
+      redirect("/onboarding")
+    }
+  }
+
   const orgTimezone = (membership.organizations as { timezone?: string })?.timezone || DEFAULT_TIMEZONE
   const todayInPai = getTodayInPaiTimezone(orgTimezone)
 
@@ -96,6 +110,12 @@ export default async function AdminPage() {
 
   const { data: orgSettings } = await supabase.from("org_settings").select("*").eq("org_id", membership.org_id).single()
 
+  const { data: subscription } = await supabase
+    .from("gym_subscriptions")
+    .select("status, trial_ends_at, current_period_end, price_thb")
+    .eq("org_id", membership.org_id)
+    .maybeSingle()
+
   return (
     <AdminDashboardClient
       user={user}
@@ -109,6 +129,7 @@ export default async function AdminPage() {
       todayDate={todayInPai}
       timezone={orgTimezone}
       orgSettings={orgSettings}
+      subscription={subscription}
     />
   )
 }

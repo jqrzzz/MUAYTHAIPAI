@@ -113,7 +113,7 @@ export default async function ActionConfirmPage({
     return (
       <Page title="Link expired">
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          This confirmation link has expired. Ask the AI to propose the
+          This confirmation link has expired. Ask OckOck to propose the
           action again.
         </p>
         <PreviewBlock preview={token.preview} label={handler?.label} />

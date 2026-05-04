@@ -201,7 +201,7 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
         />
         <div>
           <h2 className="text-lg font-bold text-white">Marketing Agents</h2>
-          <p className="text-xs text-neutral-500">AI-powered tools to grow {gymName}</p>
+          <p className="text-xs text-neutral-500">OckOck&apos;s tools to grow {gymName}</p>
         </div>
       </div>
 
@@ -233,7 +233,7 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="w-4 h-4 text-orange-400" />
             <h3 className="font-semibold text-white text-sm">Lead Inbox</h3>
-            <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px]">AI Reply</Badge>
+            <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px]">OckOck Reply</Badge>
           </div>
           <p className="text-xs text-neutral-500 mb-3">
             Paste a customer message from WhatsApp, Facebook, or Instagram. OckOck drafts a reply.

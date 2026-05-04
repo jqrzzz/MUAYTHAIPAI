@@ -266,7 +266,7 @@ export default function TrainOckockTab() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" /> AI suggest from your gym
+                    <Sparkles className="w-4 h-4 mr-2" /> OckOck suggests FAQs
                   </>
                 )}
               </Button>
@@ -555,13 +555,13 @@ export default function TrainOckockTab() {
         </CardContent>
       </Card>
 
-      {/* AI suggested FAQs dialog */}
+      {/* OckOck-suggested FAQs dialog */}
       <Dialog open={aiSuggestOpen} onOpenChange={setAiSuggestOpen}>
         <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-orange-400" />
-              AI suggested FAQs
+              OckOck drafted these FAQs
             </DialogTitle>
             <DialogDescription>
               Drafted from your gym&apos;s services, trainers, hours, and cert

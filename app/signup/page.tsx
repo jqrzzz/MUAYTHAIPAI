@@ -2,9 +2,9 @@ import type { Metadata } from "next"
 import SignupClient from "./client"
 
 export const metadata: Metadata = {
-  title: "Create Your Gym | Muay Thai Network",
+  title: "List your gym | MUAYTHAIPAI",
   description:
-    "Set up your gym on the Muay Thai Network. Manage bookings, trainers, and students with our all-in-one platform.",
+    "Run your Muay Thai gym with OckOck — bookings, students, the Naga–Garuda cert ladder, and OckOck answering your customers in your voice. Free 30-day trial.",
 }
 
 export default function SignupPage() {

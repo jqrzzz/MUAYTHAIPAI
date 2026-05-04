@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import TodayTab from "@/components/admin/today-tab"
 import TodaySignalPanel from "@/components/admin/today-signal-panel"
+import TrialBanner from "@/components/admin/trial-banner"
 import RecentTab from "@/components/admin/recent-tab"
 import ServicesTab from "@/components/admin/services-tab"
 import TrainersTab from "@/components/admin/trainers-tab"
@@ -145,6 +146,13 @@ interface OrgSettings {
   website?: string | null // Added from settingsForm
 }
 
+interface Subscription {
+  status: string | null
+  trial_ends_at: string | null
+  current_period_end: string | null
+  price_thb: number | null
+}
+
 interface AdminDashboardProps {
   user: SupabaseUser
   membership: Membership
@@ -157,6 +165,7 @@ interface AdminDashboardProps {
   orgSettings: OrgSettings | null
   todayDate: string
   timezone: string
+  subscription: Subscription | null
 }
 
 interface Student {
@@ -187,6 +196,7 @@ export default function AdminDashboardClient({
   orgSettings: initialOrgSettings,
   todayDate,
   timezone,
+  subscription,
 }: AdminDashboardProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -315,8 +325,8 @@ export default function AdminDashboardClient({
       ],
     },
     {
-      label: "AI Assistant",
-      labelTh: "ผู้ช่วย AI",
+      label: "OckOck",
+      labelTh: "อ๊อกอ๊อก",
       items: [
         { id: "marketing" as const, label: "Marketing", labelTh: "การตลาด", icon: Megaphone },
         { id: "train-ockock" as const, label: "Train OckOck", labelTh: "สอน OckOck", icon: BookOpen },
@@ -341,6 +351,9 @@ export default function AdminDashboardClient({
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white overflow-x-hidden">
+      {/* Trial / subscription banner — only renders when trial or past_due */}
+      <TrialBanner orgId={membership.org_id} subscription={subscription} />
+
       {/* Mobile Header */}
       <header className="md:hidden sticky top-0 z-50 bg-neutral-900/95 backdrop-blur border-b border-neutral-800">
         <div className="flex items-center justify-between px-4 py-3">

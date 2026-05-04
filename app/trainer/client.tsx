@@ -173,7 +173,7 @@ export default function TrainerDashboardClient({
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: `สวัสดีครับ ${trainerProfile.display_name}! I'm OckOck, your AI assistant. How can I help you today? (ผมช่วยอะไรได้บ้างครับ?)`,
+      content: `สวัสดีครับ ${trainerProfile.display_name}! I'm OckOck — here to help. (ผมช่วยอะไรได้บ้างครับ?)`,
     },
   ])
   const [inputMessage, setInputMessage] = useState("")
@@ -771,7 +771,7 @@ export default function TrainerDashboardClient({
                 {activeView === "today" && "Today (วันนี้)"}
                 {activeView === "students" && "Students (นักเรียน)"}
                 {activeView === "profile" && "My Profile (โปรไฟล์)"}
-                {activeView === "ockock" && "OckOck (ผู้ช่วย AI)"}
+                {activeView === "ockock" && "OckOck (ผู้ช่วย)"}
               </p>
             </div>
             <button

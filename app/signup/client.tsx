@@ -138,10 +138,12 @@ export default function SignupClient() {
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-3xl font-bold text-white">
-            Get Your Gym Online
+            List your gym on MUAYTHAIPAI
           </h1>
           <p className="text-neutral-400">
-            Start managing bookings, trainers, and students in minutes
+            The friendliest way to run a Muay Thai gym — bookings, the
+            Naga–Garuda cert ladder, and OckOck answering your customers
+            in your voice.
           </p>
         </div>
 
