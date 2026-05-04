@@ -84,9 +84,9 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
     },
     {
       icon: User,
-      label: "Member Login",
+      label: "Sign in",
       href: "/login",
-      description: "Access your account",
+      description: "Students, trainers, and gym admins",
     },
   ]
 
