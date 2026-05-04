@@ -2,14 +2,13 @@ import type { Metadata } from "next"
 import LoginClient from "./client"
 
 export const metadata: Metadata = {
-  title: "Login | Muay Thai Pai Online Courses",
+  title: "Sign in | MUAYTHAIPAI",
   description:
-    "Log in to access your Muay Thai Pai online courses. Subscribe to our online certification program with video instruction from Thai masters.",
-  keywords: ["Muay Thai online courses", "Login Muay Thai Pai", "Online Muay Thai training", "Thai boxing courses"],
+    "Sign in to MUAYTHAIPAI — pick whether you're a student, trainer, or gym owner.",
   robots: "noindex, nofollow",
   openGraph: {
-    title: "Login | Muay Thai Pai Online Courses",
-    description: "Log in to access your Muay Thai Pai online courses.",
+    title: "Sign in | MUAYTHAIPAI",
+    description: "Sign in to MUAYTHAIPAI.",
     url: "https://muaythaipai.com/login",
     images: [{ url: "/images/pai-hero-main.jpeg", width: 1200, height: 630 }],
   },

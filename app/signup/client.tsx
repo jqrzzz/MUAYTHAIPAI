@@ -138,10 +138,11 @@ export default function SignupClient() {
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-3xl font-bold text-white">
-            Get Your Gym Online
+            List your gym on MUAYTHAIPAI
           </h1>
           <p className="text-neutral-400">
-            Start managing bookings, trainers, and students in minutes
+            AI-native gym management — bookings, students, the Naga–Garuda cert
+            ladder, and an AI receptionist that knows your gym.
           </p>
         </div>
 
