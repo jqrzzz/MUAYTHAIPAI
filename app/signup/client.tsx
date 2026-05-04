@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
@@ -34,7 +34,7 @@ interface InvitePreview {
   suggestedEmail?: string | null
 }
 
-export default function SignupClient() {
+function SignupInner() {
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get("invite")
 
@@ -288,5 +288,19 @@ export default function SignupClient() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function SignupClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-neutral-950">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        </div>
+      }
+    >
+      <SignupInner />
+    </Suspense>
   )
 }

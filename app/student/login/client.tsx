@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, ArrowLeft, Dumbbell, Mail, CheckCircle } from "lucide-react"
 
-export default function StudentLoginClient() {
+function StudentLoginInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
@@ -181,5 +181,19 @@ export default function StudentLoginClient() {
         <p className="text-center text-xs text-neutral-500 mt-4">One account for all Muay Thai gyms in Thailand</p>
       </div>
     </div>
+  )
+}
+
+export default function StudentLoginClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        </div>
+      }
+    >
+      <StudentLoginInner />
+    </Suspense>
   )
 }
