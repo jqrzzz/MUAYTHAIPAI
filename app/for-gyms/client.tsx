@@ -251,6 +251,35 @@ export default function ForGymsClient() {
           </div>
         </section>
 
+        {/* Try OckOck live */}
+        <section className="mt-24">
+          <div className="rounded-3xl border-2 border-dashed border-orange-300 dark:border-orange-500/40 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-orange-500/[0.07] dark:to-amber-500/[0.04] p-8 md:p-10 text-center relative overflow-hidden">
+            <div className="text-5xl mb-3">🐃</div>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-neutral-900 dark:text-white">
+              Try OckOck right now
+            </h2>
+            <p className="max-w-lg mx-auto text-neutral-700 dark:text-neutral-300 mb-4">
+              Tap the chat in the bottom corner — you&apos;re talking to OckOck
+              for Wisarut Family Gym. Ask about prices, hours, what to bring,
+              or how to get to Pai.
+            </p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-500">
+              This is the same OckOck your customers will chat with on your
+              gym&apos;s page. ↘
+            </p>
+
+            {/* Visual arrow pointing down-right toward the floating widget */}
+            <motion.div
+              className="absolute bottom-3 right-4 text-4xl pointer-events-none select-none hidden sm:block"
+              animate={{ y: [0, 6, 0] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              aria-hidden
+            >
+              ↘
+            </motion.div>
+          </div>
+        </section>
+
         {/* Pricing teaser */}
         <section className="mt-24">
           <div className="text-center">

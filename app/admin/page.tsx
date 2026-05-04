@@ -96,6 +96,12 @@ export default async function AdminPage() {
 
   const { data: orgSettings } = await supabase.from("org_settings").select("*").eq("org_id", membership.org_id).single()
 
+  const { data: subscription } = await supabase
+    .from("gym_subscriptions")
+    .select("status, trial_ends_at, current_period_end, price_thb")
+    .eq("org_id", membership.org_id)
+    .maybeSingle()
+
   return (
     <AdminDashboardClient
       user={user}
@@ -109,6 +115,7 @@ export default async function AdminPage() {
       todayDate={todayInPai}
       timezone={orgTimezone}
       orgSettings={orgSettings}
+      subscription={subscription}
     />
   )
 }
