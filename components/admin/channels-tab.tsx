@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import ChannelCredentialsCard from "@/components/admin/channel-credentials-card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -182,6 +183,13 @@ export default function ChannelsTab({ role }: ChannelsTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Per-gym channel credentials — paste your own LINE / WhatsApp /
+          IG tokens so OckOck answers in your gym's voice from your own
+          accounts, not a shared platform set. Renders above the routing
+          / chat-groups admin so the most common task (connecting) is
+          first. */}
+      {canManage && <ChannelCredentialsCard />}
+
       {/* Header */}
       <Card className="bg-neutral-900 border-neutral-800">
         <CardHeader className="pb-3">
@@ -189,7 +197,7 @@ export default function ChannelsTab({ role }: ChannelsTabProps) {
             <div className="flex items-center gap-3">
               <Link2 className="w-6 h-6 text-orange-500" />
               <div>
-                <CardTitle className="text-white">Channel Connections</CardTitle>
+                <CardTitle className="text-white">Routing & chat groups</CardTitle>
                 <CardDescription>
                   Route incoming messages from LINE, Telegram, WhatsApp, and more
                   into the right inbox.

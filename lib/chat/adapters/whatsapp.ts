@@ -32,6 +32,7 @@
 import crypto from "node:crypto"
 import type {
   ChannelAdapter,
+  ChannelCredentials,
   IncomingAttachment,
   IncomingMessage,
   OutgoingMessage,
@@ -186,8 +187,13 @@ export const whatsappAdapter: ChannelAdapter = {
     return messages
   },
 
-  verifySignature(rawBody: string, headers: Headers): boolean {
-    const secret = process.env.WHATSAPP_APP_SECRET
+  verifySignature(
+    rawBody: string,
+    headers: Headers,
+    credentials?: ChannelCredentials,
+  ): boolean {
+    const secret =
+      credentials?.app_secret ?? process.env.WHATSAPP_APP_SECRET
     if (!secret) return false
 
     const header = headers.get("x-hub-signature-256")
@@ -211,14 +217,17 @@ export const whatsappAdapter: ChannelAdapter = {
   async send(
     externalChatId: string,
     message: OutgoingMessage,
+    credentials?: ChannelCredentials,
   ): Promise<SendResult> {
-    const token = process.env.WHATSAPP_ACCESS_TOKEN
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+    const token =
+      credentials?.access_token ?? process.env.WHATSAPP_ACCESS_TOKEN
+    const phoneNumberId =
+      credentials?.phone_number_id ?? process.env.WHATSAPP_PHONE_NUMBER_ID
     if (!token) {
-      return { ok: false, error: "WHATSAPP_ACCESS_TOKEN not configured" }
+      return { ok: false, error: "WhatsApp access token not configured" }
     }
     if (!phoneNumberId) {
-      return { ok: false, error: "WHATSAPP_PHONE_NUMBER_ID not configured" }
+      return { ok: false, error: "WhatsApp phone_number_id not configured" }
     }
 
     try {

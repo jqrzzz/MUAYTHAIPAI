@@ -1,8 +1,20 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Check, ChevronRight, MapPin, Clock, Dumbbell, Loader2 } from "lucide-react"
+import {
+  Check,
+  ChevronRight,
+  MapPin,
+  Clock,
+  Dumbbell,
+  Loader2,
+  Sparkles,
+  Link2,
+} from "lucide-react"
+import OckOckChatWidget from "@/components/public/ockock-chat-widget"
+import ChannelCredentialsCard from "@/components/admin/channel-credentials-card"
 
 // ============================================
 // Types
@@ -65,11 +77,19 @@ const SERVICE_TEMPLATES: ServiceForm[] = [
   { name: "Kids Muay Thai", description: "Training for young fighters ages 6-14", duration_minutes: "60", price_thb: "400" },
 ]
 
-type Step = "details" | "services" | "hours" | "done"
+type Step =
+  | "details"
+  | "services"
+  | "hours"
+  | "meet-ockock"
+  | "channels"
+  | "done"
 const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
-  { key: "details", label: "Gym Details", icon: <MapPin className="h-4 w-4" /> },
+  { key: "details", label: "Details", icon: <MapPin className="h-4 w-4" /> },
   { key: "services", label: "Services", icon: <Dumbbell className="h-4 w-4" /> },
   { key: "hours", label: "Hours", icon: <Clock className="h-4 w-4" /> },
+  { key: "meet-ockock", label: "Meet OckOck", icon: <Sparkles className="h-4 w-4" /> },
+  { key: "channels", label: "Channels", icon: <Link2 className="h-4 w-4" /> },
   { key: "done", label: "Done", icon: <Check className="h-4 w-4" /> },
 ]
 
@@ -201,7 +221,7 @@ export default function OnboardingClient({
         }),
       })
       if (!res.ok) throw new Error("Failed to save hours")
-      setStep("done")
+      setStep("meet-ockock")
     } catch {
       setError("Failed to save. Please try again.")
     } finally {
@@ -304,8 +324,22 @@ export default function OnboardingClient({
             hours={hours}
             setHours={setHours}
             onNext={saveHours}
-            onSkip={() => setStep("done")}
+            onSkip={() => setStep("meet-ockock")}
             saving={saving}
+          />
+        )}
+        {step === "meet-ockock" && (
+          <MeetOckOckStep
+            gymName={organization.name}
+            orgSlug={organization.slug}
+            onNext={() => setStep("channels")}
+            onSkip={() => setStep("channels")}
+          />
+        )}
+        {step === "channels" && (
+          <ChannelsStep
+            onNext={() => setStep("done")}
+            onSkip={() => setStep("done")}
           />
         )}
         {step === "done" && (
@@ -660,6 +694,138 @@ function HoursStep({
         <button
           onClick={onSkip}
           className="text-sm text-neutral-500 hover:text-white"
+        >
+          Skip for now
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// Step: Meet OckOck — let the new owner chat with their fresh AI
+// receptionist before they hit the dashboard. The widget already loads
+// a knowledge block from this gym's services + hours, so the very first
+// reply should already be in their gym's voice.
+// ============================================
+
+function MeetOckOckStep({
+  gymName,
+  orgSlug,
+  onNext,
+  onSkip,
+}: {
+  gymName: string
+  orgSlug: string
+  onNext: () => void
+  onSkip: () => void
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/20 to-amber-500/10 ring-1 ring-orange-500/30">
+          <Image
+            src="/images/ockock-avatar.png"
+            alt="OckOck"
+            width={56}
+            height={56}
+            className="rounded-full"
+          />
+        </div>
+        <h2 className="text-2xl font-bold text-white">Meet OckOck</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-neutral-400">
+          OckOck (อ๊อกอ๊อก) is your gym&apos;s friendly receptionist.
+          We&apos;ve already taught it about your services and hours from
+          what you just entered. Tap the chat in the corner and ask anything
+          a customer would.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.04] p-5">
+        <p className="text-sm font-semibold text-orange-200 mb-2">
+          Try asking:
+        </p>
+        <ul className="space-y-1.5 text-sm text-neutral-300">
+          <li>&ldquo;How much for a private session?&rdquo;</li>
+          <li>&ldquo;What time are morning classes?&rdquo;</li>
+          <li>&ldquo;What should I bring?&rdquo;</li>
+        </ul>
+        <p className="mt-3 text-xs text-neutral-500 leading-relaxed">
+          OckOck only answers from your data. When it doesn&apos;t know
+          something, it asks. You can teach it more from{" "}
+          <span className="text-orange-300">/admin → OckOck → Train OckOck</span>{" "}
+          later.
+        </p>
+      </div>
+
+      {/* Mount OckOck pinned to this gym, forced visible since the
+          global widget hides on /onboarding via HIDDEN_PREFIXES check. */}
+      <OckOckChatWidget orgSlug={orgSlug} forceVisible />
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onNext}
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-orange-400"
+        >
+          Got it — what&apos;s next?
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onSkip}
+          className="text-sm text-neutral-400 hover:text-white px-3"
+        >
+          Skip
+        </button>
+      </div>
+      <p className="text-center text-[11px] text-neutral-600">
+        OckOck for {gymName} is live on your public gym page already.
+      </p>
+    </div>
+  )
+}
+
+// ============================================
+// Step: Connect a channel (optional). Reuses the per-gym credentials
+// card from the Channels admin tab so the form, validation, and save
+// logic match. Owners who don't have tokens handy can skip and come
+// back from /admin → Channels later.
+// ============================================
+
+function ChannelsStep({
+  onNext,
+  onSkip,
+}: {
+  onNext: () => void
+  onSkip: () => void
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/15 ring-1 ring-blue-500/30">
+          <Link2 className="h-6 w-6 text-blue-400" />
+        </div>
+        <h2 className="text-2xl font-bold text-white">Connect your channels</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-neutral-400">
+          Paste your LINE Official Account or WhatsApp Business tokens so
+          OckOck can answer DMs from those channels too. Optional — you
+          can do this later from{" "}
+          <span className="text-blue-300">/admin → Channels</span>.
+        </p>
+      </div>
+
+      <ChannelCredentialsCard />
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onNext}
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-orange-400"
+        >
+          Continue
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onSkip}
+          className="text-sm text-neutral-400 hover:text-white px-3"
         >
           Skip for now
         </button>

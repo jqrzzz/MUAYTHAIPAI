@@ -31,14 +31,21 @@ interface InviteAcceptClientProps {
   organization: Organization
   isLoggedIn: boolean
   userEmail?: string
+  defaultName?: string | null
 }
 
-export default function InviteAcceptClient({ invite, organization, isLoggedIn, userEmail }: InviteAcceptClientProps) {
+export default function InviteAcceptClient({
+  invite,
+  organization,
+  isLoggedIn,
+  userEmail,
+  defaultName,
+}: InviteAcceptClientProps) {
   const router = useRouter()
   const [step, setStep] = useState<"verify" | "code" | "name" | "success">(isLoggedIn ? "name" : "verify")
   const [email, setEmail] = useState(invite.email)
   const [code, setCode] = useState("")
-  const [name, setName] = useState("")
+  const [name, setName] = useState(defaultName ?? "")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 

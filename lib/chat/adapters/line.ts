@@ -3,14 +3,16 @@
  *
  * Docs: https://developers.line.biz/en/reference/messaging-api/
  *
- * Env vars (both optional until a LINE OA is connected):
- *   LINE_CHANNEL_SECRET        — used for X-Line-Signature verification
- *   LINE_CHANNEL_ACCESS_TOKEN  — used for push API auth
+ * Credentials (preferred per-gym via mtp_channel_credentials, fall back
+ * to env vars for the legacy single-tenant demo path):
+ *   channel_secret        ← LINE_CHANNEL_SECRET        — verifies X-Line-Signature
+ *   channel_access_token  ← LINE_CHANNEL_ACCESS_TOKEN  — Bearer for push API
  */
 
 import crypto from "node:crypto"
 import type {
   ChannelAdapter,
+  ChannelCredentials,
   IncomingAttachment,
   IncomingMessage,
   OutgoingMessage,
@@ -117,8 +119,13 @@ export const lineAdapter: ChannelAdapter = {
     return messages
   },
 
-  verifySignature(rawBody: string, headers: Headers): boolean {
-    const secret = process.env.LINE_CHANNEL_SECRET
+  verifySignature(
+    rawBody: string,
+    headers: Headers,
+    credentials?: ChannelCredentials,
+  ): boolean {
+    const secret =
+      credentials?.channel_secret ?? process.env.LINE_CHANNEL_SECRET
     if (!secret) return false
 
     const sig = headers.get("x-line-signature")
@@ -141,10 +148,12 @@ export const lineAdapter: ChannelAdapter = {
   async send(
     externalChatId: string,
     message: OutgoingMessage,
+    credentials?: ChannelCredentials,
   ): Promise<SendResult> {
-    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
+    const token =
+      credentials?.channel_access_token ?? process.env.LINE_CHANNEL_ACCESS_TOKEN
     if (!token) {
-      return { ok: false, error: "LINE_CHANNEL_ACCESS_TOKEN not configured" }
+      return { ok: false, error: "LINE channel access token not configured" }
     }
 
     try {

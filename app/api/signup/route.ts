@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
+import { ensureChatGroups } from "@/lib/chat/bootstrap"
 
 // Use service role to create orgs (no auth required for signup)
 const supabase = createClient(
@@ -69,8 +70,15 @@ export async function POST(request: Request) {
         .single()
 
       if (existingMembership) {
+        // Hand the front-end a sign-in URL with the email pre-filled so
+        // they can hop straight to the magic-link form for the gym they
+        // already own. The signup page surfaces this as a CTA instead
+        // of a generic error string.
         return NextResponse.json(
-          { error: "This email already owns a gym. Please sign in instead." },
+          {
+            error: "This email already owns a gym.",
+            signInUrl: `/admin/login?email=${encodeURIComponent(ownerEmail)}`,
+          },
           { status: 409 }
         )
       }
@@ -134,6 +142,10 @@ export async function POST(request: Request) {
       status: "trial",
       price_thb: 0,
     })
+
+    // Bootstrap the OckOck chat groups (public_inbox + owner_assist) so
+    // OckOck works on day one without a "Chat is not set up yet" detour.
+    await ensureChatGroups(supabase, org.id)
 
     // Create invite token for the owner
     const token = crypto.randomUUID()

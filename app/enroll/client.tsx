@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { CheckCircle, ChevronRight, ArrowLeft, Loader2, Award } from "lucide-react"
@@ -16,7 +16,7 @@ import { CERTIFICATION_LEVELS, type CertificationLevel } from "@/lib/certificati
 
 type Step = "level" | "details" | "confirm" | "success"
 
-export default function EnrollClient() {
+function EnrollInner() {
   const mounted = useMounted()
   const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>("level")
@@ -387,5 +387,19 @@ export default function EnrollClient() {
         <MarketingBottomNav />
       </div>
     </PageBackground>
+  )
+}
+
+export default function EnrollClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-neutral-950">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        </div>
+      }
+    >
+      <EnrollInner />
+    </Suspense>
   )
 }

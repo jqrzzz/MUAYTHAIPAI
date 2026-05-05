@@ -23,6 +23,7 @@ import {
   runConciergeAI,
   type ConciergeHistoryEntry,
 } from "@/lib/chat/ai/concierge"
+import { ensureChatGroups } from "@/lib/chat/bootstrap"
 import { NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -79,14 +80,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Gym not found" }, { status: 404 })
   }
 
-  // 2. Find the public_inbox group
-  const { data: group } = await supabase
+  // 2. Find the public_inbox group — self-heal if missing. This handles
+  // gyms that signed up before bootstrap-on-signup landed (and any race
+  // condition where the signup helper failed silently).
+  let { data: group } = await supabase
     .from("mtp_chat_groups")
     .select("id")
     .eq("org_id", org.id)
     .eq("purpose", "public_inbox")
     .eq("is_active", true)
     .maybeSingle()
+
+  if (!group) {
+    await ensureChatGroups(supabase, org.id)
+    const retry = await supabase
+      .from("mtp_chat_groups")
+      .select("id")
+      .eq("org_id", org.id)
+      .eq("purpose", "public_inbox")
+      .eq("is_active", true)
+      .maybeSingle()
+    group = retry.data
+  }
 
   if (!group) {
     return NextResponse.json(

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
@@ -34,7 +34,7 @@ interface InvitePreview {
   suggestedEmail?: string | null
 }
 
-export default function SignupClient() {
+function SignupInner() {
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get("invite")
 
@@ -50,6 +50,7 @@ export default function SignupClient() {
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [signInUrl, setSignInUrl] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   // Pre-fill from invite token if present
@@ -91,6 +92,8 @@ export default function SignupClient() {
     setSubmitting(true)
     setError(null)
 
+    setSignInUrl(null)
+
     try {
       const res = await fetch("/api/signup", {
         method: "POST",
@@ -101,6 +104,9 @@ export default function SignupClient() {
       const data = await res.json()
 
       if (!res.ok) {
+        if (typeof data?.signInUrl === "string") {
+          setSignInUrl(data.signInUrl)
+        }
         throw new Error(data.error || "Failed to create gym")
       }
 
@@ -255,6 +261,14 @@ export default function SignupClient() {
           {error && (
             <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
+              {signInUrl && (
+                <Link
+                  href={signInUrl}
+                  className="mt-2 inline-flex items-center gap-1 text-orange-300 hover:text-orange-200 underline underline-offset-2"
+                >
+                  Sign in to your existing gym →
+                </Link>
+              )}
             </div>
           )}
 
@@ -288,5 +302,19 @@ export default function SignupClient() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function SignupClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-neutral-950">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        </div>
+      }
+    >
+      <SignupInner />
+    </Suspense>
   )
 }
