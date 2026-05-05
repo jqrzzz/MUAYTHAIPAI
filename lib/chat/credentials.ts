@@ -275,3 +275,27 @@ export function maskCredential(value: string | undefined | null): string {
   if (value.length <= 4) return "••••"
   return "••••" + value.slice(-4)
 }
+
+/**
+ * Whether OckOck should auto-send concierge AI replies on this channel
+ * without owner approval. Default FALSE for every channel except web —
+ * the web widget's UX depends on real-time replies, while DM channels
+ * carry more weight and start in draft-mode by default.
+ *
+ * Owners flip this to TRUE per channel once they trust the AI's
+ * judgment (typically after approving 5+ drafts in the inbox without
+ * editing).
+ */
+export async function loadChannelAutoSendEnabled(
+  supabase: SupabaseClient,
+  orgId: string,
+  channel: ChannelName,
+): Promise<boolean> {
+  const { data: row } = await supabase
+    .from("mtp_channel_credentials")
+    .select("auto_send_enabled, is_active")
+    .eq("org_id", orgId)
+    .eq("channel", channel)
+    .maybeSingle()
+  return Boolean(row?.is_active && row?.auto_send_enabled)
+}

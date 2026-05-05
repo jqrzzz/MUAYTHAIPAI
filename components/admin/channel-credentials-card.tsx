@@ -51,6 +51,7 @@ interface ChannelStatus {
   is_verified: boolean
   last_verified_at: string | null
   last_error: string | null
+  auto_send_enabled: boolean
   using_env_fallback: boolean
   fields: FieldStatus[]
 }
@@ -80,6 +81,7 @@ export default function ChannelCredentialsCard() {
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({})
   const [saving, setSaving] = useState<ChannelName | null>(null)
   const [savedFlash, setSavedFlash] = useState<ChannelName | null>(null)
+  const [togglingAutoSend, setTogglingAutoSend] = useState<ChannelName | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -133,6 +135,31 @@ export default function ChannelCredentialsCard() {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setSaving(null)
+    }
+  }
+
+  async function toggleAutoSend(channel: ChannelName, next: boolean) {
+    setTogglingAutoSend(channel)
+    setError(null)
+    try {
+      const res = await fetch("/api/admin/channels/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel, auto_send_enabled: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? "Toggle failed")
+      // Optimistic update for snappy feedback, then reload to sync.
+      setChannels((prev) =>
+        (prev ?? []).map((c) =>
+          c.channel === channel ? { ...c, auto_send_enabled: next } : c,
+        ),
+      )
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setTogglingAutoSend(null)
     }
   }
 
@@ -306,6 +333,41 @@ export default function ChannelCredentialsCard() {
                     First inbound message will mark this verified.
                   </span>
                 )}
+              </div>
+
+              {/* Auto-reply toggle. OckOck always saves a draft for
+                  inbound DMs; turning this ON lets OckOck send replies
+                  directly without owner approval (matches the web
+                  widget). Owner can flip back to drafts-only any time. */}
+              <div className="mt-3 pt-3 border-t border-neutral-800 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white inline-flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+                    OckOck auto-reply
+                  </p>
+                  <p className="text-[11px] text-neutral-500 mt-0.5 leading-snug">
+                    {c.auto_send_enabled
+                      ? "OckOck answers DMs immediately in your gym's voice. You'll still see every conversation in the inbox."
+                      : "OckOck drafts a reply for every inbound DM and waits for you to approve it in the inbox. Flip this on once you trust the drafts."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={c.auto_send_enabled}
+                  disabled={togglingAutoSend === c.channel}
+                  onClick={() => toggleAutoSend(c.channel, !c.auto_send_enabled)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-50 ${
+                    c.auto_send_enabled ? "bg-orange-500" : "bg-neutral-700"
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ${
+                      c.auto_send_enabled ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
             </CardContent>
           </Card>

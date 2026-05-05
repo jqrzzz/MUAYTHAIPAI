@@ -18,8 +18,11 @@ import { lineAdapter } from "../../adapters/line"
 import { telegramAdapter } from "../../adapters/telegram"
 import { testAdapter } from "../../adapters/test"
 import { whatsappAdapter } from "../../adapters/whatsapp"
+import { loadChannelCredentials, type ChannelName } from "../../credentials"
 import type { ChannelAdapter } from "../../types"
 import type { ActionHandler, ActionHandlerResult } from "../types"
+
+const FIRST_PARTY_CHANNELS = new Set(["web", "test"])
 
 // Adapter registry. Add new channels here as they're implemented.
 // Channels without adapters (ig, fb, web as of wave 9a) will return a
@@ -85,9 +88,22 @@ export const sendPendingDraftHandler: ActionHandler = {
       }
     }
 
-    const sendResult = await adapter.send(convo.external_thread_id, {
-      text: draft.body,
-    })
+    // Load the gym's per-channel credentials so the send goes through
+    // their own LINE OA / WhatsApp number / etc. Falls back to env vars
+    // for first-party channels (web, test) and for the demo gym.
+    const credentials = FIRST_PARTY_CHANNELS.has(convo.channel)
+      ? undefined
+      : (await loadChannelCredentials(
+          supabase,
+          context.orgId,
+          convo.channel as ChannelName,
+        )) ?? undefined
+
+    const sendResult = await adapter.send(
+      convo.external_thread_id,
+      { text: draft.body },
+      credentials,
+    )
 
     if (!sendResult.ok) {
       // Leave the draft in pending so the owner can retry.

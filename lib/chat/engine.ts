@@ -21,12 +21,29 @@ import { createClient } from "@supabase/supabase-js"
 import { runConciergeAI, type ConciergeHistoryEntry } from "./ai/concierge"
 import { runOwnerAI, type OwnerAIHistoryEntry } from "./ai/owner"
 import { loadGymKnowledge } from "./knowledge"
-import { loadChannelCredentials } from "./credentials"
+import {
+  loadChannelAutoSendEnabled,
+  loadChannelCredentials,
+  type ChannelName,
+} from "./credentials"
 import type {
+  Channel,
   ChannelAdapter,
   HandleMessageResult,
   IncomingMessage,
 } from "./types"
+
+/**
+ * Channels that don't go through the per-gym credentials flow. The web
+ * widget is first-party — there's no third-party API token to manage,
+ * and visitors expect immediate replies, so it's always auto-send.
+ * The test channel exists for in-memory smoke tests.
+ */
+const FIRST_PARTY_CHANNELS: ReadonlySet<Channel> = new Set(["web", "test"])
+
+function isCredentialedChannel(c: Channel): c is ChannelName {
+  return !FIRST_PARTY_CHANNELS.has(c) && c !== "web"
+}
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -220,8 +237,26 @@ export async function handleMessage(
       aiResult = {}
     }
 
-    // 6. Persist outbound + send via adapter
+    // 6. Persist outbound + maybe send via adapter
     if (aiResult.replyText) {
+      const isFirstParty = FIRST_PARTY_CHANNELS.has(msg.platform)
+
+      // Auto-send policy:
+      //   - First-party channels (web, test): always send.
+      //   - DM channels: send only when the gym has flipped
+      //     auto_send_enabled=TRUE for that channel. Otherwise the AI's
+      //     reply lands in the inbox as draft_status='pending' and the
+      //     owner approves/edits/rejects it from /admin → Inbox.
+      const autoSendEnabled =
+        isFirstParty || !isCredentialedChannel(msg.platform)
+          ? true
+          : await loadChannelAutoSendEnabled(supabase, orgId, msg.platform)
+
+      const draftStatus = autoSendEnabled ? "approved" : "pending"
+      const needsReview = autoSendEnabled
+        ? aiResult.needsReview ?? false
+        : true
+
       const { data: outboundRow } = await supabase
         .from("mtp_communication_log")
         .insert({
@@ -231,23 +266,39 @@ export async function handleMessage(
           direction: "outbound",
           recipient: msg.externalSenderId,
           body: aiResult.replyText,
-          metadata: { ai_meta: aiResult.meta ?? {} },
+          metadata: {
+            ai_meta: aiResult.meta ?? {},
+            auto_send_enabled: autoSendEnabled,
+          },
           handled_by: "ai",
-          needs_review: aiResult.needsReview ?? false,
+          draft_status: draftStatus,
+          needs_review: needsReview,
         })
         .select("id")
         .single()
 
-      // Load this gym's credentials for the channel before sending. The
-      // adapters prefer per-org creds over env-var fallback, which is
-      // what makes a multi-gym deployment actually multi-tenant on the
-      // outbound side. For the demo gym (Wisarut) the DB row may be
-      // missing; loadChannelCredentials returns the env fallback.
-      const creds =
-        msg.platform === "web" || msg.platform === "test"
-          ? undefined
-          : (await loadChannelCredentials(supabase, orgId, msg.platform)) ??
-            undefined
+      // Draft mode: skip the adapter, the owner sends from the inbox.
+      if (!autoSendEnabled) {
+        if (aiResult.escalated) {
+          await supabase
+            .from("mtp_conversations")
+            .update({ status: "awaiting_human" })
+            .eq("id", conversationId)
+        }
+        return {
+          conversationId,
+          messageLogId,
+          aiHandled: true,
+          escalated: aiResult.escalated ?? false,
+        }
+      }
+
+      // Auto-send path: load creds (per-gym preferred, env fallback for
+      // the demo gym) and push the reply through the adapter.
+      const creds = isCredentialedChannel(msg.platform)
+        ? (await loadChannelCredentials(supabase, orgId, msg.platform)) ??
+          undefined
+        : undefined
 
       const sendResult = await adapter.send(
         msg.externalChatId,
@@ -269,7 +320,7 @@ export async function handleMessage(
 
       // First successful send through real per-gym credentials flips
       // is_verified=true so the Channels UI shows a green badge.
-      if (sendResult.ok && creds && msg.platform !== "web" && msg.platform !== "test") {
+      if (sendResult.ok && creds && !isFirstParty) {
         await supabase
           .from("mtp_channel_credentials")
           .update({

@@ -46,7 +46,8 @@ function getServiceClient() {
 
 const PostSchema = z.object({
   channel: z.enum(CHANNELS as unknown as [ChannelName, ...ChannelName[]]),
-  fields: z.record(z.string(), z.string().optional()),
+  fields: z.record(z.string(), z.string().optional()).optional(),
+  auto_send_enabled: z.boolean().optional(),
 })
 
 export async function GET(_req: NextRequest) {
@@ -64,7 +65,7 @@ export async function GET(_req: NextRequest) {
   const { data: rows } = await service
     .from("mtp_channel_credentials")
     .select(
-      "channel, credentials, is_active, is_verified, last_verified_at, last_error",
+      "channel, credentials, is_active, is_verified, last_verified_at, last_error, auto_send_enabled",
     )
     .eq("org_id", membership.org_id)
 
@@ -76,6 +77,7 @@ export async function GET(_req: NextRequest) {
       is_verified: boolean
       last_verified_at: string | null
       last_error: string | null
+      auto_send_enabled: boolean
     }
   >()
   for (const row of rows ?? []) {
@@ -85,6 +87,7 @@ export async function GET(_req: NextRequest) {
       is_verified: !!row.is_verified,
       last_verified_at: row.last_verified_at ?? null,
       last_error: row.last_error ?? null,
+      auto_send_enabled: !!row.auto_send_enabled,
     })
   }
 
@@ -134,6 +137,7 @@ export async function GET(_req: NextRequest) {
         is_verified: dbState?.is_verified ?? false,
         last_verified_at: dbState?.last_verified_at ?? null,
         last_error: dbState?.last_error ?? null,
+        auto_send_enabled: dbState?.auto_send_enabled ?? false,
         // True if any field is being satisfied by env fallback rather
         // than the DB — usually meaningful only for the demo gym.
         using_env_fallback: fieldStatus.some((f) => f.source === "env"),
@@ -162,25 +166,64 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { channel, fields } = parsed.data
-  // Validate the keys against the canonical schema for this channel so a
-  // typo doesn't get silently stored.
-  const allowed = new Set(CHANNEL_FIELDS[channel].map((f) => f.key))
-  const cleaned: Record<string, string | undefined> = {}
-  for (const [k, v] of Object.entries(fields)) {
-    if (!allowed.has(k)) continue
-    cleaned[k] = v
+  const { channel, fields, auto_send_enabled } = parsed.data
+  const service = getServiceClient()
+
+  // Field updates: validate keys against the canonical schema so a typo
+  // doesn't get silently stored.
+  if (fields) {
+    const allowed = new Set(CHANNEL_FIELDS[channel].map((f) => f.key))
+    const cleaned: Record<string, string | undefined> = {}
+    for (const [k, v] of Object.entries(fields)) {
+      if (!allowed.has(k)) continue
+      cleaned[k] = v
+    }
+    if (Object.keys(cleaned).length > 0) {
+      const result = await upsertChannelCredentials(
+        service,
+        membership.org_id,
+        channel,
+        cleaned,
+      )
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 500 })
+      }
+    }
   }
 
-  const service = getServiceClient()
-  const result = await upsertChannelCredentials(
-    service,
-    membership.org_id,
-    channel,
-    cleaned,
-  )
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 500 })
+  // Auto-send toggle: independent of credential updates so the owner
+  // can flip on auto-replies without re-pasting tokens.
+  if (typeof auto_send_enabled === "boolean") {
+    // Make sure a row exists first — toggling on a never-saved channel
+    // creates an empty creds row so the engine can read the flag.
+    const { data: existing } = await service
+      .from("mtp_channel_credentials")
+      .select("id")
+      .eq("org_id", membership.org_id)
+      .eq("channel", channel)
+      .maybeSingle()
+
+    if (existing) {
+      const { error } = await service
+        .from("mtp_channel_credentials")
+        .update({ auto_send_enabled })
+        .eq("id", existing.id)
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+    } else {
+      const { error } = await service.from("mtp_channel_credentials").insert({
+        org_id: membership.org_id,
+        channel,
+        credentials: {},
+        is_active: true,
+        is_verified: false,
+        auto_send_enabled,
+      })
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+    }
   }
 
   return NextResponse.json({ ok: true })
