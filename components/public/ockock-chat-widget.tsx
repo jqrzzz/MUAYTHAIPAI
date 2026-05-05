@@ -49,6 +49,10 @@ const HIDDEN_PREFIXES = [
   "/a/",
   "/embed",
   "/gyms",
+  "/onboarding",
+  "/trainer",
+  "/student",
+  "/platform-admin",
 ]
 
 export default function OckOckChatWidget({ orgSlug, forceVisible = false }: OckOckChatWidgetProps) {

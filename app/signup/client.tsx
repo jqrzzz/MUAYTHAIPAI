@@ -50,6 +50,7 @@ function SignupInner() {
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [signInUrl, setSignInUrl] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   // Pre-fill from invite token if present
@@ -91,6 +92,8 @@ function SignupInner() {
     setSubmitting(true)
     setError(null)
 
+    setSignInUrl(null)
+
     try {
       const res = await fetch("/api/signup", {
         method: "POST",
@@ -101,6 +104,9 @@ function SignupInner() {
       const data = await res.json()
 
       if (!res.ok) {
+        if (typeof data?.signInUrl === "string") {
+          setSignInUrl(data.signInUrl)
+        }
         throw new Error(data.error || "Failed to create gym")
       }
 
@@ -255,6 +261,14 @@ function SignupInner() {
           {error && (
             <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
+              {signInUrl && (
+                <Link
+                  href={signInUrl}
+                  className="mt-2 inline-flex items-center gap-1 text-orange-300 hover:text-orange-200 underline underline-offset-2"
+                >
+                  Sign in to your existing gym →
+                </Link>
+              )}
             </div>
           )}
 

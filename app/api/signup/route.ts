@@ -70,8 +70,15 @@ export async function POST(request: Request) {
         .single()
 
       if (existingMembership) {
+        // Hand the front-end a sign-in URL with the email pre-filled so
+        // they can hop straight to the magic-link form for the gym they
+        // already own. The signup page surfaces this as a CTA instead
+        // of a generic error string.
         return NextResponse.json(
-          { error: "This email already owns a gym. Please sign in instead." },
+          {
+            error: "This email already owns a gym.",
+            signInUrl: `/admin/login?email=${encodeURIComponent(ownerEmail)}`,
+          },
           { status: 409 }
         )
       }

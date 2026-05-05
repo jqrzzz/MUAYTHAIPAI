@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -11,9 +11,12 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, ArrowLeft, Mail, CheckCircle } from "lucide-react"
 
-export default function AdminLoginClient() {
+function AdminLoginInner() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const searchParams = useSearchParams()
+  // Pre-fill email when redirected from /signup with a duplicate-owner
+  // detection (?email=...). Saves the gym owner from re-typing.
+  const [email, setEmail] = useState(searchParams.get("email") ?? "")
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState<"email" | "sent">("email")
   const [error, setError] = useState<string | null>(null)
@@ -156,5 +159,19 @@ export default function AdminLoginClient() {
         <p className="text-center text-xs text-neutral-500 mt-4">For gym staff and trainers only</p>
       </div>
     </div>
+  )
+}
+
+export default function AdminLoginClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        </div>
+      }
+    >
+      <AdminLoginInner />
+    </Suspense>
   )
 }

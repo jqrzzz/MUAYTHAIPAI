@@ -76,6 +76,12 @@ export default async function InviteAcceptPage({
       organization={invite.organizations}
       isLoggedIn={!!user}
       userEmail={user?.email}
+      defaultName={
+        // Pre-fill from the name they entered on /signup (stored in
+        // Supabase user_metadata at invite-creation time). Saves a
+        // duplicate input on the invite page.
+        (user?.user_metadata?.full_name as string | undefined) ?? null
+      }
     />
   )
 }
