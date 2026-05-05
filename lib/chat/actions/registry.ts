@@ -16,6 +16,7 @@
 
 import type { ActionHandler } from "./types"
 import { sendPendingDraftHandler } from "./handlers/send-pending-draft"
+import { sendAnnouncementHandler } from "./handlers/send-announcement"
 
 const handlers = new Map<string, ActionHandler>()
 
@@ -28,6 +29,7 @@ function registerAction(handler: ActionHandler): void {
 
 // --- Registered actions ---------------------------------------------------
 registerAction(sendPendingDraftHandler)
+registerAction(sendAnnouncementHandler)
 
 export function getActionHandler(type: string): ActionHandler | undefined {
   return handlers.get(type)

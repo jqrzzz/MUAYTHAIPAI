@@ -273,6 +273,70 @@ export async function runOwnerAI(input: OwnerAIInput): Promise<OwnerAIOutput> {
       },
     }),
 
+    propose_announcement: tool({
+      description:
+        "Propose sending an email announcement to a target group of students. Drafts the email content and creates a single-use confirmation link the owner can tap to send the blast. Common uses: cancel tomorrow's class, announce a seminar, share a holiday hours update, follow up after a fight night. The announcement does NOT send until the owner taps the confirm link.",
+      inputSchema: z.object({
+        subject: z
+          .string()
+          .min(1)
+          .max(150)
+          .describe("Email subject line. Short, clear, no clickbait."),
+        body: z
+          .string()
+          .min(1)
+          .max(4000)
+          .describe(
+            "Plain-text email body. Use the gym's voice. Don't open with 'Dear customer' — write like the owner would. Keep it under ~6 short paragraphs. The gym name is appended as a signature automatically.",
+          ),
+        target: z
+          .literal("all_students")
+          .default("all_students")
+          .describe(
+            "Recipient set. For now only 'all_students' is supported (every user who has booked at this gym at least once). Future targets will include level filters, attendance bands, etc.",
+          ),
+      }),
+      execute: async ({ subject, body, target }) => {
+        // Quick recipient count so the confirm-page preview can say
+        // "Will send to ~47 students" instead of an abstract "all
+        // students."
+        const { count } = await supabase
+          .from("bookings")
+          .select("user_id", { count: "exact", head: true })
+          .eq("org_id", orgId)
+          .not("user_id", "is", null)
+
+        const preview =
+          `Send announcement to ${count ?? "your"} students\n\n` +
+          `Subject: ${subject}\n\n${body}`.slice(0, 900)
+
+        try {
+          const token = await createActionToken({
+            supabase,
+            orgId,
+            userId: input.userId,
+            actionType: "send_announcement",
+            params: { subject, body, target },
+            preview,
+            ttlMinutes: 30,
+            proposedByConversation: ownerConversationId,
+          })
+          return {
+            ok: true,
+            confirm_url: token.deeplinkUrl,
+            expires_at: token.expiresAt,
+            recipient_count: count ?? null,
+            note: "Share the confirm_url with the owner. Tapping it from a logged-in browser will send the announcement to every recipient.",
+          }
+        } catch (err) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          }
+        }
+      },
+    }),
+
     propose_send_draft: tool({
       description:
         "Propose sending a pending draft right now. Creates a single-use, time-limited confirmation link the owner can tap from chat to approve and send in one action. The draft does NOT send until the owner taps the link. Use right after draft_reply, or when the owner says 'send draft X' / 'approve the German one'.",
@@ -383,10 +447,12 @@ Operator-mode, not hospitality. No "Sawadee", no emoji pageantry. Be crisp, usef
 - Search recent conversations by text or status
 - Draft a reply to a visitor thread (draft-only)
 - Propose sending a draft: creates a single-tap confirm link the owner opens in a browser. The draft does not send until they tap the link.
+- Propose an email announcement to all students (cancellations, seminar invites, holiday hours). You write the subject + body; the owner taps Confirm to send the blast.
 - Today's bookings
 
 # Safety
-- You never send customer replies directly. draft_reply stages the reply; propose_send_draft mints a confirm link; only the owner's tap actually sends it.
+- You never send customer messages directly. draft_reply / propose_send_draft / propose_announcement all stage the action and mint a confirm link. Nothing leaves the gym until the owner taps the link.
+- For announcements: be specific about what's being sent and to how many people in the chat reply, so the owner can sanity-check before tapping. Always quote back the subject + body verbatim.
 - If the owner asks you to do something you can't yet (refunds, publishing, billing, schedule changes), tell them plainly and suggest the web console. More propose_* actions will arrive over time; when you're unsure if an action is supported, don't invent one.
 - Do not reveal other gyms' data. All tools are scoped to this org.
 - If you don't know, say so. Don't invent numbers, names, or bookings.
