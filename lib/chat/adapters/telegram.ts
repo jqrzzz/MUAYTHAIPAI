@@ -24,6 +24,7 @@
 import crypto from "node:crypto"
 import type {
   ChannelAdapter,
+  ChannelCredentials,
   IncomingAttachment,
   IncomingMessage,
   OutgoingMessage,
@@ -129,11 +130,10 @@ export const telegramAdapter: ChannelAdapter = {
 
     // Telegram doesn't send a receiver id in the webhook payload itself —
     // the bot identity is implicit in the fact that Telegram delivered
-    // this update to our webhook URL. For single-bot deployments we read
-    // TELEGRAM_BOT_ID from env and stamp it here so the engine can route
-    // first-contact visitors through mtp_chat_group_channels. Multi-bot
-    // deployments will switch to per-bot webhook paths and derive the id
-    // from the path at the webhook layer.
+    // this update to our webhook URL. The webhook layer is now expected
+    // to stamp the right bot_id on the parsed message AFTER calling
+    // parse() (it knows which gym's creds were used to verify). The env
+    // fallback here keeps the demo gym working without that stamping.
     const receiverAccountId = process.env.TELEGRAM_BOT_ID || undefined
 
     return [
@@ -154,8 +154,13 @@ export const telegramAdapter: ChannelAdapter = {
     ]
   },
 
-  verifySignature(_rawBody: string, headers: Headers): boolean {
-    const expected = process.env.TELEGRAM_WEBHOOK_SECRET
+  verifySignature(
+    _rawBody: string,
+    headers: Headers,
+    credentials?: ChannelCredentials,
+  ): boolean {
+    const expected =
+      credentials?.webhook_secret ?? process.env.TELEGRAM_WEBHOOK_SECRET
     if (!expected) return false
 
     const got = headers.get("x-telegram-bot-api-secret-token")
@@ -173,10 +178,11 @@ export const telegramAdapter: ChannelAdapter = {
   async send(
     externalChatId: string,
     message: OutgoingMessage,
+    credentials?: ChannelCredentials,
   ): Promise<SendResult> {
-    const token = process.env.TELEGRAM_BOT_TOKEN
+    const token = credentials?.bot_token ?? process.env.TELEGRAM_BOT_TOKEN
     if (!token) {
-      return { ok: false, error: "TELEGRAM_BOT_TOKEN not configured" }
+      return { ok: false, error: "Telegram bot token not configured" }
     }
 
     try {
@@ -225,8 +231,11 @@ export const telegramAdapter: ChannelAdapter = {
     }
   },
 
-  async sendTyping(externalChatId: string): Promise<void> {
-    const token = process.env.TELEGRAM_BOT_TOKEN
+  async sendTyping(
+    externalChatId: string,
+    credentials?: ChannelCredentials,
+  ): Promise<void> {
+    const token = credentials?.bot_token ?? process.env.TELEGRAM_BOT_TOKEN
     if (!token) return
     try {
       await fetch(`${TELEGRAM_API_BASE}/bot${token}/sendChatAction`, {

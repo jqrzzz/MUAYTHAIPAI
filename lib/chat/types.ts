@@ -107,23 +107,52 @@ export type ChannelAdapter = {
 
   /**
    * Verify the webhook signature against the raw body + headers.
+   *
+   * `credentials` is optional. When the gym has stored its own per-org
+   * tokens (via mtp_channel_credentials), the webhook handler resolves
+   * the right gym from the payload's destination and passes that gym's
+   * creds in. When omitted (or when no DB row exists), the adapter
+   * falls back to the platform's process.env values — the demo-gym
+   * (single-tenant) path that predates Wave 9c.
+   *
    * Returns false for invalid signatures — webhook handler should still
    * return 200 to prevent retries, but skip processing.
    */
-  verifySignature(rawBody: string, headers: Headers): boolean
+  verifySignature(
+    rawBody: string,
+    headers: Headers,
+    credentials?: ChannelCredentials,
+  ): boolean
 
   /**
    * Send an outgoing message. Must not throw on channel errors —
    * return SendResult with ok:false instead.
+   *
+   * `credentials` is preferred when given; falls back to env vars to
+   * keep the demo gym working without a DB write.
    */
-  send(externalChatId: string, message: OutgoingMessage): Promise<SendResult>
+  send(
+    externalChatId: string,
+    message: OutgoingMessage,
+    credentials?: ChannelCredentials,
+  ): Promise<SendResult>
 
   /**
    * Optional typing indicator for channels that support it.
    * No-op for channels that don't (LINE).
    */
-  sendTyping?(externalChatId: string): Promise<void>
+  sendTyping?(
+    externalChatId: string,
+    credentials?: ChannelCredentials,
+  ): Promise<void>
 }
+
+/**
+ * Per-channel credential bag. Keys are channel-specific (see
+ * lib/chat/credentials.ts CHANNEL_FIELDS). Values are plain strings —
+ * the table stores JSONB and the adapter reads the strings it needs.
+ */
+export type ChannelCredentials = Record<string, string | undefined>
 
 /**
  * Result summary from the engine handling one inbound message.

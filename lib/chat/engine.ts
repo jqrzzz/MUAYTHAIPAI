@@ -21,6 +21,7 @@ import { createClient } from "@supabase/supabase-js"
 import { runConciergeAI, type ConciergeHistoryEntry } from "./ai/concierge"
 import { runOwnerAI, type OwnerAIHistoryEntry } from "./ai/owner"
 import { loadGymKnowledge } from "./knowledge"
+import { loadChannelCredentials } from "./credentials"
 import type {
   ChannelAdapter,
   HandleMessageResult,
@@ -237,10 +238,25 @@ export async function handleMessage(
         .select("id")
         .single()
 
-      const sendResult = await adapter.send(msg.externalChatId, {
-        text: aiResult.replyText,
-        replyToExternalMessageId: msg.externalMessageId,
-      })
+      // Load this gym's credentials for the channel before sending. The
+      // adapters prefer per-org creds over env-var fallback, which is
+      // what makes a multi-gym deployment actually multi-tenant on the
+      // outbound side. For the demo gym (Wisarut) the DB row may be
+      // missing; loadChannelCredentials returns the env fallback.
+      const creds =
+        msg.platform === "web" || msg.platform === "test"
+          ? undefined
+          : (await loadChannelCredentials(supabase, orgId, msg.platform)) ??
+            undefined
+
+      const sendResult = await adapter.send(
+        msg.externalChatId,
+        {
+          text: aiResult.replyText,
+          replyToExternalMessageId: msg.externalMessageId,
+        },
+        creds,
+      )
 
       if (sendResult.ok && sendResult.externalMessageId && outboundRow) {
         await supabase
@@ -249,6 +265,29 @@ export async function handleMessage(
           .eq("id", outboundRow.id)
       } else if (!sendResult.ok) {
         console.error("[chat/engine] adapter send failed:", sendResult.error)
+      }
+
+      // First successful send through real per-gym credentials flips
+      // is_verified=true so the Channels UI shows a green badge.
+      if (sendResult.ok && creds && msg.platform !== "web" && msg.platform !== "test") {
+        await supabase
+          .from("mtp_channel_credentials")
+          .update({
+            is_verified: true,
+            last_verified_at: new Date().toISOString(),
+            last_error: null,
+          })
+          .eq("org_id", orgId)
+          .eq("channel", msg.platform)
+          .eq("is_verified", false)
+      } else if (!sendResult.ok && creds) {
+        await supabase
+          .from("mtp_channel_credentials")
+          .update({
+            last_error: sendResult.error?.slice(0, 500) ?? "send failed",
+          })
+          .eq("org_id", orgId)
+          .eq("channel", msg.platform)
       }
     }
 
