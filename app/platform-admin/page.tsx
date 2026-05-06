@@ -2,7 +2,11 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import PlatformAdminClient from "./client"
 
-export default async function PlatformAdminPage() {
+export default async function PlatformAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ full?: string }>
+}) {
   const supabase = await createClient()
 
   const {
@@ -18,6 +22,15 @@ export default async function PlatformAdminPage() {
 
   if (!userData?.is_platform_admin) {
     redirect("/admin")
+  }
+
+  // Default landing is the briefing page (`/platform-admin/today`) — the
+  // operator's mission-control morning view. The 11-tab full dashboard
+  // remains accessible at /platform-admin?full=1, linked from the
+  // briefing page's "Full dashboard" button.
+  const params = await searchParams
+  if (params.full !== "1") {
+    redirect("/platform-admin/today")
   }
 
   // Fetch all gyms with subscriptions

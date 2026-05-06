@@ -2,6 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "path": "/api/cron/discover-rotating-cities",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/master-daily-digest",
+      "schedule": "30 1 * * *"
+    },
+    {
       "path": "/api/cron/trial-nudge",
       "schedule": "0 2 * * *"
     }

@@ -51,7 +51,7 @@ export default async function TodayHomePage() {
             <p className="text-sm font-semibold text-white">Command center</p>
           </div>
           <Link
-            href="/platform-admin"
+            href="/platform-admin?full=1"
             className="text-xs text-orange-400 hover:underline inline-flex items-center gap-1"
           >
             Full dashboard
