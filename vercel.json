@@ -6,6 +6,10 @@
       "schedule": "0 19 * * *"
     },
     {
+      "path": "/api/cron/auto-enrich",
+      "schedule": "0 20 * * *"
+    },
+    {
       "path": "/api/cron/master-daily-digest",
       "schedule": "30 1 * * *"
     },
