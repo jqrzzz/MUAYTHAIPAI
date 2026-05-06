@@ -7,21 +7,31 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  AlertTriangle,
   ArrowLeft,
   Award,
   Calendar,
   CheckCircle2,
   CreditCard,
+  FileText,
   Globe,
   Loader2,
   Mail,
   MapPin,
+  Package as PackageIcon,
   Phone,
   Plus,
   TrendingUp,
   User,
   XCircle,
 } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Student {
   id: string
@@ -114,6 +124,13 @@ interface Stats {
   gyms_visited: number
 }
 
+interface WaiverStatus {
+  state: "no_waiver" | "signed_current" | "signed_outdated" | "unsigned"
+  version: number | null
+  signed_at: string | null
+  signed_name: string | null
+}
+
 interface Props {
   orgRole: "owner" | "admin"
   student: Student
@@ -124,6 +141,7 @@ interface Props {
   ladder: LadderLevel[]
   recentSignoffs: RecentSignoff[]
   stats: Stats
+  waiverStatus: WaiverStatus
 }
 
 function formatDateOnly(iso: string | null): string {
@@ -166,6 +184,15 @@ function statusTone(status: string, paymentStatus: string): {
   return { label: status, color: "bg-zinc-700 text-zinc-300 border-zinc-600" }
 }
 
+interface PackageRow {
+  id: string
+  name: string
+  price_thb: number
+  credit_count: number | null
+  duration_days: number | null
+  credit_type: string
+}
+
 export default function StudentProfileClient({
   orgRole: _orgRole,
   student,
@@ -176,11 +203,65 @@ export default function StudentProfileClient({
   ladder,
   recentSignoffs,
   stats,
+  waiverStatus,
 }: Props) {
   const [newNote, setNewNote] = useState("")
   const [savingNote, setSavingNote] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
   const [localNotes, setLocalNotes] = useState<Note[]>(notes)
+
+  // Package-sale state — load lazily when the operator opens the dropdown.
+  const [packagesAvailable, setPackagesAvailable] = useState<PackageRow[]>([])
+  const [packagesLoaded, setPackagesLoaded] = useState(false)
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("")
+  const [paymentMethod, setPaymentMethod] = useState<string>("cash")
+  const [selling, setSelling] = useState(false)
+  const [saleError, setSaleError] = useState<string | null>(null)
+  const [saleSuccess, setSaleSuccess] = useState<string | null>(null)
+
+  async function loadPackages() {
+    if (packagesLoaded) return
+    try {
+      const res = await fetch("/api/admin/packages", { cache: "no-store" })
+      const data = await res.json()
+      if (res.ok) {
+        const active = ((data.packages as PackageRow[] & { is_active?: boolean }[]) ?? [])
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((p: any) => p.is_active !== false)
+        setPackagesAvailable(active as PackageRow[])
+      }
+    } finally {
+      setPackagesLoaded(true)
+    }
+  }
+
+  async function sellPackage() {
+    if (!selectedPackageId) return
+    setSelling(true)
+    setSaleError(null)
+    setSaleSuccess(null)
+    try {
+      const res = await fetch(
+        `/api/admin/students/${student.id}/buy-package`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            package_id: selectedPackageId,
+            payment_method: paymentMethod,
+          }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Sale failed")
+      setSaleSuccess(`Sold "${data.package?.name ?? "package"}" — refresh to see new credits.`)
+      setSelectedPackageId("")
+    } catch (err) {
+      setSaleError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSelling(false)
+    }
+  }
 
   const studentName = student.full_name || student.display_name || student.email
   const totalCredits = credits.reduce((s, c) => s + c.credits_remaining, 0)
@@ -351,6 +432,11 @@ export default function StudentProfileClient({
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Liability waiver status — only renders if the gym has published one */}
+        {waiverStatus.state !== "no_waiver" && (
+          <WaiverStatusBanner status={waiverStatus} />
         )}
 
         {/* Cert journey */}
@@ -638,6 +724,72 @@ export default function StudentProfileClient({
                 </ul>
               )}
               <hr className="border-neutral-800" />
+              {/* Sell-package action — opens lazy. Operator picks a
+                  package + payment method and ships the sale. */}
+              <div className="space-y-2">
+                <p className="text-xs text-neutral-500 uppercase tracking-wider inline-flex items-center gap-1.5">
+                  <PackageIcon className="h-3 w-3" />
+                  Sell a package
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select
+                    value={selectedPackageId}
+                    onValueChange={setSelectedPackageId}
+                    onOpenChange={(open) => open && loadPackages()}
+                  >
+                    <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white text-xs h-9">
+                      <SelectValue
+                        placeholder={
+                          packagesLoaded
+                            ? packagesAvailable.length === 0
+                              ? "No packages defined"
+                              : "Pick a package"
+                            : "Click to load packages"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="bg-neutral-900 border-neutral-700 text-white">
+                      {packagesAvailable.map((p) => (
+                        <SelectItem key={p.id} value={p.id} className="text-white">
+                          {p.name} · ฿{p.price_thb.toLocaleString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white text-xs h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-neutral-900 border-neutral-700 text-white">
+                      <SelectItem value="cash" className="text-white">Cash</SelectItem>
+                      <SelectItem value="card" className="text-white">Card</SelectItem>
+                      <SelectItem value="stripe" className="text-white">Stripe</SelectItem>
+                      <SelectItem value="bank_transfer" className="text-white">Bank transfer</SelectItem>
+                      <SelectItem value="other" className="text-white">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={sellPackage}
+                  disabled={selling || !selectedPackageId}
+                  className="bg-orange-500 hover:bg-orange-400 text-white text-xs w-full"
+                >
+                  {selling ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <PackageIcon className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Sell + record payment
+                </Button>
+                {saleError && (
+                  <p className="text-[11px] text-red-400">{saleError}</p>
+                )}
+                {saleSuccess && (
+                  <p className="text-[11px] text-emerald-400">{saleSuccess}</p>
+                )}
+              </div>
+              <hr className="border-neutral-800" />
               <p className="text-xs text-neutral-500 uppercase tracking-wider">
                 Recent transactions
               </p>
@@ -683,6 +835,67 @@ export default function StudentProfileClient({
         </div>
       </main>
     </div>
+  )
+}
+
+function WaiverStatusBanner({ status }: { status: WaiverStatus }) {
+  if (status.state === "signed_current") {
+    return (
+      <Card className="border-emerald-700/30 bg-emerald-500/[0.04]">
+        <CardContent className="p-3 flex items-center gap-3">
+          <FileText className="h-5 w-5 text-emerald-400 shrink-0" />
+          <div className="text-sm text-emerald-200 flex-1">
+            <strong>Liability waiver signed</strong>
+            {status.signed_name && (
+              <span className="text-emerald-300/70">
+                {" "}
+                · &quot;{status.signed_name}&quot;
+              </span>
+            )}
+            <span className="text-emerald-300/70">
+              {" "}
+              · v{status.version}
+              {status.signed_at && ` · ${formatRelative(status.signed_at)}`}
+            </span>
+          </div>
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+        </CardContent>
+      </Card>
+    )
+  }
+  if (status.state === "signed_outdated") {
+    return (
+      <Card className="border-amber-700/30 bg-amber-500/[0.06]">
+        <CardContent className="p-3 flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
+          <div className="text-sm text-amber-200 flex-1">
+            <strong>Outdated waiver signature</strong>
+            <span className="text-amber-300/70">
+              {" "}
+              · signed an older version
+              {status.signed_at && ` ${formatRelative(status.signed_at)}`}
+              {status.version != null &&
+                ` · current is v${status.version}`}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+  // unsigned
+  return (
+    <Card className="border-red-700/30 bg-red-500/[0.06]">
+      <CardContent className="p-3 flex items-center gap-3">
+        <AlertTriangle className="h-5 w-5 text-red-400 shrink-0" />
+        <div className="text-sm text-red-200 flex-1">
+          <strong>Liability waiver not signed</strong>
+          <span className="text-red-300/70">
+            {" "}
+            · ask the student to sign before their first session
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

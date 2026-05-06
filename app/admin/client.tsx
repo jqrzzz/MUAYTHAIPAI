@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import TodayTab from "@/components/admin/today-tab"
 import TodaySignalPanel from "@/components/admin/today-signal-panel"
 import TrialBanner from "@/components/admin/trial-banner"
+import PackagesTab from "@/components/admin/packages-tab"
 import RecentTab from "@/components/admin/recent-tab"
 import ServicesTab from "@/components/admin/services-tab"
 import TrainersTab from "@/components/admin/trainers-tab"
@@ -31,6 +32,7 @@ import {
   LogOut,
   Clock,
   Dumbbell,
+  Package as PackageIcon,
   RefreshCw,
   BarChart3,
   Settings,
@@ -202,7 +204,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -320,6 +322,7 @@ export default function AdminDashboardClient({
       items: [
         { id: "reports" as const, label: "Reports", labelTh: "รายงาน", icon: BarChart3 },
         { id: "services" as const, label: "Services", labelTh: "บริการ", icon: Dumbbell },
+        { id: "packages" as const, label: "Packages", labelTh: "แพ็คเกจ", icon: PackageIcon },
         { id: "time-slots" as const, label: "Time Slots", labelTh: "ช่วงเวลา", icon: Clock },
         { id: "trainers" as const, label: "Trainers", labelTh: "ครูมวย", icon: Users },
       ],
@@ -640,6 +643,8 @@ export default function AdminDashboardClient({
               onServicesChange={setServices}
             />
           )}
+
+          {activeTab === "packages" && <PackagesTab />}
 
           {activeTab === "trainers" && (
             <TrainersTab

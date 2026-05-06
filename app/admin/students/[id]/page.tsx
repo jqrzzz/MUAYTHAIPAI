@@ -57,6 +57,8 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
     signoffsAnywhereRes,
     certsHereRes,
     enrollsHereRes,
+    activeWaiverRes,
+    studentSignaturesRes,
   ] = await Promise.all([
     supabase
       .from("users")
@@ -117,6 +119,17 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
       .eq("org_id", orgId)
       .eq("user_id", id)
       .order("enrolled_at", { ascending: false }),
+    supabase
+      .from("org_waivers")
+      .select("id, version, title")
+      .eq("org_id", orgId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("student_waiver_signatures")
+      .select("waiver_id, signed_at, signed_name")
+      .eq("org_id", orgId)
+      .eq("user_id", id),
   ])
 
   if (!studentRes.data) {
@@ -128,6 +141,42 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
   const signoffsAnywhere = signoffsAnywhereRes.data ?? []
   const certsHere = certsHereRes.data ?? []
   const enrollsHere = enrollsHereRes.data ?? []
+  const activeWaiver = activeWaiverRes.data ?? null
+  const studentSignatures = studentSignaturesRes.data ?? []
+  const signedActive = activeWaiver
+    ? studentSignatures.find((s) => s.waiver_id === activeWaiver.id) ?? null
+    : null
+  const signedOlder =
+    !signedActive && studentSignatures.length > 0
+      ? studentSignatures[0]
+      : null
+  const waiverStatus: {
+    state: "no_waiver" | "signed_current" | "signed_outdated" | "unsigned"
+    version: number | null
+    signed_at: string | null
+    signed_name: string | null
+  } = !activeWaiver
+    ? { state: "no_waiver", version: null, signed_at: null, signed_name: null }
+    : signedActive
+      ? {
+          state: "signed_current",
+          version: activeWaiver.version,
+          signed_at: signedActive.signed_at,
+          signed_name: signedActive.signed_name,
+        }
+      : signedOlder
+        ? {
+            state: "signed_outdated",
+            version: activeWaiver.version,
+            signed_at: signedOlder.signed_at,
+            signed_name: signedOlder.signed_name,
+          }
+        : {
+            state: "unsigned",
+            version: activeWaiver.version,
+            signed_at: null,
+            signed_name: null,
+          }
 
   // Business stats — what an operator wants to see at a glance.
   const paid = bookings.filter((b) => b.payment_status === "paid")
@@ -260,6 +309,7 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
         gyms_visited:
           new Set(signoffsAnywhere.map((s) => s.org_id as string)).size,
       }}
+      waiverStatus={waiverStatus}
     />
   )
 }
