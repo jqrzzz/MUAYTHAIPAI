@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, UserCheck, UserX, Banknote } from "lucide-react"
+import { Plus, UserCheck, UserX, Banknote, List, Users } from "lucide-react"
 import { getTodayInPaiTimezone } from "@/lib/timezone"
 
 interface Booking {
@@ -66,6 +66,7 @@ export default function TodayTab({
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false)
   const [isCreatingBooking, setIsCreatingBooking] = useState(false)
+  const [viewMode, setViewMode] = useState<"list" | "classes">("list")
   const [bookingError, setBookingError] = useState("")
   const [newBookingForm, setNewBookingForm] = useState({
     serviceId: "",
@@ -171,14 +172,47 @@ export default function TodayTab({
 
   return (
     <Card className="bg-neutral-900/50 border-neutral-800">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
         <div>
           <CardTitle className="text-white">Today&apos;s Bookings (การจองวันนี้)</CardTitle>
           <CardDescription>
             {todayDate} • {bookings.length} bookings
           </CardDescription>
         </div>
-        <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
+        <div className="flex items-center gap-2">
+          {/* View toggle: flat list vs grouped by class. Operators with
+              class-based gyms (group sessions at fixed times) want the
+              class view; operators with private-session-heavy gyms keep
+              the flat list. Persists per-render. */}
+          <div className="inline-flex items-center rounded-md border border-neutral-700 p-0.5 bg-neutral-900">
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs ${
+                viewMode === "list"
+                  ? "bg-neutral-700 text-white"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+              title="Flat list — every booking shown in time order"
+            >
+              <List className="h-3 w-3" />
+              List
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("classes")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs ${
+                viewMode === "classes"
+                  ? "bg-neutral-700 text-white"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+              title="Grouped by class — same service + time bucketed together"
+            >
+              <Users className="h-3 w-3" />
+              Classes
+            </button>
+          </div>
+          <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
               <Plus className="h-4 w-4 mr-1 md:mr-2" />
@@ -324,11 +358,19 @@ export default function TodayTab({
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         {bookings.length === 0 ? (
           <div className="text-center py-8 text-neutral-400">No bookings today (ไม่มีการจองวันนี้)</div>
+        ) : viewMode === "classes" ? (
+          <ClassesView
+            bookings={bookings}
+            isUpdating={isUpdating}
+            updateBookingStatus={updateBookingStatus}
+            markAsPaid={markAsPaid}
+          />
         ) : (
           <div className="space-y-3">
             {bookings.map((booking) => (
@@ -415,5 +457,169 @@ export default function TodayTab({
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * Class roster view — buckets today's bookings by service+time so the
+ * operator sees "9:00 Group Muay Thai · 8 booked" with the attendee
+ * roster, instead of a flat list. Useful for class-based gyms; the
+ * flat list is still available for private-session-heavy gyms via the
+ * view toggle.
+ */
+function ClassesView({
+  bookings,
+  isUpdating,
+  updateBookingStatus,
+  markAsPaid,
+}: {
+  bookings: Booking[]
+  isUpdating: string | null
+  updateBookingStatus: (id: string, status: string) => void
+  markAsPaid: (id: string) => void
+}) {
+  // Group by `${service_name}|${time}`. Bookings with no time bucket
+  // together as "Anytime".
+  const groups = new Map<
+    string,
+    {
+      time: string
+      serviceName: string
+      bookings: Booking[]
+    }
+  >()
+  for (const b of bookings) {
+    const time = b.booking_time?.slice(0, 5) ?? "Anytime"
+    const serviceName = b.services?.name || "Service"
+    const key = `${time}|${serviceName}`
+    const existing = groups.get(key)
+    if (existing) {
+      existing.bookings.push(b)
+    } else {
+      groups.set(key, { time, serviceName, bookings: [b] })
+    }
+  }
+
+  // Sort groups by time (Anytime last)
+  const sorted = Array.from(groups.values()).sort((a, b) => {
+    if (a.time === "Anytime") return 1
+    if (b.time === "Anytime") return -1
+    return a.time.localeCompare(b.time)
+  })
+
+  return (
+    <div className="space-y-3">
+      {sorted.map(({ time, serviceName, bookings: groupBookings }) => {
+        const completedCount = groupBookings.filter(
+          (b) => b.status === "completed",
+        ).length
+        const noShowCount = groupBookings.filter(
+          (b) => b.status === "no_show",
+        ).length
+        const paidCount = groupBookings.filter(
+          (b) => b.payment_status === "paid",
+        ).length
+        return (
+          <div
+            key={`${time}|${serviceName}`}
+            className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-3 space-y-2"
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-white">
+                  {time === "Anytime" ? "Anytime" : time}{" "}
+                  <span className="text-neutral-400 font-normal">
+                    · {serviceName}
+                  </span>
+                </p>
+                <p className="text-xs text-neutral-500">
+                  {groupBookings.length} booked
+                  {completedCount > 0 && (
+                    <span className="text-green-400">
+                      {" · "}
+                      {completedCount} arrived
+                    </span>
+                  )}
+                  {noShowCount > 0 && (
+                    <span className="text-red-400">
+                      {" · "}
+                      {noShowCount} no-show
+                    </span>
+                  )}
+                  {paidCount > 0 && (
+                    <span className="text-amber-400">
+                      {" · "}
+                      {paidCount} paid
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <ul className="space-y-1">
+              {groupBookings.map((b) => (
+                <li
+                  key={b.id}
+                  className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-neutral-900 border border-neutral-800/60 text-sm"
+                >
+                  <span className="text-white truncate">{b.guest_name}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        b.status === "completed"
+                          ? "border-green-500/40 text-green-400"
+                          : b.status === "no_show"
+                            ? "border-red-500/40 text-red-400"
+                            : "border-neutral-700 text-neutral-400"
+                      }`}
+                    >
+                      {b.status === "completed"
+                        ? "Arrived"
+                        : b.status === "no_show"
+                          ? "No-show"
+                          : "Confirmed"}
+                    </Badge>
+                    {b.status !== "completed" && b.status !== "no_show" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updateBookingStatus(b.id, "completed")}
+                        disabled={isUpdating === b.id}
+                        className="h-6 px-2 text-[10px] text-green-400 hover:text-green-300 hover:bg-green-900/20"
+                      >
+                        <UserCheck className="w-3 h-3" />
+                      </Button>
+                    )}
+                    {b.status !== "completed" && b.status !== "no_show" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updateBookingStatus(b.id, "no_show")}
+                        disabled={isUpdating === b.id}
+                        className="h-6 px-2 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                      >
+                        <UserX className="w-3 h-3" />
+                      </Button>
+                    )}
+                    {b.payment_status !== "paid" &&
+                      b.payment_method === "cash" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => markAsPaid(b.id)}
+                          disabled={isUpdating === b.id}
+                          className="h-6 px-2 text-[10px] text-amber-400 hover:text-amber-300 hover:bg-amber-900/20"
+                        >
+                          <Banknote className="w-3 h-3" />
+                        </Button>
+                      )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })}
+    </div>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Minus, RefreshCw, GraduationCap, History, Award, Eye } from "lucide-react"
+import { Plus, Minus, RefreshCw, GraduationCap, History, Award, Eye, ExternalLink } from "lucide-react"
 import StudentPassportDialog from "./student-passport-dialog"
 
 interface StudentCredit {
@@ -464,6 +465,13 @@ export default function StudentsTab({
                     <Plus className="w-3 h-3 mr-1" /> Add Credits
                   </Button>
                 </div>
+                <Link
+                  href={`/admin/students/${student.id}`}
+                  className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-orange-500/30 bg-orange-500/[0.06] py-1.5 text-xs text-orange-300 hover:bg-orange-500/15 hover:text-orange-200 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Open full profile — bookings, LTV, attendance, notes
+                </Link>
               </CardContent>
             </Card>
           ))}
