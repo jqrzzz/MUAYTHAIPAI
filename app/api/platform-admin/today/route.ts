@@ -27,6 +27,7 @@ export async function GET() {
     recentCerts,
     growthRows,
     newDiscoveries,
+    draftsReady,
   ] = await Promise.all([
     // Invited > 7 days ago, not claimed, not snoozed within last 7 days
     supabase
@@ -97,6 +98,16 @@ export async function GET() {
       .gte("created_at", ago(7))
       .neq("status", "onboarded")
       .order("created_at", { ascending: false })
+      .limit(15),
+    // Auto-drafted invites awaiting operator approval — gyms where the
+    // auto-draft cron has run but the operator hasn't sent yet
+    // (status='discovered', auto_drafted_at IS NOT NULL).
+    supabase
+      .from("discovered_gyms")
+      .select("id, name, city, province, email, auto_draft_subject, auto_drafted_at")
+      .eq("status", "discovered")
+      .not("auto_drafted_at", "is", null)
+      .order("auto_drafted_at", { ascending: false })
       .limit(15),
   ])
 
@@ -182,6 +193,14 @@ export async function GET() {
       summary: g.ai_summary,
       enriched: !!g.last_extracted_at,
       created_at: g.created_at,
+    })),
+    drafts_ready: (draftsReady.data || []).map((g) => ({
+      id: g.id,
+      name: g.name,
+      where: [g.city, g.province].filter(Boolean).join(", ") || null,
+      email: g.email,
+      subject: g.auto_draft_subject,
+      drafted_at: g.auto_drafted_at,
     })),
   })
 }

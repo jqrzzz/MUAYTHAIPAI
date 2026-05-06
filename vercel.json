@@ -10,6 +10,10 @@
       "schedule": "0 20 * * *"
     },
     {
+      "path": "/api/cron/auto-draft-invites",
+      "schedule": "0 21 * * *"
+    },
+    {
       "path": "/api/cron/master-daily-digest",
       "schedule": "30 1 * * *"
     },
