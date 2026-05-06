@@ -55,16 +55,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .eq("id", user.id)
   }
 
-  // 2. Add as org member
+  // 2. Add as org member. Permissions are derived from role at gate-time
+  // (the can_manage_* columns were removed in 030-cleanup-role-model.sql
+  // — they were set here but never read anywhere). See
+  // docs/roles-and-access.md for the role → permission matrix.
   const { error: memberError } = await supabase.from("org_members").insert({
     org_id: invite.org_id,
     user_id: user.id,
     role: invite.role,
     status: "active",
-    can_manage_bookings: invite.role !== "student",
-    can_manage_services: invite.role === "admin",
-    can_manage_members: invite.role === "admin",
-    can_view_payments: invite.role !== "student",
   })
 
   if (memberError) {

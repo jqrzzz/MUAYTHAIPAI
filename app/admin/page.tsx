@@ -36,18 +36,28 @@ export default async function AdminPage() {
     redirect("/admin/login?error=no_access")
   }
 
+  // Role gate: /admin is for gym owners + admins only. Trainers go to
+  // /trainer (their dedicated dashboard); anyone else (including any
+  // legacy student-role members) lands on /student.
+  // See docs/roles-and-access.md for the full role/route matrix.
+  const role = String(membership.role)
+  if (role === "trainer") {
+    redirect("/trainer")
+  }
+  if (role !== "owner" && role !== "admin") {
+    redirect("/student")
+  }
+
   // First-time setup: owners/admins with no services yet get sent to the
   // onboarding wizard. Mirrors the inverse check in /onboarding/page.tsx
   // (which sends users back here once they have any services).
-  if (membership.role === "owner" || membership.role === "admin") {
-    const { count: serviceCount } = await supabase
-      .from("services")
-      .select("id", { count: "exact", head: true })
-      .eq("org_id", membership.org_id)
+  const { count: serviceCount } = await supabase
+    .from("services")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", membership.org_id)
 
-    if (!serviceCount) {
-      redirect("/onboarding")
-    }
+  if (!serviceCount) {
+    redirect("/onboarding")
   }
 
   const orgTimezone = (membership.organizations as { timezone?: string })?.timezone || DEFAULT_TIMEZONE

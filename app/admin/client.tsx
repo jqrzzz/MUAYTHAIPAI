@@ -311,7 +311,7 @@ export default function AdminDashboardClient({
         { id: "inbox" as const, label: "Inbox", labelTh: "กล่องข้อความ", icon: Inbox, badge: inboxCounts.total },
         { id: "students" as const, label: "Students", labelTh: "นักเรียน", icon: GraduationCap },
         { id: "certificates" as const, label: "Certificates", labelTh: "ใบรับรอง", icon: Award },
-        { id: "courses" as const, label: "Courses", labelTh: "หลักสูตร", icon: BookOpen },
+        { id: "courses" as const, label: "Gym courses", labelTh: "หลักสูตรของยิม", icon: BookOpen },
       ],
     },
     {
@@ -365,6 +365,7 @@ export default function AdminDashboardClient({
           </button>
           <div className="text-center">
             <h1 className="text-lg font-bold text-orange-500">{organization.name}</h1>
+            <p className="text-[10px] uppercase tracking-wider text-neutral-500 leading-none">Gym admin</p>
           </div>
           <div className="flex items-center gap-1">
             <NotificationBell />
@@ -384,7 +385,7 @@ export default function AdminDashboardClient({
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-bold text-orange-500">{organization.name}</h2>
-                  <p className="text-xs text-neutral-400">Admin Dashboard</p>
+                  <p className="text-xs text-neutral-400">Gym admin · {membership.role}</p>
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-neutral-800 rounded-lg">
                   <X className="w-5 h-5" />
@@ -443,7 +444,10 @@ export default function AdminDashboardClient({
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="font-bold text-orange-500 truncate">{organization.name}</h2>
-                <p className="text-xs text-neutral-400">Admin Dashboard</p>
+                <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                  Gym admin · {membership.role}
+                </span>
               </div>
               <NotificationBell />
             </div>
