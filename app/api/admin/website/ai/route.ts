@@ -64,6 +64,7 @@ const ActionSchema = z.discriminatedUnion("type", [
       "testimonials",
       "cta",
       "rich_text",
+      "lead_form",
     ]),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     props: z.record(z.string(), z.any()),
@@ -168,7 +169,9 @@ When the operator asks for a change, return:
 - reply: a short, warm acknowledgement (1-3 sentences)
 - actions: zero or more concrete edits
 
-Section types you can work with: hero, about, hours, contact, classes, trainers, photos, testimonials, cta, rich_text.
+Section types you can work with: hero, about, hours, contact, classes, trainers, photos, testimonials, cta, rich_text, lead_form.
+
+The lead_form section is a contact form that collects name + email + phone + message from website visitors. Submissions land in the operator's inbox with an AI-drafted reply. Props: heading, subtitle, success_message, submit_label, require_phone (bool).
 
 Section ids are the existing ones in the JSON above — use those exactly when updating or removing. Don't invent ids.
 

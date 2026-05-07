@@ -17,6 +17,7 @@ export type SectionType =
   | "testimonials"
   | "cta"
   | "rich_text"
+  | "lead_form"
 
 export interface HeroSection {
   id: string
@@ -131,6 +132,21 @@ export interface RichTextSection {
   }
 }
 
+export interface LeadFormSection {
+  id: string
+  type: "lead_form"
+  props: {
+    heading?: string
+    subtitle?: string
+    /** Visible after a successful submit. */
+    success_message?: string
+    /** Operator can hide the phone field if they don't want it. */
+    require_phone?: boolean
+    /** Optional fixed CTA on the submit button. */
+    submit_label?: string
+  }
+}
+
 export type WebsiteSection =
   | HeroSection
   | AboutSection
@@ -142,6 +158,7 @@ export type WebsiteSection =
   | TestimonialsSection
   | CtaSection
   | RichTextSection
+  | LeadFormSection
 
 export interface WebsiteTheme {
   primary_color?: string
@@ -229,6 +246,19 @@ export function defaultSections(args: {
         show_phone: true,
         show_email: true,
         show_socials: true,
+      },
+    },
+    {
+      id: newId(),
+      type: "lead_form",
+      props: {
+        heading: "Have a question?",
+        subtitle:
+          "Send us a message — we'll reply within a day. (No spam, promise.)",
+        success_message:
+          "Thanks! We'll be in touch soon. Train hard until then 🥊",
+        require_phone: false,
+        submit_label: "Send message",
       },
     },
     {

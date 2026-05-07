@@ -35,7 +35,9 @@ import type {
   TestimonialsSection,
   CtaSection,
   RichTextSection,
+  LeadFormSection,
 } from "@/lib/website-sections"
+import LeadFormBlock from "./lead-form-block"
 
 interface Service {
   id: string
@@ -170,6 +172,13 @@ function SectionRenderer({
       return <CtaBlock section={section} />
     case "rich_text":
       return <RichTextBlock section={section} />
+    case "lead_form":
+      return (
+        <LeadFormBlock
+          section={section as LeadFormSection}
+          gymSlug={org.slug ?? ""}
+        />
+      )
     default:
       return null
   }

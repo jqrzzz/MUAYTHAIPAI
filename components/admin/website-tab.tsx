@@ -488,6 +488,72 @@ function SectionEditor({
     )
   }
 
+  if (section.type === "lead_form") {
+    const props = local as {
+      heading?: string
+      subtitle?: string
+      success_message?: string
+      submit_label?: string
+      require_phone?: boolean
+    }
+    return (
+      <>
+        <Field label="Heading">
+          <SaasInput
+            value={props.heading ?? ""}
+            onChange={(e) => updateLocal("heading", e.target.value)}
+            onBlur={commit}
+            disabled={saving}
+            placeholder="Get in touch"
+          />
+        </Field>
+        <Field label="Subtitle">
+          <SaasInput
+            value={props.subtitle ?? ""}
+            onChange={(e) => updateLocal("subtitle", e.target.value)}
+            onBlur={commit}
+            disabled={saving}
+            placeholder="Send us a message — we'll reply within a day."
+          />
+        </Field>
+        <Field label="Success message">
+          <SaasInput
+            value={props.success_message ?? ""}
+            onChange={(e) => updateLocal("success_message", e.target.value)}
+            onBlur={commit}
+            disabled={saving}
+            placeholder="Thanks! We'll be in touch soon."
+          />
+        </Field>
+        <Field label="Submit button label">
+          <SaasInput
+            value={props.submit_label ?? ""}
+            onChange={(e) => updateLocal("submit_label", e.target.value)}
+            onBlur={commit}
+            disabled={saving}
+            placeholder="Send message"
+          />
+        </Field>
+        <label className="flex items-center gap-2 text-[12px] text-zinc-300 select-none">
+          <input
+            type="checkbox"
+            checked={!!props.require_phone}
+            onChange={(e) => {
+              updateLocal("require_phone", e.target.checked)
+              onChange({ ...local, require_phone: e.target.checked })
+            }}
+            disabled={saving}
+            className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900"
+          />
+          Require phone number
+        </label>
+        <p className="text-[11px] text-zinc-500 leading-relaxed">
+          Submissions go straight to <strong className="text-zinc-300">/admin → Inbox</strong> with an AI-drafted reply ready for you to review and approve.
+        </p>
+      </>
+    )
+  }
+
   return (
     <p className="text-[12px] text-zinc-500">
       The {section.type} section editor isn&apos;t built yet — but you can
