@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import TodayPanel from "@/components/platform-admin/today-panel"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
+import ViewAsPicker from "@/components/platform-admin/view-as-picker"
 
 export const metadata: Metadata = {
   title: "Today — MUAYTHAIPAI",
@@ -61,6 +62,7 @@ export default async function TodayHomePage() {
       </header>
       <main className="mx-auto max-w-2xl p-3 space-y-4">
         <TodayPanel />
+        <ViewAsPicker />
         <div>
           <PlatformCommandBar />
         </div>

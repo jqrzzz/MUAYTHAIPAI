@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import TrainerDashboardClient from "./client"
+import { getActiveImpersonation } from "@/lib/impersonation"
 
 export const metadata: Metadata = {
   title: "Trainer Dashboard | Muay Thai Thailand Network",
@@ -18,6 +19,24 @@ export default async function TrainerDashboardPage() {
     redirect("/trainer/login")
   }
 
+  // Platform admin "view as trainer" — pull the impersonated trainer
+  // profile instead of the actor's own. Falls back to the actor's profile
+  // if no impersonation is active. Regular users hit the normal path.
+  const { data: actorRow } = await supabase
+    .from("users")
+    .select("is_platform_admin")
+    .eq("id", user.id)
+    .single()
+  const isPlatformAdmin = !!actorRow?.is_platform_admin
+
+  let trainerUserId: string = user.id
+  if (isPlatformAdmin) {
+    const impersonation = await getActiveImpersonation()
+    if (impersonation?.type === "trainer" && impersonation.userId) {
+      trainerUserId = impersonation.userId
+    }
+  }
+
   // Fetch trainer profile
   const { data: trainerProfile } = await supabase
     .from("trainer_profiles")
@@ -25,11 +44,14 @@ export default async function TrainerDashboardPage() {
       *,
       organizations:org_id (id, name, slug, city, timezone, logo_url)
     `)
-    .eq("user_id", user.id)
+    .eq("user_id", trainerUserId)
     .single()
 
   // If not a trainer, redirect to appropriate place
   if (!trainerProfile) {
+    if (isPlatformAdmin) {
+      redirect("/platform-admin")
+    }
     redirect("/trainer/login")
   }
 

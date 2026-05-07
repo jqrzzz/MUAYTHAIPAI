@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import TodayTab from "@/components/admin/today-tab"
 import TodaySignalPanel from "@/components/admin/today-signal-panel"
 import TrialBanner from "@/components/admin/trial-banner"
+import ImpersonationBanner from "@/components/impersonation-banner"
 import PackagesTab from "@/components/admin/packages-tab"
 import RecentTab from "@/components/admin/recent-tab"
 import ServicesTab from "@/components/admin/services-tab"
@@ -354,6 +355,7 @@ export default function AdminDashboardClient({
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white overflow-x-hidden">
+      <ImpersonationBanner />
       {/* Trial / subscription banner — only renders when trial or past_due */}
       <TrialBanner orgId={membership.org_id} subscription={subscription} />
 
