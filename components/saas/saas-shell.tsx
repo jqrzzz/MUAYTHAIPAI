@@ -19,7 +19,7 @@ export function SaasShell({
   return (
     <div
       className={cn(
-        "min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased",
+        "min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased overflow-x-hidden",
         className,
       )}
     >
