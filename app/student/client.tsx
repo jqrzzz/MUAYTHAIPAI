@@ -348,28 +348,31 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
   }, [certProgress])
 
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased">
       <ImpersonationBanner />
-      {/* App-style Header */}
-      <header className="sticky top-0 z-50 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800/50">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
+      {/* Frosted header — restrained, indigo monogram */}
+      <header className="sticky top-0 z-50 bg-zinc-950/70 backdrop-blur-xl border-b border-zinc-900/80">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 ring-1 ring-indigo-300/30 flex items-center justify-center text-white text-[13px] font-semibold shadow-[0_4px_16px_-4px_rgba(99,102,241,0.5)]">
               {userName.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-xs text-neutral-500">{greeting}</p>
-              <h1 className="font-semibold text-white leading-tight">{userName}</h1>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+                {greeting}
+              </p>
+              <h1 className="text-[13px] font-semibold text-white leading-tight truncate">
+                {userName}
+              </h1>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={() => setActiveView("profile")}
-            className="text-neutral-400 hover:text-white"
+            className="text-zinc-500 hover:text-zinc-200 transition-colors p-2 -mr-2"
+            aria-label="Profile"
           >
-            <User className="w-5 h-5" />
-          </Button>
+            <User className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -377,37 +380,22 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {/* Home View */}
         {activeView === "home" && (
           <div className="py-6 space-y-6">
-            {/* Quick Stats - Added credits card */}
+            {/* Quick stats — uniform chrome, eyebrow + number, indigo only on the actionable one */}
             <div className="grid grid-cols-4 gap-2">
-              <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
-                <CardContent className="p-3 text-center">
-                  <Flame className="w-4 h-4 text-orange-500 mx-auto mb-1" />
-                  <p className="text-xl font-bold text-white">{streak}</p>
-                  <p className="text-[9px] text-orange-400/80 uppercase tracking-wide">Streak</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
-                <CardContent className="p-3 text-center">
-                  <TrendingUp className="w-4 h-4 text-blue-500 mx-auto mb-1" />
-                  <p className="text-xl font-bold text-white">{completedSessions}</p>
-                  <p className="text-[9px] text-blue-400/80 uppercase tracking-wide">Sessions</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
-                <CardContent className="p-3 text-center">
-                  <Award className="w-4 h-4 text-purple-500 mx-auto mb-1" />
-                  <p className="text-xl font-bold text-white">{certificates.length}</p>
-                  <p className="text-[9px] text-purple-400/80 uppercase tracking-wide">Certs</p>
-                </CardContent>
-              </Card>
-              <button onClick={() => setActiveView("credits")} className="block">
-                <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20 h-full hover:border-green-500/40 transition-colors">
-                  <CardContent className="p-3 text-center">
-                    <CreditCard className="w-4 h-4 text-green-500 mx-auto mb-1" />
-                    <p className="text-xl font-bold text-white">{totalCredits || "—"}</p>
-                    <p className="text-[9px] text-green-400/80 uppercase tracking-wide">Credits</p>
-                  </CardContent>
-                </Card>
+              <MiniStat icon={Flame} value={streak} label="Streak" />
+              <MiniStat icon={TrendingUp} value={completedSessions} label="Sessions" />
+              <MiniStat icon={Award} value={certificates.length} label="Certs" />
+              <button
+                onClick={() => setActiveView("credits")}
+                className="text-left rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.05] to-zinc-900/40 backdrop-blur-sm p-3 hover:ring-indigo-500/40 transition-all"
+              >
+                <CreditCard className="w-3.5 h-3.5 text-indigo-300 mb-1" />
+                <p className="text-[18px] font-semibold tracking-tight text-white tabular-nums">
+                  {totalCredits || "—"}
+                </p>
+                <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">
+                  Credits
+                </p>
               </button>
             </div>
 
@@ -1173,8 +1161,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         )}
       </main>
 
-      {/* Bottom Navigation - App Style - Added AI tab */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-neutral-950/95 backdrop-blur-md border-t border-neutral-800/50 pb-safe">
+      {/* Bottom navigation — frosted, indigo on active */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-900/80 pb-safe">
         <div className="max-w-lg mx-auto px-4 py-2">
           <div className="flex items-center justify-around">
             <NavButton
@@ -1193,7 +1181,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             <button
               onClick={() => setActiveView("ai")}
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors relative ${
-                activeView === "ai" ? "text-orange-500" : "text-neutral-500 hover:text-neutral-300"
+                activeView === "ai" ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
               <Image
@@ -1242,17 +1230,39 @@ function NavButton({
     <button
       onClick={onClick}
       className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors relative ${
-        active ? "text-orange-500" : "text-neutral-500 hover:text-neutral-300"
+        active ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
       }`}
     >
       {icon}
       <span className="text-[10px] font-medium">{label}</span>
       {badge && (
-        <span className="absolute -top-1 right-0 w-4 h-4 bg-orange-500 rounded-full text-[10px] text-white flex items-center justify-center">
+        <span className="absolute -top-1 right-0 w-4 h-4 bg-indigo-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
           {badge}
         </span>
       )}
     </button>
+  )
+}
+
+function MiniStat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  value: string | number
+  label: string
+}) {
+  return (
+    <div className="rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 backdrop-blur-sm p-3">
+      <Icon className="w-3.5 h-3.5 text-zinc-500 mb-1" />
+      <p className="text-[18px] font-semibold tracking-tight text-white tabular-nums">
+        {value}
+      </p>
+      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </p>
+    </div>
   )
 }
 
