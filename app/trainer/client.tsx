@@ -761,29 +761,29 @@ export default function TrainerDashboardClient({
   const completedBookings = bookings.filter((b) => b.status === "completed" || b.status === "no_show")
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white pb-20 overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased pb-20 overflow-x-hidden">
       <ImpersonationBanner />
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800/50">
-        <div className="max-w-lg mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-white">{organization?.name || "Trainer"}</h1>
-              <p className="text-xs text-neutral-400">
-                {activeView === "today" && "Today (วันนี้)"}
-                {activeView === "students" && "Students (นักเรียน)"}
-                {activeView === "profile" && "My Profile (โปรไฟล์)"}
-                {activeView === "ockock" && "OckOck (ผู้ช่วย)"}
-              </p>
-            </div>
-            <button
-              onClick={handleSignOut}
-              aria-label="Sign out"
-              className="p-2 text-neutral-400 hover:text-white transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+      {/* Frosted header */}
+      <header className="sticky top-0 z-40 bg-zinc-950/70 backdrop-blur-xl border-b border-zinc-900/80">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="min-w-0">
+            <h1 className="text-[15px] font-semibold text-white truncate leading-tight">
+              {organization?.name || "Trainer"}
+            </h1>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-zinc-500 mt-0.5">
+              {activeView === "today" && "Today · วันนี้"}
+              {activeView === "students" && "Students · นักเรียน"}
+              {activeView === "profile" && "Profile · โปรไฟล์"}
+              {activeView === "ockock" && "OckOck · ผู้ช่วย"}
+            </p>
           </div>
+          <button
+            onClick={handleSignOut}
+            aria-label="Sign out"
+            className="p-2 -mr-2 text-zinc-500 hover:text-zinc-200 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -792,41 +792,44 @@ export default function TrainerDashboardClient({
         {/* Today View */}
         {activeView === "today" && (
           <div className="space-y-4">
-            {/* Welcome Summary */}
-            <div className="rounded-xl bg-gradient-to-r from-orange-600/20 to-orange-500/5 border border-orange-500/10 px-4 py-3">
-              <p className="text-sm text-white">
-                สวัสดี <span className="font-semibold">{trainerProfile.display_name}</span>
+            {/* Welcome strip — indigo accent, restrained */}
+            <div className="rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.06] to-zinc-900/40 backdrop-blur-sm px-4 py-3">
+              <p className="text-[13px] text-white">
+                สวัสดี{" "}
+                <span className="font-semibold">
+                  {trainerProfile.display_name}
+                </span>
               </p>
-              <p className="text-xs text-neutral-400 mt-0.5">
+              <p className="text-[12px] text-zinc-500 mt-0.5">
                 {bookings.length === 0
                   ? "No sessions today — enjoy the rest!"
                   : `${pendingBookings.length} upcoming${needsAttentionBookings.length > 0 ? ` · ${needsAttentionBookings.length} need attention` : ""}${completedBookings.length > 0 ? ` · ${completedBookings.length} done` : ""}`}
               </p>
             </div>
 
-            {/* View Toggle */}
+            {/* List/Calendar toggle */}
             <div className="flex items-center justify-between">
-              <div className="flex bg-neutral-800 rounded-lg p-1">
+              <div className="flex bg-zinc-950/40 ring-1 ring-zinc-800 rounded-lg p-1 gap-1">
                 <button
                   onClick={() => setScheduleView("list")}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-medium transition-all ${
                     scheduleView === "list"
-                      ? "bg-orange-600 text-white"
-                      : "text-neutral-400 hover:text-white"
+                      ? "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700/60"
+                      : "text-zinc-500 hover:text-zinc-200"
                   }`}
                 >
-                  <LucideList className="w-4 h-4" />
+                  <LucideList className="w-3.5 h-3.5" />
                   <span>List</span>
                 </button>
                 <button
                   onClick={() => setScheduleView("calendar")}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-medium transition-all ${
                     scheduleView === "calendar"
-                      ? "bg-orange-600 text-white"
-                      : "text-neutral-400 hover:text-white"
+                      ? "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700/60"
+                      : "text-zinc-500 hover:text-zinc-200"
                   }`}
                 >
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="w-3.5 h-3.5" />
                   <span>Calendar</span>
                 </button>
               </div>
@@ -1611,8 +1614,8 @@ export default function TrainerDashboardClient({
         )}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-neutral-950/95 backdrop-blur-md border-t border-neutral-800/50 pb-safe">
+      {/* Bottom navigation — frosted, indigo on active */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-900/80 pb-safe">
         <div className="max-w-lg mx-auto px-4 py-2">
           <div className="flex items-center justify-around">
             <NavButton
@@ -1633,7 +1636,7 @@ export default function TrainerDashboardClient({
             <button
               onClick={() => setActiveView("ockock")}
               className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors ${
-                activeView === "ockock" ? "text-orange-500" : "text-neutral-500 hover:text-neutral-300"
+                activeView === "ockock" ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
               <Image
