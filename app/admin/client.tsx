@@ -26,6 +26,7 @@ import InboxTab from "@/components/admin/inbox-tab"
 import ChannelsTab from "@/components/admin/channels-tab"
 import CoursesTab from "@/components/admin/courses-tab"
 import WebsiteTab from "@/components/admin/website-tab"
+import SocialTab from "@/components/admin/social-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import {
   Award,
@@ -50,6 +51,7 @@ import {
   Inbox,
   Link2,
   Globe,
+  Sparkles,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -207,7 +209,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -327,6 +329,7 @@ export default function AdminDashboardClient({
       labelTh: "อ๊อกอ๊อก",
       items: [
         { id: "marketing" as const, label: "Marketing", labelTh: "การตลาด", icon: Megaphone },
+        { id: "social" as const, label: "Social", labelTh: "โซเชียล", icon: Sparkles },
         { id: "train-ockock" as const, label: "Train OckOck", labelTh: "สอน OckOck", icon: BookOpen },
         { id: "ockock" as const, label: "OckOck", labelTh: "OckOck", icon: null, isOckOck: true },
       ],
@@ -765,6 +768,8 @@ export default function AdminDashboardClient({
           {activeTab === "courses" && <CoursesTab orgId={membership.org_id} />}
 
           {activeTab === "website" && <WebsiteTab gymSlug={organization.slug ?? null} />}
+
+          {activeTab === "social" && <SocialTab />}
         </div>
       </main>
     </div>
