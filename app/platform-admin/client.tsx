@@ -463,72 +463,74 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      {/* Header */}
-      <header className="border-b border-zinc-800 px-4 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/images/ockock-avatar.png" alt="OckOck" width={40} height={40} className="rounded-full" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold">Master admin</h1>
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                  Network-wide
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400">MUAYTHAIPAI · everything across every gym</p>
-            </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased">
+      {/* Frosted header */}
+      <header className="sticky top-0 z-30 border-b border-zinc-900/80 bg-zinc-950/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 h-14">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+            <h1 className="text-[14px] font-semibold text-white tracking-tight">
+              Operator console
+            </h1>
+            <span className="hidden sm:inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] font-medium bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/25">
+              Network-wide
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <a
               href="/platform-admin/today"
-              className="hidden sm:inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-white border border-zinc-800 rounded-md px-2.5 py-1.5"
+              className="hidden sm:inline-flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 rounded-lg px-2.5 py-1.5 transition-colors"
               title="Mobile-optimized home — Today + Command bar"
             >
-              <Sparkles className="h-3 w-3 text-orange-400" />
+              <Sparkles className="h-3 w-3 text-indigo-400" />
               Today
             </a>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
+            <button
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 rounded-lg px-2.5 py-1.5 transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="border-b border-zinc-800">
-        <div className="mx-auto flex max-w-6xl gap-1 px-4">
-          {[
-            { id: "overview", label: "Overview", icon: Building2 },
-            { id: "command", label: "Command", icon: Sparkles },
-            { id: "network", label: "Network", icon: Map },
-            { id: "campaigns", label: "Campaigns", icon: Megaphone },
-            { id: "students", label: "Students", icon: GraduationCap },
-            { id: "trainers", label: "Trainers", icon: UserCheck },
-            { id: "gyms", label: "Gyms", icon: Users },
-            { id: "courses", label: "Curriculum", icon: BookOpen },
-            { id: "payouts", label: "Payouts", icon: DollarSign },
-            { id: "blacklist", label: "Blacklist", icon: Shield },
-            { id: "ockock", label: "OckOck", icon: MessageSquare },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "border-orange-500 text-orange-500"
-                  : "border-transparent text-zinc-400 hover:text-white"
-              }`}
-            >
-              {tab.id === "ockock" ? (
-                <Image src="/images/ockock-avatar.png" alt="OckOck" width={20} height={20} className="rounded-full" />
-              ) : (
-                <tab.icon className="h-4 w-4" />
-              )}
-              {tab.label}
-            </button>
-          ))}
+      {/* Tab strip — underline indicator only for active */}
+      <div className="border-b border-zinc-900/80 bg-zinc-950">
+        <div className="mx-auto max-w-6xl px-5 overflow-x-auto">
+          <div className="flex gap-0.5 min-w-max">
+            {[
+              { id: "overview", label: "Overview", icon: Building2 },
+              { id: "command", label: "Command", icon: Sparkles },
+              { id: "network", label: "Network", icon: Map },
+              { id: "campaigns", label: "Campaigns", icon: Megaphone },
+              { id: "students", label: "Students", icon: GraduationCap },
+              { id: "trainers", label: "Trainers", icon: UserCheck },
+              { id: "gyms", label: "Gyms", icon: Users },
+              { id: "courses", label: "Curriculum", icon: BookOpen },
+              { id: "payouts", label: "Payouts", icon: DollarSign },
+              { id: "blacklist", label: "Blacklist", icon: Shield },
+              { id: "ockock", label: "OckOck", icon: MessageSquare },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[12px] font-medium transition-all ${
+                  activeTab === tab.id
+                    ? "border-indigo-400 text-white"
+                    : "border-transparent text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {tab.id === "ockock" ? (
+                  <Image src="/images/ockock-avatar.png" alt="OckOck" width={16} height={16} className="rounded-full" />
+                ) : (
+                  <tab.icon className="h-3.5 w-3.5" />
+                )}
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -566,77 +568,26 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             {/* Today panel — operator's first-screen */}
             <TodayPanel />
 
-            {/* Stats */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card className="border-zinc-800 bg-zinc-900">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-orange-500/10 p-2">
-                      <Building2 className="h-5 w-5 text-orange-500" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{stats.totalGyms}</p>
-                      <p className="text-xs text-zinc-400">Total Gyms</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-zinc-800 bg-zinc-900">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-blue-500/10 p-2">
-                      <Users className="h-5 w-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{stats.totalStudents}</p>
-                      <p className="text-xs text-zinc-400">Total Users</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-zinc-800 bg-zinc-900">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-green-500/10 p-2">
-                      <Calendar className="h-5 w-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{stats.totalBookings}</p>
-                      <p className="text-xs text-zinc-400">Total Bookings</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-zinc-800 bg-zinc-900">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-purple-500/10 p-2">
-                      <CreditCard className="h-5 w-5 text-purple-500" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{stats.activeSubscriptions}</p>
-                      <p className="text-xs text-zinc-400">Paying Gyms</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Network stats — uniform chrome, indigo accent only on revenue */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <NetworkStat icon={Building2} value={stats.totalGyms} label="Total gyms" />
+              <NetworkStat icon={Users} value={stats.totalStudents} label="Total users" />
+              <NetworkStat icon={Calendar} value={stats.totalBookings} label="Total bookings" />
+              <NetworkStat icon={CreditCard} value={stats.activeSubscriptions} label="Paying gyms" />
             </div>
 
-            {/* Monthly Revenue Estimate */}
-            <Card className="border-zinc-800 bg-zinc-900">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Monthly Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-green-500">
-                  ฿{(stats.activeSubscriptions * 999).toLocaleString()}
-                </p>
-                <p className="text-sm text-zinc-400">{stats.activeSubscriptions} gyms × ฿999/month</p>
-              </CardContent>
-            </Card>
+            {/* Monthly recurring revenue — promoted, indigo gradient */}
+            <div className="rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.06] to-zinc-900/40 backdrop-blur-sm p-5">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1">
+                Monthly recurring revenue
+              </p>
+              <p className="text-[32px] font-semibold tracking-tight text-white tabular-nums">
+                ฿{(stats.activeSubscriptions * 999).toLocaleString()}
+              </p>
+              <p className="text-[12px] text-zinc-500 mt-0.5">
+                {stats.activeSubscriptions} gyms × ฿999/month
+              </p>
+            </div>
           </div>
         )}
 
@@ -1327,6 +1278,28 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function NetworkStat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  value: string | number
+  label: string
+}) {
+  return (
+    <div className="rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 backdrop-blur-sm p-4">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+        <Icon className="h-3 w-3" />
+        {label}
+      </div>
+      <p className="text-[24px] font-semibold tracking-tight text-white tabular-nums mt-1.5">
+        {value}
+      </p>
     </div>
   )
 }
