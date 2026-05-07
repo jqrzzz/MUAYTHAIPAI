@@ -1,6 +1,6 @@
 import type React from "react"
 import "./globals.css"
-import { Cinzel } from "next/font/google"
+import { Cinzel, Inter } from "next/font/google"
 import Script from "next/script"
 import { ThemeProvider } from "@/components/theme-provider"
 import type { Metadata, Viewport } from "next"
@@ -10,6 +10,11 @@ import { SOCIAL_LINKS } from "@/lib/socials"
 import OckOckChatWidget from "@/components/public/ockock-chat-widget"
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+})
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -213,7 +218,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${cinzel.variable} font-sans antialiased`}>
+      <body className={`${cinzel.variable} ${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
           <OckOckChatWidget orgSlug="wisarut-family-gym" />

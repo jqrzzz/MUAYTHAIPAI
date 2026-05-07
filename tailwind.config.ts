@@ -21,6 +21,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-cinzel)"],
+        inter: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
