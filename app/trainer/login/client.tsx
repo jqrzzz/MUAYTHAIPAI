@@ -3,13 +3,9 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, ArrowLeft, Users, Mail, CheckCircle } from "lucide-react"
+import { Loader2, Mail, CheckCircle2 } from "lucide-react"
+import { AuthCard, SaasButton, SaasInput } from "@/components/saas"
 
 export default function TrainerLoginClient() {
   const router = useRouter()
@@ -25,16 +21,12 @@ export default function TrainerLoginClient() {
         data: { session },
       } = await supabase.auth.getSession()
       if (session) {
-        // Check if user is a trainer
         const { data: trainerProfile } = await supabase
           .from("trainer_profiles")
           .select("id")
           .eq("user_id", session.user.id)
           .single()
-
-        if (trainerProfile) {
-          router.push("/trainer")
-        }
+        if (trainerProfile) router.push("/trainer")
       }
     }
     checkSession()
@@ -46,22 +38,23 @@ export default function TrainerLoginClient() {
     setError(null)
 
     const supabase = createClient()
-
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: false, // Trainers must be invited first
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback?next=/trainer`,
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+            `${window.location.origin}/auth/callback?next=/trainer`,
         },
       })
-
       if (error) throw error
-
       setStep("sent")
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("Signups not allowed")) {
-        setError("No trainer account found with this email. Please contact your gym owner for an invitation.")
+        setError(
+          "No trainer account found with this email. Ask your gym owner for an invitation.",
+        )
       } else {
         setError(err instanceof Error ? err.message : "An error occurred")
       }
@@ -70,113 +63,74 @@ export default function TrainerLoginClient() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950 p-4">
-      <div className="w-full max-w-md">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-neutral-400 hover:text-white mb-6 transition-colors"
+  if (step === "sent") {
+    return (
+      <AuthCard
+        title="Check your email"
+        subtitle={`We sent a sign-in link to ${email}. Click it to continue.`}
+        footnote="ตรวจสอบอีเมลของคุณ · Trainer dashboard"
+      >
+        <div className="rounded-xl ring-1 ring-emerald-500/20 bg-emerald-500/[0.06] p-4 flex items-start gap-3">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 shrink-0 mt-0.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+          </span>
+          <div className="text-[13px] text-emerald-100/90 leading-relaxed">
+            Magic link delivered. Open it on this device to stay signed in.
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setStep("email")
+            setError(null)
+          }}
+          className="mt-5 w-full text-center text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to site
-        </Link>
+          Use a different email
+        </button>
+      </AuthCard>
+    )
+  }
 
-        <Card className="bg-neutral-900/50 border-neutral-800">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-orange-600/20 rounded-full flex items-center justify-center mb-4">
-              {step === "email" ? (
-                <Users className="w-6 h-6 text-orange-500" />
-              ) : (
-                <Mail className="w-6 h-6 text-orange-500" />
-              )}
-            </div>
-            <CardTitle className="text-2xl font-bold text-white">
-              {step === "email" ? "Trainer Login" : "Check Your Email"}
-            </CardTitle>
-            <CardTitle className="text-lg text-neutral-400 font-normal mt-1">
-              {step === "email" ? "เข้าสู่ระบบครูมวย" : "ตรวจสอบอีเมลของคุณ"}
-            </CardTitle>
-            <CardDescription className="text-neutral-400 mt-2">
-              {step === "email"
-                ? "Enter your email to access your trainer dashboard"
-                : "Click the link in your email to sign in"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {step === "email" ? (
-              <form onSubmit={handleSendMagicLink} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-neutral-300">
-                    Email (อีเมล)
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
-                  />
-                </div>
+  return (
+    <AuthCard
+      title="Trainer sign-in"
+      subtitle="เข้าสู่ระบบครูมวย — magic-link access to your trainer dashboard."
+      footnote="Need an account? Ask your gym owner for an invite."
+    >
+      <form onSubmit={handleSendMagicLink} className="space-y-4">
+        <div className="space-y-1.5">
+          <label
+            htmlFor="email"
+            className="text-[12px] font-medium text-zinc-300"
+          >
+            Email <span className="text-zinc-600 font-normal">(อีเมล)</span>
+          </label>
+          <SaasInput
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
 
-                {error && (
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <p className="text-sm text-red-400">{error}</p>
-                  </div>
-                )}
+        {error && (
+          <div className="rounded-lg ring-1 ring-red-500/20 bg-red-500/10 px-3 py-2.5 text-[12px] text-red-300">
+            {error}
+          </div>
+        )}
 
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-orange-600 hover:bg-orange-500 text-white"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending Link...
-                    </>
-                  ) : (
-                    "Send Magic Link (ส่งลิงก์เข้าสู่ระบบ)"
-                  )}
-                </Button>
-
-                <p className="text-xs text-neutral-500 text-center mt-4">
-                  Need an account? Ask your gym owner to send you an invite.
-                </p>
-              </form>
-            ) : (
-              <div className="space-y-4 text-center">
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm text-green-400">
-                    We sent a login link to <strong>{email}</strong>
-                  </p>
-                </div>
-
-                <p className="text-sm text-neutral-400">
-                  Click the link in your email to sign in. You can close this page.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep("email")
-                    setError(null)
-                  }}
-                  className="w-full text-sm text-neutral-400 hover:text-white transition-colors"
-                >
-                  Use a different email
-                </button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-xs text-neutral-500 mt-4">
-          Trainer dashboard for Muay Thai Thailand Network gyms
-        </p>
-      </div>
-    </div>
+        <SaasButton
+          type="submit"
+          variant="primary"
+          loading={isLoading}
+          className="w-full"
+        >
+          {!isLoading && <Mail className="h-3.5 w-3.5" />}
+          {isLoading ? "Sending link…" : "Email me a sign-in link"}
+        </SaasButton>
+      </form>
+    </AuthCard>
   )
 }

@@ -1,125 +1,75 @@
 "use client"
 
 import Link from "next/link"
-import { motion } from "framer-motion"
-import { ArrowRight, Dumbbell, Users, Building2, ArrowLeft } from "lucide-react"
-
-import {
-  PageBackground,
-  SacredDecoration,
-  CONTENT_FADE_IN,
-} from "@/components/marketing"
-import { Card, CardContent } from "@/components/ui/card"
+import { ArrowRight, Dumbbell, Users, Building2 } from "lucide-react"
+import { AuthCard } from "@/components/saas"
 
 const ROLES = [
   {
     id: "student",
     label: "I'm a student or member",
-    description: "Book classes, track your cert progress, access your courses.",
+    description:
+      "Book classes, track cert progress, access your courses.",
     href: "/student/login",
     icon: Dumbbell,
-    accent: "from-orange-500/30 to-amber-500/20",
-    iconColor: "text-orange-400",
   },
   {
     id: "trainer",
     label: "I'm a trainer",
-    description: "Sign off skills, manage your students, keep your schedule.",
+    description: "Sign off skills, manage students, keep your schedule.",
     href: "/trainer/login",
     icon: Users,
-    accent: "from-emerald-500/25 to-emerald-500/10",
-    iconColor: "text-emerald-400",
   },
   {
     id: "owner",
     label: "I'm a gym owner or admin",
-    description: "Manage bookings, students, trainers, and certifications.",
+    description: "Manage bookings, students, trainers, certifications.",
     href: "/admin/login",
     icon: Building2,
-    accent: "from-blue-500/25 to-indigo-500/10",
-    iconColor: "text-blue-400",
   },
 ] as const
 
 export default function LoginClient() {
   return (
-    <PageBackground>
-      <h1 className="sr-only">Sign in to MUAYTHAIPAI</h1>
-      <SacredDecoration />
-
-      <main className="relative z-20 min-h-screen flex flex-col items-center justify-center px-4 py-16 text-center">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to home
-        </Link>
-
-        <motion.h2
-          className="text-3xl md:text-4xl font-black mb-2 bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-700 bg-clip-text text-transparent dark:from-amber-300 dark:via-orange-400 dark:to-yellow-500"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ ...CONTENT_FADE_IN, duration: 0.5 }}
-        >
-          Sign in
-        </motion.h2>
-        <motion.p
-          className="mt-2 text-base max-w-md mx-auto text-neutral-700 dark:text-neutral-300"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ ...CONTENT_FADE_IN, duration: 0.5, delay: 0.1 }}
-        >
-          Pick the option that fits — we&apos;ll send you a magic link.
-        </motion.p>
-
-        <div className="mt-8 w-full max-w-md grid gap-3">
-          {ROLES.map((role, i) => (
-            <motion.div
+    <AuthCard
+      title="Sign in"
+      subtitle="Pick the option that fits — we'll email you a magic link."
+    >
+      <div className="grid gap-2">
+        {ROLES.map((role) => {
+          const Icon = role.icon
+          return (
+            <Link
               key={role.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + i * 0.08, duration: 0.4 }}
+              href={role.href}
+              className="group rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 hover:bg-zinc-900/70 hover:ring-zinc-800 backdrop-blur-sm p-4 flex items-center gap-3 transition-all"
             >
-              <Link href={role.href} className="block group">
-                <Card
-                  className={`bg-gradient-to-br ${role.accent} border border-neutral-200 dark:border-white/10 backdrop-blur-md transition-all duration-200 group-hover:scale-[1.02] group-hover:border-orange-500/40`}
-                >
-                  <CardContent className="p-5 flex items-center gap-4 text-left">
-                    <div className="rounded-full bg-white/40 dark:bg-white/5 p-3 shrink-0">
-                      <role.icon className={`h-6 w-6 ${role.iconColor}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base text-neutral-900 dark:text-white">
-                        {role.label}
-                      </h3>
-                      <p className="text-sm mt-0.5 text-neutral-700 dark:text-neutral-200">
-                        {role.description}
-                      </p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-neutral-500 group-hover:text-orange-400 transition-colors shrink-0" />
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10 ring-1 ring-indigo-500/15 shrink-0">
+                <Icon className="h-4 w-4 text-indigo-300" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-white">
+                  {role.label}
+                </p>
+                <p className="text-[12px] text-zinc-500 mt-0.5">
+                  {role.description}
+                </p>
+              </div>
+              <ArrowRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-indigo-300 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </Link>
+          )
+        })}
+      </div>
 
-        <motion.p
-          className="mt-8 text-sm text-neutral-700 dark:text-neutral-300"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+      <p className="mt-6 text-center text-[12px] text-zinc-500">
+        New gym?{" "}
+        <Link
+          href="/signup"
+          className="text-indigo-300 hover:text-indigo-200 font-medium"
         >
-          New gym?{" "}
-          <Link
-            href="/signup"
-            className="text-orange-600 dark:text-orange-400 hover:underline font-medium"
-          >
-            List your gym — free 30-day trial
-          </Link>
-        </motion.p>
-      </main>
-    </PageBackground>
+          List your gym — free 30-day trial
+        </Link>
+      </p>
+    </AuthCard>
   )
 }

@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react"
+import { AuthCard, SaasInput, SaasButton } from "@/components/saas"
 
 interface SignupForm {
   gymName: string
@@ -53,7 +54,6 @@ function SignupInner() {
   const [signInUrl, setSignInUrl] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  // Pre-fill from invite token if present
   useEffect(() => {
     if (!inviteToken) return
     let cancelled = false
@@ -77,7 +77,10 @@ function SignupInner() {
         }))
       })
       .catch((err) => {
-        if (!cancelled) setInviteError(err instanceof Error ? err.message : "Invite lookup failed")
+        if (!cancelled)
+          setInviteError(
+            err instanceof Error ? err.message : "Invite lookup failed",
+          )
       })
     return () => {
       cancelled = true
@@ -91,7 +94,6 @@ function SignupInner() {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
-
     setSignInUrl(null)
 
     try {
@@ -100,16 +102,13 @@ function SignupInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, inviteToken }),
       })
-
       const data = await res.json()
-
       if (!res.ok) {
         if (typeof data?.signInUrl === "string") {
           setSignInUrl(data.signInUrl)
         }
         throw new Error(data.error || "Failed to create gym")
       }
-
       setSuccess(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")
@@ -120,187 +119,166 @@ function SignupInner() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-4">
-        <div className="mx-auto max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+      <AuthCard
+        title="Check your email"
+        subtitle={`We sent a sign-in link to ${form.ownerEmail}. Click it to enter your dashboard and start setting up.`}
+        footnote="30-day free trial · no credit card required"
+      >
+        <div className="rounded-xl ring-1 ring-emerald-500/20 bg-emerald-500/[0.06] p-4 flex items-start gap-3">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 shrink-0 mt-0.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+          </span>
+          <div className="text-[13px] text-emerald-100/90 leading-relaxed">
+            Your gym is provisioned. Trial is running. Open the magic link
+            on this device to keep going.
           </div>
-          <h1 className="mb-2 text-2xl font-bold text-white">Check Your Email</h1>
-          <p className="mb-6 text-neutral-400">
-            We sent a login link to <span className="text-white">{form.ownerEmail}</span>.
-            Click it to access your gym dashboard and start setting up.
-          </p>
-          <p className="text-sm text-neutral-500">
-            Your 30-day free trial starts now. No credit card required.
-          </p>
         </div>
-      </div>
+      </AuthCard>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="mb-2 text-3xl font-bold text-white">
-            List your gym on MUAYTHAIPAI
-          </h1>
-          <p className="text-neutral-400">
-            The friendliest way to run a Muay Thai gym — bookings, the
-            Naga–Garuda cert ladder, and OckOck answering your customers
-            in your voice.
-          </p>
-        </div>
-
-        {invite && (
-          <div className="mb-4 rounded-xl border border-orange-500/40 bg-orange-500/10 p-4">
-            <div className="flex items-start gap-2">
-              <Sparkles className="h-4 w-4 text-orange-400 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-orange-200">
-                  You&apos;re claiming <span className="text-white">{invite.gymName}</span>
-                </p>
-                <p className="text-orange-200/80 text-xs mt-0.5">
-                  We pre-filled what we know — adjust anything that&apos;s wrong.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-        {inviteError && (
-          <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
-            Invite link issue: {inviteError}. You can still sign up below.
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
-            {/* Gym Name */}
-            <div>
-              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-neutral-300">
-                <Building2 className="h-3.5 w-3.5 text-neutral-500" />
-                Gym Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={form.gymName}
-                onChange={(e) => update("gymName", e.target.value)}
-                placeholder="e.g. Tiger Muay Thai"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-neutral-500 outline-none focus:border-orange-500/50"
-              />
-            </div>
-
-            {/* Owner Name */}
-            <div>
-              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-neutral-300">
-                <User className="h-3.5 w-3.5 text-neutral-500" />
-                Your Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={form.ownerName}
-                onChange={(e) => update("ownerName", e.target.value)}
-                placeholder="Your full name"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-neutral-500 outline-none focus:border-orange-500/50"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-neutral-300">
-                <Mail className="h-3.5 w-3.5 text-neutral-500" />
-                Email <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="email"
-                required
-                value={form.ownerEmail}
-                onChange={(e) => update("ownerEmail", e.target.value)}
-                placeholder="you@yourgym.com"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-neutral-500 outline-none focus:border-orange-500/50"
-              />
-            </div>
-
-            <hr className="border-white/5" />
-
-            {/* Location */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-neutral-300">
-                  <MapPin className="h-3.5 w-3.5 text-neutral-500" />
-                  City
-                </label>
-                <input
-                  type="text"
-                  value={form.city}
-                  onChange={(e) => update("city", e.target.value)}
-                  placeholder="e.g. Phuket"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-neutral-500 outline-none focus:border-orange-500/50"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 text-sm font-medium text-neutral-300">
-                  Province
-                </label>
-                <input
-                  type="text"
-                  value={form.province}
-                  onChange={(e) => update("province", e.target.value)}
-                  placeholder="e.g. Phuket"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-neutral-500 outline-none focus:border-orange-500/50"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
-              {error}
-              {signInUrl && (
-                <Link
-                  href={signInUrl}
-                  className="mt-2 inline-flex items-center gap-1 text-orange-300 hover:text-orange-200 underline underline-offset-2"
-                >
-                  Sign in to your existing gym →
-                </Link>
-              )}
-            </div>
-          )}
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={submitting || !form.gymName || !form.ownerName || !form.ownerEmail}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 py-3 font-semibold text-white transition-colors hover:bg-orange-400 disabled:opacity-50"
-          >
-            {submitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                Start Free Trial
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-
-          <p className="text-center text-xs text-neutral-500">
-            30-day free trial. No credit card required.
-          </p>
-        </form>
-
-        {/* Footer */}
-        <p className="mt-8 text-center text-sm text-neutral-500">
+    <AuthCard
+      title="List your gym"
+      subtitle="Bookings, the Naga–Garuda cert ladder, and OckOck answering your customers in your voice. 30-day free trial — no credit card."
+      footnote={
+        <>
           Already have an account?{" "}
-          <Link href="/admin/login" className="text-orange-400 hover:text-orange-300">
+          <Link
+            href="/admin/login"
+            className="text-indigo-300 hover:text-indigo-200 font-medium"
+          >
             Sign in
           </Link>
+        </>
+      }
+    >
+      {invite && (
+        <div className="mb-4 rounded-xl ring-1 ring-indigo-500/25 bg-indigo-500/[0.06] p-3 flex items-start gap-2.5">
+          <Sparkles className="h-3.5 w-3.5 text-indigo-300 mt-0.5 shrink-0" />
+          <div className="text-[12px]">
+            <p className="font-medium text-indigo-100">
+              Claiming{" "}
+              <span className="text-white">{invite.gymName}</span>
+            </p>
+            <p className="text-indigo-200/70 text-[11px] mt-0.5">
+              We pre-filled what we know — adjust anything that&apos;s off.
+            </p>
+          </div>
+        </div>
+      )}
+      {inviteError && (
+        <div className="mb-4 rounded-lg ring-1 ring-red-500/20 bg-red-500/10 p-2.5 text-[12px] text-red-300">
+          Invite link issue: {inviteError}. You can still sign up below.
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        <FormField
+          label="Gym name"
+          icon={Building2}
+          required
+          value={form.gymName}
+          onChange={(v) => update("gymName", v)}
+          placeholder="e.g. Tiger Muay Thai"
+        />
+        <FormField
+          label="Your name"
+          icon={User}
+          required
+          value={form.ownerName}
+          onChange={(v) => update("ownerName", v)}
+          placeholder="Your full name"
+        />
+        <FormField
+          label="Email"
+          icon={Mail}
+          type="email"
+          required
+          value={form.ownerEmail}
+          onChange={(v) => update("ownerEmail", v)}
+          placeholder="you@yourgym.com"
+        />
+        <div className="grid grid-cols-2 gap-2.5">
+          <FormField
+            label="City"
+            icon={MapPin}
+            value={form.city}
+            onChange={(v) => update("city", v)}
+            placeholder="Phuket"
+          />
+          <FormField
+            label="Province"
+            value={form.province}
+            onChange={(v) => update("province", v)}
+            placeholder="Phuket"
+          />
+        </div>
+
+        {error && (
+          <div className="rounded-lg ring-1 ring-red-500/20 bg-red-500/10 px-3 py-2.5 text-[12px] text-red-300">
+            {error}
+            {signInUrl && (
+              <Link
+                href={signInUrl}
+                className="mt-1.5 block text-indigo-300 hover:text-indigo-200 underline-offset-2 hover:underline"
+              >
+                Sign in to your existing gym →
+              </Link>
+            )}
+          </div>
+        )}
+
+        <SaasButton
+          type="submit"
+          variant="primary"
+          loading={submitting}
+          disabled={!form.gymName || !form.ownerName || !form.ownerEmail}
+          className="w-full"
+        >
+          Start free trial
+          {!submitting && <ArrowRight className="h-3.5 w-3.5" />}
+        </SaasButton>
+
+        <p className="text-center text-[11px] text-zinc-600">
+          30-day free trial · no credit card required
         </p>
-      </div>
+      </form>
+    </AuthCard>
+  )
+}
+
+function FormField({
+  label,
+  icon: Icon,
+  type = "text",
+  required,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string
+  icon?: typeof Building2
+  type?: string
+  required?: boolean
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[12px] font-medium text-zinc-300 inline-flex items-center gap-1.5">
+        {Icon && <Icon className="h-3 w-3 text-zinc-500" />}
+        {label}
+        {required && <span className="text-indigo-400">*</span>}
+      </label>
+      <SaasInput
+        type={type}
+        required={required}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   )
 }
@@ -309,8 +287,8 @@ export default function SignupClient() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-neutral-950">
-          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+          <Loader2 className="h-5 w-5 animate-spin text-indigo-400" />
         </div>
       }
     >
