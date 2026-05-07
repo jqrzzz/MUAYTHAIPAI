@@ -65,30 +65,30 @@ export default function TrialBanner({ orgId, subscription }: TrialBannerProps) {
   // Expired / past-due — red banner with upgrade CTA.
   if (isExpired) {
     return (
-      <div className="border-b border-red-500/30 bg-red-500/10">
-        <div className="px-4 py-3 max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-start gap-2 text-sm text-red-200">
+      <div className="border-b border-red-500/20 bg-red-500/[0.06]">
+        <div className="px-4 sm:px-5 py-3 max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-2.5 text-[13px] text-red-100">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-400" />
             <div>
-              <p className="font-semibold text-red-100">
-                Your free trial has ended
-              </p>
-              <p className="text-xs text-red-200/80">
+              <p className="font-semibold">Your free trial has ended</p>
+              <p className="text-[12px] text-red-200/80 mt-0.5">
                 Upgrade to keep OckOck answering customers, taking bookings,
                 and issuing certificates.
               </p>
-              {error && <p className="text-xs text-red-300 mt-1">{error}</p>}
+              {error && (
+                <p className="text-[12px] text-red-300 mt-1">{error}</p>
+              )}
             </div>
           </div>
           <button
             onClick={handleUpgrade}
             disabled={upgrading}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50 shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-red-500 hover:bg-red-400 px-3.5 py-2 text-[12px] font-semibold text-white disabled:opacity-50 shrink-0 transition-colors"
           >
             {upgrading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              <Sparkles className="h-3.5 w-3.5" />
+              <Sparkles className="h-3 w-3" />
             )}
             Upgrade now
           </button>
@@ -97,7 +97,7 @@ export default function TrialBanner({ orgId, subscription }: TrialBannerProps) {
     )
   }
 
-  // Active trial — friendly orange banner.
+  // Active trial — restrained indigo banner.
   if (status === "trial") {
     const days = daysLeft ?? 0
     const urgent = days <= 7
@@ -105,39 +105,39 @@ export default function TrialBanner({ orgId, subscription }: TrialBannerProps) {
       <div
         className={`border-b ${
           urgent
-            ? "border-orange-500/40 bg-orange-500/15"
-            : "border-orange-500/20 bg-orange-500/5"
+            ? "border-indigo-500/30 bg-gradient-to-r from-indigo-500/[0.10] to-indigo-500/[0.04]"
+            : "border-indigo-500/20 bg-gradient-to-r from-indigo-500/[0.06] to-indigo-500/[0.02]"
         }`}
       >
-        <div className="px-4 py-2.5 max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm text-orange-200">
-            <span className="text-base leading-none">🐃</span>
-            <span>
-              <span className="font-semibold text-orange-100">
+        <div className="px-4 sm:px-5 py-2.5 max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2 text-[12px] text-indigo-100 min-w-0">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-300 shrink-0" />
+            <span className="min-w-0">
+              <span className="font-semibold text-white">
                 {days === 0
                   ? "Last day of your free trial"
                   : days === 1
                     ? "1 day left in your free trial"
                     : `${days} days left in your free trial`}
               </span>
-              <span className="text-orange-200/80 ml-1.5 hidden sm:inline">
+              <span className="text-indigo-200/70 ml-1.5 hidden sm:inline">
                 — ฿{subscription.price_thb ?? 999}/month after, no credit card
                 needed yet.
               </span>
             </span>
-            {error && <p className="text-xs text-red-300">{error}</p>}
+            {error && <p className="text-[11px] text-red-300 ml-2">{error}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <Link
               href="/pricing"
-              className="text-xs text-orange-200/80 hover:text-orange-100 hidden sm:inline"
+              className="text-[11px] text-indigo-200/70 hover:text-indigo-100 hidden sm:inline transition-colors"
             >
               See what&apos;s included
             </Link>
             <button
               onClick={handleUpgrade}
               disabled={upgrading}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-400 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-50 transition-colors"
             >
               {upgrading ? (
                 <Loader2 className="h-3 w-3 animate-spin" />

@@ -25,10 +25,12 @@ export function SaasButton({
   disabled,
   ...rest
 }: SaasButtonProps) {
+  // h-10 (40px) on md keeps comfortable touch targets on mobile while
+  // still reading SaaS-tight; h-7 (28px) on sm is for inline action chips.
   const sizeCls =
     size === "sm"
       ? "h-7 px-2.5 text-[11px]"
-      : "h-9 px-3.5 text-[12px]"
+      : "h-10 px-4 text-[13px]"
 
   const variantCls =
     variant === "primary"
