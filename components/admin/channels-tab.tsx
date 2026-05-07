@@ -195,7 +195,7 @@ export default function ChannelsTab({ role }: ChannelsTabProps) {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <Link2 className="w-6 h-6 text-orange-500" />
+              <Link2 className="w-6 h-6 text-indigo-300" />
               <div>
                 <CardTitle className="text-white">Routing & chat groups</CardTitle>
                 <CardDescription>
@@ -209,7 +209,7 @@ export default function ChannelsTab({ role }: ChannelsTabProps) {
                 <Button
                   onClick={handleBootstrap}
                   disabled={bootstrapping}
-                  className="bg-orange-600 hover:bg-orange-700"
+                  className="bg-indigo-500 hover:bg-indigo-400"
                   size="sm"
                 >
                   {bootstrapping ? "Setting up…" : "Set up default groups"}
@@ -544,7 +544,7 @@ function GroupPanel({
               <Button
                 onClick={handleAdd}
                 disabled={adding || !formAccountId.trim()}
-                className="bg-orange-600 hover:bg-orange-700"
+                className="bg-indigo-500 hover:bg-indigo-400"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Add

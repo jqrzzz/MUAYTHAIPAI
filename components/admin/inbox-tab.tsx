@@ -299,7 +299,7 @@ export default function InboxTab({ role, onGoToChannels }: InboxTabProps) {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <Inbox className="w-6 h-6 text-orange-500" />
+              <Inbox className="w-6 h-6 text-indigo-300" />
               <div>
                 <CardTitle className="text-white">Inbox</CardTitle>
                 <p className="text-xs text-neutral-400">
@@ -315,7 +315,7 @@ export default function InboxTab({ role, onGoToChannels }: InboxTabProps) {
                     onClick={() => setStatusFilter(f.key)}
                     className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                       statusFilter === f.key
-                        ? "bg-orange-600 text-white"
+                        ? "bg-indigo-500 text-white"
                         : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
                     }`}
                   >
@@ -548,7 +548,7 @@ export default function InboxTab({ role, onGoToChannels }: InboxTabProps) {
                     <Button
                       onClick={handleSendReply}
                       disabled={sendingReply || !replyText.trim()}
-                      className="bg-orange-600 hover:bg-orange-700 h-[44px]"
+                      className="bg-indigo-500 hover:bg-indigo-400 h-[44px]"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
@@ -597,8 +597,8 @@ function MessageBubble({
       : isRejectedDraft
         ? "bg-neutral-800/50 text-neutral-500 line-through"
         : isAI
-          ? "bg-orange-900/50 text-orange-50"
-          : "bg-orange-600 text-white"
+          ? "bg-indigo-500/15 text-indigo-200"
+          : "bg-indigo-500 text-white"
 
   return (
     <div className={`flex flex-col gap-1 ${align}`}>

@@ -303,24 +303,24 @@ export default function StudentProfileClient({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Header */}
-      <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased">
+      {/* Frosted header */}
+      <header className="border-b border-zinc-900/80 bg-zinc-950/70 backdrop-blur-xl sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-5 h-14 flex items-center gap-3">
           <Link
             href="/admin"
-            className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             Back to dashboard
           </Link>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-5 py-6 space-y-6">
         {/* Student summary */}
         <div className="flex items-start gap-4">
-          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-2xl font-bold shrink-0">
+          <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 ring-1 ring-indigo-300/30 shadow-[0_4px_18px_-4px_rgba(99,102,241,0.5)] flex items-center justify-center text-[20px] font-semibold text-white shrink-0">
             {studentName.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -443,7 +443,7 @@ export default function StudentProfileClient({
         <Card className="bg-neutral-900/50 border-neutral-800">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
-              <Award className="h-5 w-5 text-orange-400" />
+              <Award className="h-5 w-5 text-indigo-300" />
               Cert journey
             </CardTitle>
             <CardDescription>
@@ -454,7 +454,7 @@ export default function StudentProfileClient({
           </CardHeader>
           <CardContent className="space-y-3">
             {currentJourney && (
-              <div className="rounded-lg border border-orange-500/30 bg-orange-500/[0.04] p-3">
+              <div className="rounded-lg ring-1 ring-indigo-500/25 bg-indigo-500/[0.06] p-3">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-2xl">{currentJourney.icon}</span>
                   <div className="flex-1">
@@ -475,9 +475,9 @@ export default function StudentProfileClient({
                     </p>
                   </div>
                 </div>
-                <div className="mt-2 h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+                <div className="mt-2 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
                   <div
-                    className="h-full bg-orange-500"
+                    className="h-full bg-indigo-400 transition-all"
                     style={{
                       width: `${Math.round(
                         (currentJourney.signed_off_here /
@@ -498,14 +498,14 @@ export default function StudentProfileClient({
                 return (
                   <div
                     key={lvl.id}
-                    className={`rounded-lg border p-2.5 text-center ${
+                    className={`rounded-lg ring-1 p-2.5 text-center ${
                       lvl.earned_here
-                        ? "border-amber-500/40 bg-amber-500/[0.06]"
+                        ? "ring-amber-500/30 bg-amber-500/[0.06]"
                         : lvl.enrolled_here
-                          ? "border-orange-500/40 bg-orange-500/[0.06]"
+                          ? "ring-indigo-500/30 bg-indigo-500/[0.06]"
                           : lvl.signed_off_here > 0
-                            ? "border-neutral-700 bg-neutral-900"
-                            : "border-neutral-800 bg-neutral-900/30 opacity-60"
+                            ? "ring-zinc-800 bg-zinc-900/60"
+                            : "ring-zinc-900 bg-zinc-900/30 opacity-60"
                     }`}
                   >
                     <div className="text-2xl mb-1">{lvl.icon}</div>
@@ -616,7 +616,7 @@ export default function StudentProfileClient({
                   size="sm"
                   onClick={addNote}
                   disabled={savingNote || !newNote.trim()}
-                  className="bg-orange-500 hover:bg-orange-400 text-white w-full"
+                  className="bg-indigo-500 hover:bg-indigo-400 text-white w-full"
                 >
                   {savingNote ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -914,22 +914,24 @@ function StatCard({
 }) {
   const colors = {
     emerald: "text-emerald-400",
-    orange: "text-orange-400",
+    orange: "text-indigo-300",
     amber: "text-amber-400",
     red: "text-red-400",
-    neutral: "text-neutral-400",
+    neutral: "text-zinc-400",
   }
   const valueColor =
     tone === "neutral" ? "text-white" : colors[tone]
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-neutral-500">
+    <div className="rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 backdrop-blur-sm p-3">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-zinc-500">
         <Icon className={`h-3 w-3 ${colors[tone]}`} />
         {label}
       </div>
-      <p className={`text-xl font-bold ${valueColor} mt-1`}>{value}</p>
+      <p className={`text-[20px] font-semibold tracking-tight tabular-nums ${valueColor} mt-1`}>
+        {value}
+      </p>
       {sub && (
-        <p className="text-[10px] text-neutral-500 mt-0.5">{sub}</p>
+        <p className="text-[10px] text-zinc-600 mt-0.5">{sub}</p>
       )}
     </div>
   )

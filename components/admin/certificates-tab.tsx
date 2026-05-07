@@ -263,7 +263,7 @@ export default function CertificatesTab({ role }: { role: string }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-300" />
       </div>
     )
   }
@@ -289,7 +289,7 @@ export default function CertificatesTab({ role }: { role: string }) {
         <Card className="bg-neutral-900/50 border-neutral-800">
           <CardContent className="p-4">
             <p className="text-xs text-neutral-500">Enrolled Students</p>
-            <p className="text-2xl font-bold text-orange-400">{stats.enrolledCount}</p>
+            <p className="text-2xl font-bold text-indigo-300">{stats.enrolledCount}</p>
           </CardContent>
         </Card>
         {stats.byLevel.filter((l) => l.count > 0).slice(0, 2).map((l) => (
@@ -326,17 +326,17 @@ export default function CertificatesTab({ role }: { role: string }) {
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setShowEnrollDialog(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium transition-colors"
         >
           <UserPlus className="w-4 h-4" />
           Enroll Student
         </button>
         <button
           onClick={() => setShowBulkSignoff(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-medium border border-orange-500/40 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-medium border border-indigo-500/40 transition-colors"
           title="Sign off the same skill for many students at once"
         >
-          <Sparkles className="w-4 h-4 text-orange-400" />
+          <Sparkles className="w-4 h-4 text-indigo-300" />
           Bulk signoff
         </button>
         {isOwnerOrAdmin && (
@@ -371,7 +371,7 @@ export default function CertificatesTab({ role }: { role: string }) {
                   </div>
                   <button
                     onClick={() => handleViewSkills(e)}
-                    className="text-xs text-neutral-400 hover:text-orange-400 transition-colors flex items-center gap-1"
+                    className="text-xs text-neutral-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
                   >
                     <Eye className="w-3 h-3" />
                     Skills
@@ -430,7 +430,7 @@ export default function CertificatesTab({ role }: { role: string }) {
               placeholder="Search name, email, cert #..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 w-48 md:w-64"
+              className="pl-9 pr-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-indigo-500 w-48 md:w-64"
             />
           </div>
         </div>
@@ -513,7 +513,7 @@ export default function CertificatesTab({ role }: { role: string }) {
                           href={`/verify/${cert.certificate_number}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors"
+                          className="flex items-center gap-1 text-xs text-indigo-300 hover:text-indigo-200 transition-colors"
                         >
                           <ExternalLink className="w-3 h-3" />
                           View Certificate
@@ -560,7 +560,7 @@ export default function CertificatesTab({ role }: { role: string }) {
                 value={enrollForm.student_email}
                 onChange={(e) => setEnrollForm((f: typeof enrollForm) => ({ ...f, student_email: e.target.value }))}
                 placeholder="student@example.com"
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500"
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -568,7 +568,7 @@ export default function CertificatesTab({ role }: { role: string }) {
               <select
                 value={enrollForm.level}
                 onChange={(e) => setEnrollForm((f: typeof enrollForm) => ({ ...f, level: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white focus:outline-none focus:border-orange-500"
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white focus:outline-none focus:border-indigo-500"
               >
                 {CERTIFICATION_LEVELS.map((l) => (
                   <option key={l.id} value={l.id}>{l.icon} {l.name} (Level {l.number})</option>
@@ -582,13 +582,13 @@ export default function CertificatesTab({ role }: { role: string }) {
                 value={enrollForm.notes}
                 onChange={(e) => setEnrollForm((f: typeof enrollForm) => ({ ...f, notes: e.target.value }))}
                 placeholder="e.g. Walk-in enrollment"
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500"
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
             <button
               onClick={handleEnrollStudent}
               disabled={enrolling || !enrollForm.student_email}
-              className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 disabled:bg-neutral-700 disabled:text-neutral-500 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               {enrolling ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
               Enroll Student
@@ -611,7 +611,7 @@ export default function CertificatesTab({ role }: { role: string }) {
                 value={issueCertForm.student_email}
                 onChange={(e) => setIssueCertForm((f: typeof issueCertForm) => ({ ...f, student_email: e.target.value }))}
                 placeholder="student@example.com"
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500"
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -619,7 +619,7 @@ export default function CertificatesTab({ role }: { role: string }) {
               <select
                 value={issueCertForm.level}
                 onChange={(e) => setIssueCertForm((f: typeof issueCertForm) => ({ ...f, level: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white focus:outline-none focus:border-orange-500"
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-sm text-white focus:outline-none focus:border-indigo-500"
               >
                 {CERTIFICATION_LEVELS.map((l) => (
                   <option key={l.id} value={l.id}>{l.icon} {l.name} (Level {l.number})</option>
@@ -631,7 +631,7 @@ export default function CertificatesTab({ role }: { role: string }) {
                 type="checkbox"
                 checked={issueCertForm.skip_skills_check}
                 onChange={(e) => setIssueCertForm((f: typeof issueCertForm) => ({ ...f, skip_skills_check: e.target.checked }))}
-                className="rounded border-neutral-600 bg-neutral-800 text-orange-500 focus:ring-orange-500"
+                className="rounded border-neutral-600 bg-neutral-800 text-indigo-300 focus:ring-indigo-500"
               />
               Skip skill requirements check
             </label>
@@ -641,7 +641,7 @@ export default function CertificatesTab({ role }: { role: string }) {
             <button
               onClick={handleIssueCert}
               disabled={issuingCert || !issueCertForm.student_email}
-              className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 disabled:bg-neutral-700 disabled:text-neutral-500 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               {issuingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
               Issue Certificate
@@ -660,7 +660,7 @@ export default function CertificatesTab({ role }: { role: string }) {
           </DialogHeader>
           {loadingSkills ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-300" />
             </div>
           ) : (
             <div className="space-y-2 pt-2 max-h-80 overflow-y-auto">

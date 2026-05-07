@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   Loader2,
-  Clock,
-  AlertTriangle,
+  AlertCircle,
   Mail,
   Trophy,
   CheckCircle2,
@@ -14,7 +12,15 @@ import {
   RefreshCw,
   BellOff,
   Sparkles,
+  ArrowUpRight,
 } from "lucide-react"
+import {
+  Surface,
+  SectionHeader,
+  EmptyState,
+  SaasButton,
+} from "@/components/saas"
+import { toneStyles, type SaasTone } from "@/lib/saas-design"
 
 interface TodayData {
   pending_invites: Array<{
@@ -112,21 +118,21 @@ export default function TodayPanel() {
 
   if (loading && !data) {
     return (
-      <Card className="border-zinc-800 bg-zinc-900">
-        <CardContent className="text-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto text-zinc-500" />
-        </CardContent>
-      </Card>
+      <Surface>
+        <div className="text-center py-12">
+          <Loader2 className="h-4 w-4 animate-spin mx-auto text-zinc-600" />
+        </div>
+      </Surface>
     )
   }
 
   if (error || !data) {
     return (
-      <Card className="border-zinc-800 bg-zinc-900">
-        <CardContent className="text-center py-6 text-zinc-500 text-sm">
+      <Surface>
+        <div className="text-center py-8 text-[13px] text-zinc-500">
           {error || "No data."}
-        </CardContent>
-      </Card>
+        </div>
+      </Surface>
     )
   }
 
@@ -135,199 +141,210 @@ export default function TodayPanel() {
     data.stale_crawls.length +
     Math.min(data.needs_extraction_total, 1)
 
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-orange-500" />
-          <h2 className="text-base font-semibold text-white">Today</h2>
-          <span className="text-xs text-zinc-500">
-            {new Date().toLocaleDateString(undefined, {
-              weekday: "long",
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="text-xs text-zinc-400 hover:text-white inline-flex items-center gap-1"
-        >
-          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
-      </div>
+  const weekTotal = data.growth_7d.reduce((s, b) => s + b.count, 0)
 
-      {attentionCount > 0 && (
-        <div className="space-y-2">
-          {data.pending_invites.length > 0 && (
-            <AttentionCard
-              icon={Mail}
-              tone="amber"
-              title={`${data.pending_invites.length} invite${
-                data.pending_invites.length === 1 ? "" : "s"
-              } awaiting claim — sent over a week ago`}
-            >
-              <ul className="space-y-1.5">
-                {data.pending_invites.slice(0, 5).map((g) => (
-                  <li key={g.id} className="text-sm flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
+  return (
+    <div className="space-y-5">
+      <SectionHeader
+        eyebrow="Signal"
+        title="What needs you"
+        action={
+          <SaasButton
+            variant="ghost"
+            size="sm"
+            onClick={refresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </SaasButton>
+        }
+      />
+
+      {attentionCount > 0 ? (
+        <Surface>
+          <div className="divide-y divide-zinc-900/80">
+            {data.pending_invites.length > 0 && (
+              <AttentionRow
+                tone="indigo"
+                icon={Mail}
+                title={`${data.pending_invites.length} invite${
+                  data.pending_invites.length === 1 ? "" : "s"
+                } awaiting claim`}
+                hint="Sent over a week ago"
+              >
+                <ul className="space-y-1.5">
+                  {data.pending_invites.slice(0, 5).map((g) => (
+                    <li
+                      key={g.id}
+                      className="group flex items-center gap-2 text-[13px]"
+                    >
                       <Link
                         href={`/platform-admin/onboard/${g.id}`}
-                        className="text-amber-200 hover:underline"
+                        className="flex-1 min-w-0 text-zinc-200 hover:text-white truncate"
                       >
                         {g.name}
+                        <span className="text-zinc-600">
+                          {g.where ? ` · ${g.where}` : ""} · {g.days_since}d
+                        </span>
                       </Link>
-                      <span className="text-zinc-500">
-                        {g.where ? ` · ${g.where}` : ""} · {g.days_since}d ago
-                        {g.invited_email ? ` · ${g.invited_email}` : ""}
+                      <button
+                        onClick={async () => {
+                          await fetch(
+                            `/api/platform-admin/discovery/${g.id}`,
+                            {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                last_nudged_at: new Date().toISOString(),
+                              }),
+                            },
+                          )
+                          refresh()
+                        }}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-300 inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        title="Snooze 7 days"
+                      >
+                        <BellOff className="h-3 w-3" />
+                        snooze
+                      </button>
+                    </li>
+                  ))}
+                  {data.pending_invites.length > 5 && (
+                    <li className="text-[11px] text-zinc-600">
+                      +{data.pending_invites.length - 5} more
+                    </li>
+                  )}
+                </ul>
+              </AttentionRow>
+            )}
+
+            {data.needs_extraction_total > 0 && (
+              <AttentionRow
+                tone="amber"
+                icon={AlertCircle}
+                title={`${data.needs_extraction_total} discovered gym${
+                  data.needs_extraction_total === 1 ? "" : "s"
+                } need extraction`}
+                hint="Run a batch enrich from the Network tab"
+              />
+            )}
+
+            {data.stale_crawls.length > 0 && (
+              <AttentionRow
+                tone="zinc"
+                icon={RefreshCw}
+                title={`${data.stale_crawls.length} gym${
+                  data.stale_crawls.length === 1 ? "" : "s"
+                } stale`}
+                hint="Not refreshed in 30+ days"
+              >
+                <ul className="space-y-1">
+                  {data.stale_crawls.slice(0, 3).map((g) => (
+                    <li key={g.id} className="text-[13px]">
+                      <span className="text-zinc-300">{g.name}</span>
+                      <span className="text-zinc-600">
+                        {g.where ? ` · ${g.where}` : ""}
+                        {g.days_since != null ? ` · ${g.days_since}d` : ""}
                       </span>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        await fetch(
-                          `/api/platform-admin/discovery/${g.id}`,
-                          {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              last_nudged_at: new Date().toISOString(),
-                            }),
-                          }
-                        )
-                        refresh()
-                      }}
-                      className="text-xs text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1 shrink-0"
-                      title="Snooze 7 days"
-                    >
-                      <BellOff className="h-3 w-3" />
-                      snooze
-                    </button>
-                  </li>
-                ))}
-                {data.pending_invites.length > 5 && (
-                  <li className="text-xs text-zinc-500">
-                    +{data.pending_invites.length - 5} more
-                  </li>
-                )}
-              </ul>
-            </AttentionCard>
-          )}
-
-          {data.needs_extraction_total > 0 && (
-            <AttentionCard
-              icon={AlertTriangle}
-              tone="orange"
-              title={`${data.needs_extraction_total} discovered gym${
-                data.needs_extraction_total === 1 ? "" : "s"
-              } with website but no AI extraction`}
-            >
-              <p className="text-sm text-zinc-300">
-                Run a batch enrich from the Network tab to fill these in.
-              </p>
-            </AttentionCard>
-          )}
-
-          {data.stale_crawls.length > 0 && (
-            <AttentionCard
-              icon={RefreshCw}
-              tone="zinc"
-              title={`${data.stale_crawls.length} gym${
-                data.stale_crawls.length === 1 ? "" : "s"
-              } not refreshed in 30+ days`}
-            >
-              <ul className="space-y-1">
-                {data.stale_crawls.slice(0, 3).map((g) => (
-                  <li key={g.id} className="text-sm">
-                    <span className="text-zinc-200">{g.name}</span>
-                    <span className="text-zinc-500">
-                      {g.where ? ` · ${g.where}` : ""}
-                      {g.days_since != null ? ` · ${g.days_since}d` : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </AttentionCard>
-          )}
-        </div>
+                    </li>
+                  ))}
+                </ul>
+              </AttentionRow>
+            )}
+          </div>
+        </Surface>
+      ) : (
+        <EmptyState
+          icon={CheckCircle2}
+          tone="emerald"
+          title="Inbox zero across the network"
+          description="Nothing pending — discovery + outreach are caught up."
+        />
       )}
 
       {data.drafts_ready.length > 0 && (
-        <Card className="border-emerald-700/40 bg-gradient-to-br from-emerald-500/[0.06] to-zinc-900">
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-emerald-400" />
-                <p className="text-xs text-emerald-200 uppercase tracking-wider font-semibold">
-                  {data.drafts_ready.length} draft
-                  {data.drafts_ready.length === 1 ? "" : "s"} ready to approve
-                </p>
-              </div>
-              <Link
-                href="/platform-admin?full=1#network"
-                className="text-[11px] text-emerald-400/80 hover:text-emerald-200"
-              >
-                Review drafts →
-              </Link>
+        <Surface accent="indigo">
+          <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/15 ring-1 ring-indigo-500/25">
+                <Mail className="h-3 w-3 text-indigo-300" />
+              </span>
+              <p className="text-[13px] font-medium text-white">
+                {data.drafts_ready.length} draft
+                {data.drafts_ready.length === 1 ? "" : "s"} ready to ship
+              </p>
             </div>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">
-              OckOck personalized invite letters for these gyms overnight.
-              Tap a name to review the draft + send.
-            </p>
-            <ul className="space-y-1.5">
-              {data.drafts_ready.slice(0, 6).map((g) => (
-                <li key={g.id} className="text-sm">
-                  <Link
-                    href={`/platform-admin/onboard/${g.id}`}
-                    className="text-white hover:text-emerald-300"
-                  >
-                    {g.name}
-                  </Link>
-                  <span className="text-zinc-500 text-xs">
-                    {g.where ? ` · ${g.where}` : ""}
-                    {g.email ? ` · ${g.email}` : ""}
-                  </span>
+            <Link
+              href="/platform-admin?full=1#network"
+              className="text-[12px] text-indigo-300 hover:text-indigo-200 inline-flex items-center gap-1"
+            >
+              Review
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <p className="px-4 pb-3 text-[12px] text-zinc-500">
+            OckOck personalized invite letters overnight. Tap a name to review + send.
+          </p>
+          <ul className="border-t border-zinc-900/80 divide-y divide-zinc-900/80">
+            {data.drafts_ready.slice(0, 6).map((g) => (
+              <li key={g.id}>
+                <Link
+                  href={`/platform-admin/onboard/${g.id}`}
+                  className="block px-4 py-2.5 hover:bg-zinc-900/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[13px] text-white truncate">{g.name}</p>
+                    {g.email && (
+                      <p className="text-[11px] text-zinc-600 truncate shrink-0">
+                        {g.email}
+                      </p>
+                    )}
+                  </div>
                   {g.subject && (
-                    <p className="text-[11px] text-zinc-400 italic line-clamp-1 mt-0.5">
+                    <p className="text-[12px] text-zinc-500 italic truncate mt-0.5">
                       &ldquo;{g.subject}&rdquo;
                     </p>
                   )}
-                </li>
-              ))}
-              {data.drafts_ready.length > 6 && (
-                <li className="text-[11px] text-zinc-500 pt-1">
-                  +{data.drafts_ready.length - 6} more in /platform-admin → Network
-                </li>
-              )}
-            </ul>
-          </CardContent>
-        </Card>
+                </Link>
+              </li>
+            ))}
+            {data.drafts_ready.length > 6 && (
+              <li className="px-4 py-2 text-[11px] text-zinc-600">
+                +{data.drafts_ready.length - 6} more
+              </li>
+            )}
+          </ul>
+        </Surface>
       )}
 
       {data.new_discoveries.length > 0 && (
-        <Card className="border-zinc-800 bg-gradient-to-br from-orange-500/[0.04] to-zinc-900">
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-orange-400" />
-                <p className="text-xs text-zinc-400 uppercase tracking-wider">
-                  Newly discovered · last 7 days
-                </p>
-              </div>
-              <Link
-                href="/platform-admin?full=1#network"
-                className="text-[11px] text-zinc-500 hover:text-zinc-200"
-              >
-                Open network →
-              </Link>
+        <Surface>
+          <div className="px-4 pt-3.5 pb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-zinc-500" />
+              <p className="text-[12px] uppercase tracking-[0.14em] text-zinc-500">
+                Newly discovered · 7d
+              </p>
             </div>
-            <ul className="space-y-1.5">
-              {data.new_discoveries.slice(0, 8).map((g) => (
-                <li key={g.id} className="text-sm">
-                  <div className="flex items-start gap-2">
+            <Link
+              href="/platform-admin?full=1#network"
+              className="text-[11px] text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-0.5"
+            >
+              Network
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <ul className="border-t border-zinc-900/80 divide-y divide-zinc-900/80">
+            {data.new_discoveries.slice(0, 6).map((g) => (
+              <li key={g.id}>
+                <Link
+                  href={`/platform-admin/onboard/${g.id}`}
+                  className="block px-4 py-2.5 hover:bg-zinc-900/40 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
                     <span
-                      className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${
+                      className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                         g.enriched ? "bg-emerald-400" : "bg-amber-400"
                       }`}
                       title={
@@ -337,192 +354,180 @@ export default function TodayPanel() {
                       }
                     />
                     <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/platform-admin/onboard/${g.id}`}
-                        className="text-white hover:text-orange-300 truncate inline-block max-w-full"
-                      >
-                        {g.name}
-                      </Link>
-                      <span className="text-zinc-500 text-xs">
-                        {g.where ? ` · ${g.where}` : ""}
-                        {g.enriched ? " · enriched" : " · pending"}
-                      </span>
-                      {g.summary && (
-                        <p className="text-[11px] text-zinc-500 line-clamp-1 mt-0.5">
-                          {g.summary}
-                        </p>
-                      )}
+                      <p className="text-[13px] text-white truncate">{g.name}</p>
+                      <p className="text-[11px] text-zinc-600 truncate">
+                        {g.where ? `${g.where} · ` : ""}
+                        {g.enriched ? "enriched" : "pending"}
+                      </p>
                     </div>
                   </div>
-                </li>
-              ))}
-              {data.new_discoveries.length > 8 && (
-                <li className="text-[11px] text-zinc-500 pt-1">
-                  +{data.new_discoveries.length - 8} more in /platform-admin → Network
-                </li>
-              )}
-            </ul>
-          </CardContent>
-        </Card>
+                </Link>
+              </li>
+            ))}
+            {data.new_discoveries.length > 6 && (
+              <li className="px-4 py-2 text-[11px] text-zinc-600">
+                +{data.new_discoveries.length - 6} more
+              </li>
+            )}
+          </ul>
+        </Surface>
       )}
 
       <div className="grid gap-3 md:grid-cols-3">
-        <ActivityCard
+        <ActivityLane
           icon={Trophy}
-          tone="orange"
-          title="Onboarded this week"
-          empty="No new gyms onboarded yet this week."
+          title="Onboarded · 7d"
+          empty="No new gyms onboarded this week."
           items={data.recent_onboarded.map((g) => ({
             id: g.id,
             primary: g.name,
-            secondary: [
-              g.where,
-              g.claimed_at ? timeAgo(g.claimed_at) : null,
-            ]
+            secondary: [g.where, g.claimed_at ? timeAgo(g.claimed_at) : null]
               .filter(Boolean)
               .join(" · "),
           }))}
         />
-        <ActivityCard
+        <ActivityLane
           icon={CheckCircle2}
-          tone="emerald"
-          title="Signoffs · last 24h"
-          empty="No skill signoffs in the last 24h."
+          title="Signoffs · 24h"
+          empty="No signoffs in the last 24h."
           items={data.recent_signoffs.map((s) => ({
             id: s.id,
-            primary: `${s.student}`,
-            secondary: `${s.level} · #${s.skill_index + 1} · ${s.gym}`,
+            primary: s.student,
+            secondary: `${s.level} · ${s.gym}`,
           }))}
         />
-        <ActivityCard
+        <ActivityLane
           icon={BookOpen}
-          tone="amber"
-          title="Certs issued · last 7d"
+          title="Certs · 7d"
           empty="No certificates issued this week."
           items={data.recent_certs.map((c) => ({
             id: c.id,
-            primary: `${c.student}`,
-            secondary: `${c.level} · ${c.gym} · ${timeAgo(c.issued_at)}`,
+            primary: c.student,
+            secondary: `${c.level} · ${c.gym}`,
           }))}
         />
       </div>
 
       {data.growth_7d.length > 0 && (
-        <Card className="border-zinc-800 bg-zinc-900">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider">
-                Onboarded gyms · last 7 days
-              </p>
-              <p className="text-xs text-zinc-300">
-                {data.growth_7d.reduce((s, b) => s + b.count, 0)} this week
-              </p>
+        <Surface>
+          <div className="px-4 py-3.5">
+            <div className="flex items-end justify-between mb-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+                  Onboarded · 7d
+                </p>
+                <p className="text-[20px] font-semibold tracking-tight text-white tabular-nums mt-0.5">
+                  {weekTotal}
+                  <span className="text-[12px] text-zinc-500 font-normal ml-1.5">
+                    this week
+                  </span>
+                </p>
+              </div>
             </div>
-            <div className="flex items-end gap-1.5 h-12">
+            <div className="flex items-end gap-1.5 h-10">
               {data.growth_7d.map((b) => {
-                const max = Math.max(...data.growth_7d.map((x) => x.count), 1)
-                const h = Math.max(2, Math.round((b.count / max) * 100))
+                const max = Math.max(
+                  ...data.growth_7d.map((x) => x.count),
+                  1,
+                )
+                const h = Math.max(4, Math.round((b.count / max) * 100))
                 const day = new Date(b.date).toLocaleDateString(undefined, {
                   weekday: "short",
                 })
                 return (
                   <div
                     key={b.date}
-                    className="flex flex-col items-center gap-1 flex-1 min-w-0"
+                    className="flex flex-col items-stretch gap-1.5 flex-1 min-w-0"
                     title={`${b.date}: ${b.count}`}
                   >
                     <div
-                      className={`w-full rounded ${
-                        b.count > 0 ? "bg-orange-500" : "bg-zinc-800"
+                      className={`w-full rounded-sm transition-colors ${
+                        b.count > 0 ? "bg-indigo-400/80" : "bg-zinc-800"
                       }`}
                       style={{ height: `${h}%` }}
                     />
-                    <span className="text-[10px] text-zinc-500">{day}</span>
+                    <span className="text-[10px] text-zinc-600 text-center">
+                      {day}
+                    </span>
                   </div>
                 )
               })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Surface>
       )}
     </div>
   )
 }
 
-function AttentionCard({
+function AttentionRow({
   icon: Icon,
   tone,
   title,
+  hint,
   children,
 }: {
   icon: typeof Mail
-  tone: "amber" | "orange" | "zinc"
+  tone: SaasTone
   title: string
-  children: React.ReactNode
+  hint?: string
+  children?: React.ReactNode
 }) {
-  const ring =
-    tone === "amber"
-      ? "border-amber-700/40 bg-amber-900/15"
-      : tone === "orange"
-        ? "border-orange-700/40 bg-orange-900/15"
-        : "border-zinc-700 bg-zinc-900"
-  const iconColor =
-    tone === "amber"
-      ? "text-amber-400"
-      : tone === "orange"
-        ? "text-orange-400"
-        : "text-zinc-400"
+  const styles = toneStyles[tone]
   return (
-    <div className={`rounded border ${ring} p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <Icon className={`h-4 w-4 ${iconColor}`} />
-        <p className="text-sm font-medium text-white">{title}</p>
+    <div className="px-4 py-3.5">
+      <div className="flex items-start gap-3">
+        <span
+          className={`inline-flex h-6 w-6 items-center justify-center rounded-md ring-1 ${styles.iconBg} ${styles.ring} shrink-0 mt-0.5`}
+        >
+          <Icon className={`h-3 w-3 ${styles.iconColor}`} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-medium text-white">{title}</p>
+          {hint && <p className="text-[12px] text-zinc-500 mt-0.5">{hint}</p>}
+          {children && <div className="mt-2.5">{children}</div>}
+        </div>
       </div>
-      {children}
     </div>
   )
 }
 
-function ActivityCard({
+function ActivityLane({
   icon: Icon,
-  tone,
   title,
   items,
   empty,
 }: {
   icon: typeof Mail
-  tone: "orange" | "emerald" | "amber"
   title: string
   items: Array<{ id: string; primary: string; secondary: string }>
   empty: string
 }) {
-  const iconColor =
-    tone === "emerald"
-      ? "text-emerald-400"
-      : tone === "amber"
-        ? "text-amber-400"
-        : "text-orange-400"
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
-      <CardContent className="p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${iconColor}`} />
-          <p className="text-xs text-zinc-400 uppercase tracking-wider">{title}</p>
-        </div>
+    <Surface>
+      <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-zinc-900/80">
+        <Icon className="h-3 w-3 text-zinc-500" />
+        <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+          {title}
+        </p>
+      </div>
+      <div className="p-3.5">
         {items.length === 0 ? (
-          <p className="text-xs text-zinc-500">{empty}</p>
+          <p className="text-[12px] text-zinc-600">{empty}</p>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {items.slice(0, 5).map((it) => (
-              <li key={it.id} className="text-sm text-white">
-                <p className="truncate">{it.primary}</p>
-                <p className="text-xs text-zinc-500 truncate">{it.secondary}</p>
+              <li key={it.id} className="text-[13px]">
+                <p className="text-zinc-200 truncate">{it.primary}</p>
+                <p className="text-[11px] text-zinc-600 truncate">
+                  {it.secondary}
+                </p>
               </li>
             ))}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </Surface>
   )
 }
 

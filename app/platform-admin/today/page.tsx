@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowRight } from "lucide-react"
+import { ArrowUpRight, Sparkles } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import TodayPanel from "@/components/platform-admin/today-panel"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import ViewAsPicker from "@/components/platform-admin/view-as-picker"
+import { SaasShell, SaasHeader, StatusDot } from "@/components/saas"
 
 export const metadata: Metadata = {
   title: "Today — MUAYTHAIPAI",
@@ -16,7 +17,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0a0a0a",
+  themeColor: "#09090b",
 }
 
 export default async function TodayHomePage() {
@@ -40,33 +41,59 @@ export default async function TodayHomePage() {
         ? "Good afternoon"
         : "Good evening"
   const operator = u.full_name?.split(" ")[0] || u.email.split("@")[0]
+  const dateLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  })
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <header className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10">
-        <div className="mx-auto max-w-2xl px-3 py-2.5 flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-zinc-500">
-              {greeting}, {operator}
+    <SaasShell>
+      <SaasHeader
+        left={
+          <>
+            <StatusDot />
+            <p className="text-[13px] text-zinc-400 truncate">
+              <span className="text-zinc-500">{greeting},</span>{" "}
+              <span className="text-zinc-200 font-medium">{operator}</span>
             </p>
-            <p className="text-sm font-semibold text-white">Command center</p>
-          </div>
+          </>
+        }
+        right={
           <Link
             href="/platform-admin?full=1"
-            className="text-xs text-orange-400 hover:underline inline-flex items-center gap-1"
+            className="group inline-flex items-center gap-1 text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors"
           >
             Full dashboard
-            <ArrowRight className="h-3 w-3" />
+            <ArrowUpRight className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </Link>
-        </div>
-      </header>
-      <main className="mx-auto max-w-2xl p-3 space-y-4">
+        }
+      />
+
+      <main className="mx-auto max-w-3xl px-5 py-8 space-y-8">
+        <section>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1.5 inline-flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3 text-indigo-400" />
+            Operator briefing
+          </p>
+          <h1 className="text-[28px] font-semibold tracking-tight text-white leading-tight">
+            {dateLabel}
+          </h1>
+          <p className="text-[13px] text-zinc-500 mt-1">
+            What needs your attention across the network today.
+          </p>
+        </section>
+
         <TodayPanel />
         <ViewAsPicker />
-        <div>
-          <PlatformCommandBar />
-        </div>
+        <PlatformCommandBar />
       </main>
-    </div>
+
+      <footer className="mx-auto max-w-3xl px-5 py-10 text-center">
+        <p className="text-[11px] text-zinc-600">
+          MUAYTHAIPAI · operator console
+        </p>
+      </footer>
+    </SaasShell>
   )
 }

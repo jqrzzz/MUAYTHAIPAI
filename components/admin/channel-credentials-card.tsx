@@ -179,7 +179,7 @@ export default function ChannelCredentialsCard() {
       <Card className="bg-neutral-900 border-neutral-800">
         <CardContent className="py-6 text-sm text-red-300">
           Could not load channels: {error}{" "}
-          <button onClick={load} className="text-orange-400 underline ml-2">
+          <button onClick={load} className="text-indigo-300 underline ml-2">
             Retry
           </button>
         </CardContent>
@@ -194,7 +194,7 @@ export default function ChannelCredentialsCard() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-orange-400" />
+                <Sparkles className="w-5 h-5 text-indigo-300" />
                 Connect your channels
               </CardTitle>
               <CardDescription>
@@ -316,7 +316,7 @@ export default function ChannelCredentialsCard() {
                   size="sm"
                   onClick={() => save(c.channel)}
                   disabled={!dirty || isSaving}
-                  className="bg-orange-500 hover:bg-orange-400 text-white"
+                  className="bg-indigo-500 hover:bg-indigo-400 text-white"
                 >
                   {isSaving ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -342,7 +342,7 @@ export default function ChannelCredentialsCard() {
               <div className="mt-3 pt-3 border-t border-neutral-800 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-white inline-flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-300" />
                     OckOck auto-reply
                   </p>
                   <p className="text-[11px] text-neutral-500 mt-0.5 leading-snug">
@@ -357,8 +357,8 @@ export default function ChannelCredentialsCard() {
                   aria-checked={c.auto_send_enabled}
                   disabled={togglingAutoSend === c.channel}
                   onClick={() => toggleAutoSend(c.channel, !c.auto_send_enabled)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-50 ${
-                    c.auto_send_enabled ? "bg-orange-500" : "bg-neutral-700"
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:opacity-50 ${
+                    c.auto_send_enabled ? "bg-indigo-500" : "bg-neutral-700"
                   }`}
                 >
                   <span

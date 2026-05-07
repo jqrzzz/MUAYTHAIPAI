@@ -54,8 +54,8 @@ function renderMessageBody(text: string) {
           rel="noopener noreferrer"
           className={
             isConfirm
-              ? "inline-flex items-center gap-1 mt-1 px-3 py-1.5 rounded-md bg-orange-500 hover:bg-orange-400 text-white text-xs font-semibold no-underline"
-              : "underline underline-offset-2 hover:text-orange-300"
+              ? "inline-flex items-center gap-1 mt-1 px-3 py-1.5 rounded-md bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold no-underline"
+              : "underline underline-offset-2 hover:text-indigo-200"
           }
         >
           {isConfirm ? (
@@ -205,7 +205,7 @@ export default function OckockChatTab({ orgId: _orgId }: OckockChatTabProps) {
                 <div
                   className={`max-w-[80%] p-3 rounded-lg ${
                     msg.role === "user"
-                      ? "bg-orange-600 text-white"
+                      ? "bg-indigo-500 text-white"
                       : "bg-neutral-700 text-neutral-100"
                   }`}
                 >
@@ -253,7 +253,7 @@ export default function OckockChatTab({ orgId: _orgId }: OckockChatTabProps) {
           <Button
             onClick={() => send(input)}
             disabled={sending || !input.trim()}
-            className="bg-orange-600 hover:bg-orange-500"
+            className="bg-indigo-500 hover:bg-indigo-400"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -184,7 +184,7 @@ export default function PackagesTab() {
         <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
           <div>
             <CardTitle className="text-white flex items-center gap-2">
-              <PackageIcon className="w-5 h-5 text-orange-400" />
+              <PackageIcon className="w-5 h-5 text-indigo-300" />
               Packages
             </CardTitle>
             <CardDescription>
@@ -196,7 +196,7 @@ export default function PackagesTab() {
           <Button
             size="sm"
             onClick={openNew}
-            className="bg-orange-500 hover:bg-orange-400 text-white"
+            className="bg-indigo-500 hover:bg-indigo-400 text-white"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             New package
@@ -237,7 +237,7 @@ export default function PackagesTab() {
                       <p className="font-semibold text-white truncate">
                         {pkg.name}
                       </p>
-                      <p className="text-2xl font-bold text-orange-400 mt-0.5">
+                      <p className="text-2xl font-bold text-indigo-300 mt-0.5">
                         ฿{pkg.price_thb.toLocaleString()}
                       </p>
                     </div>
@@ -428,7 +428,7 @@ export default function PackagesTab() {
             <Button
               onClick={save}
               disabled={saving || !form.name.trim() || !form.price_thb}
-              className="bg-orange-500 hover:bg-orange-400 text-white"
+              className="bg-indigo-500 hover:bg-indigo-400 text-white"
             >
               {saving ? (
                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />

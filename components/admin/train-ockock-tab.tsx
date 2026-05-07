@@ -243,7 +243,7 @@ export default function TrainOckockTab() {
                 <div className="flex items-center gap-2 mt-2">
                   <div className="h-2 bg-neutral-700 rounded-full w-48">
                     <div
-                      className="h-2 bg-orange-500 rounded-full transition-all"
+                      className="h-2 bg-indigo-500 rounded-full transition-all"
                       style={{ width: `${Math.min((faqs.length / 20) * 100, 100)}%` }}
                     />
                   </div>
@@ -257,7 +257,7 @@ export default function TrainOckockTab() {
                 size="sm"
                 onClick={openAiSuggest}
                 disabled={aiLoading}
-                className="border-orange-500/40 bg-transparent text-orange-300"
+                className="border-indigo-500/40 bg-transparent text-indigo-200"
                 title="Generate FAQs from your gym's actual data — services, trainers, hours, certs"
               >
                 {aiLoading ? (
@@ -317,7 +317,7 @@ export default function TrainOckockTab() {
           <Button
             onClick={handleQuickReply}
             disabled={isGeneratingReply || !quickReplyInput.trim()}
-            className="bg-orange-600 hover:bg-orange-700"
+            className="bg-indigo-500 hover:bg-indigo-400"
           >
             {isGeneratingReply ? (
               <>
@@ -407,7 +407,7 @@ export default function TrainOckockTab() {
             <Button
               onClick={handleSaveFaq}
               disabled={isSavingFaq || !newFaqForm.question || !newFaqForm.answer}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-indigo-500 hover:bg-indigo-400"
             >
               {isSavingFaq ? "Saving..." : editingFaq ? "Update" : "Teach OckOck"}
             </Button>
@@ -560,7 +560,7 @@ export default function TrainOckockTab() {
         <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-orange-400" />
+              <Sparkles className="w-4 h-4 text-indigo-300" />
               OckOck drafted these FAQs
             </DialogTitle>
             <DialogDescription>
@@ -571,7 +571,7 @@ export default function TrainOckockTab() {
 
           {aiLoading ? (
             <div className="text-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-orange-400" />
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-indigo-300" />
               <p className="text-sm text-neutral-400 mt-3">
                 Reading your gym data and drafting Q&amp;A…
               </p>
@@ -604,7 +604,7 @@ export default function TrainOckockTab() {
                     }}
                     className={`w-full text-left rounded border p-3 transition ${
                       picked
-                        ? "border-orange-500/60 bg-orange-500/5"
+                        ? "border-indigo-500/60 bg-indigo-500/5"
                         : "border-neutral-700 bg-neutral-950 hover:bg-neutral-900"
                     }`}
                   >
@@ -612,7 +612,7 @@ export default function TrainOckockTab() {
                       <div
                         className={`h-4 w-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
                           picked
-                            ? "border-orange-500 bg-orange-500"
+                            ? "border-indigo-500 bg-indigo-500"
                             : "border-neutral-600"
                         }`}
                       >
@@ -642,7 +642,7 @@ export default function TrainOckockTab() {
                 <Button
                   onClick={acceptAiSuggestions}
                   disabled={aiSaving || aiPicked.size === 0}
-                  className="bg-orange-500 hover:bg-orange-600"
+                  className="bg-indigo-500 hover:bg-indigo-400"
                 >
                   {aiSaving ? (
                     <Loader2 className="w-3 h-3 mr-1 animate-spin" />

@@ -348,28 +348,31 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
   }, [certProgress])
 
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased">
       <ImpersonationBanner />
-      {/* App-style Header */}
-      <header className="sticky top-0 z-50 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800/50">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
+      {/* Frosted header — restrained, indigo monogram */}
+      <header className="sticky top-0 z-50 bg-zinc-950/70 backdrop-blur-xl border-b border-zinc-900/80">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 ring-1 ring-indigo-300/30 flex items-center justify-center text-white text-[13px] font-semibold shadow-[0_4px_16px_-4px_rgba(99,102,241,0.5)]">
               {userName.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-xs text-neutral-500">{greeting}</p>
-              <h1 className="font-semibold text-white leading-tight">{userName}</h1>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+                {greeting}
+              </p>
+              <h1 className="text-[13px] font-semibold text-white leading-tight truncate">
+                {userName}
+              </h1>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={() => setActiveView("profile")}
-            className="text-neutral-400 hover:text-white"
+            className="text-zinc-500 hover:text-zinc-200 transition-colors p-2 -mr-2"
+            aria-label="Profile"
           >
-            <User className="w-5 h-5" />
-          </Button>
+            <User className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -377,37 +380,22 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {/* Home View */}
         {activeView === "home" && (
           <div className="py-6 space-y-6">
-            {/* Quick Stats - Added credits card */}
+            {/* Quick stats — uniform chrome, eyebrow + number, indigo only on the actionable one */}
             <div className="grid grid-cols-4 gap-2">
-              <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
-                <CardContent className="p-3 text-center">
-                  <Flame className="w-4 h-4 text-orange-500 mx-auto mb-1" />
-                  <p className="text-xl font-bold text-white">{streak}</p>
-                  <p className="text-[9px] text-orange-400/80 uppercase tracking-wide">Streak</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
-                <CardContent className="p-3 text-center">
-                  <TrendingUp className="w-4 h-4 text-blue-500 mx-auto mb-1" />
-                  <p className="text-xl font-bold text-white">{completedSessions}</p>
-                  <p className="text-[9px] text-blue-400/80 uppercase tracking-wide">Sessions</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
-                <CardContent className="p-3 text-center">
-                  <Award className="w-4 h-4 text-purple-500 mx-auto mb-1" />
-                  <p className="text-xl font-bold text-white">{certificates.length}</p>
-                  <p className="text-[9px] text-purple-400/80 uppercase tracking-wide">Certs</p>
-                </CardContent>
-              </Card>
-              <button onClick={() => setActiveView("credits")} className="block">
-                <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20 h-full hover:border-green-500/40 transition-colors">
-                  <CardContent className="p-3 text-center">
-                    <CreditCard className="w-4 h-4 text-green-500 mx-auto mb-1" />
-                    <p className="text-xl font-bold text-white">{totalCredits || "—"}</p>
-                    <p className="text-[9px] text-green-400/80 uppercase tracking-wide">Credits</p>
-                  </CardContent>
-                </Card>
+              <MiniStat icon={Flame} value={streak} label="Streak" />
+              <MiniStat icon={TrendingUp} value={completedSessions} label="Sessions" />
+              <MiniStat icon={Award} value={certificates.length} label="Certs" />
+              <button
+                onClick={() => setActiveView("credits")}
+                className="text-left rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.05] to-zinc-900/40 backdrop-blur-sm p-3 hover:ring-indigo-500/40 transition-all"
+              >
+                <CreditCard className="w-3.5 h-3.5 text-indigo-300 mb-1" />
+                <p className="text-[18px] font-semibold tracking-tight text-white tabular-nums">
+                  {totalCredits || "—"}
+                </p>
+                <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">
+                  Credits
+                </p>
               </button>
             </div>
 
@@ -422,7 +410,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                     </h2>
                     <button
                       onClick={() => setActiveView("certificates")}
-                      className="text-xs text-orange-500 hover:text-orange-400"
+                      className="text-[11px] text-indigo-300 hover:text-indigo-200 inline-flex items-center gap-0.5 transition-colors"
                     >
                       View Ladder
                     </button>
@@ -522,8 +510,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                 <CardContent className="p-6 text-center">
                   <Calendar className="w-10 h-10 text-neutral-700 mx-auto mb-3" />
                   <p className="text-neutral-400 text-sm mb-3">No upcoming sessions</p>
-                  <Button onClick={() => setActiveView("gyms")} className="bg-orange-600 hover:bg-orange-500 text-sm">
-                    Book Training
+                  <Button onClick={() => setActiveView("gyms")} className="bg-indigo-500 hover:bg-indigo-400 text-white text-sm">
+                    Book training
                   </Button>
                 </CardContent>
               </Card>
@@ -564,56 +552,49 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
 
             {/* Quick Actions - Added AI and Notes buttons */}
             <div>
-              <h2 className="text-sm font-medium text-neutral-400 mb-3">Quick Actions</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <button
+              <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-500 mb-3">
+                Quick actions
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <QuickAction
                   onClick={() => setActiveView("ai")}
-                  className="bg-gradient-to-br from-orange-900/30 to-red-800/20 border border-orange-500/30 rounded-xl p-4 text-left hover:border-orange-500/50 transition-colors"
-                >
-                  <div className="w-8 h-8 mb-2">
+                  accent="indigo"
+                  iconNode={
                     <Image
                       src={OCKOCK_AVATAR || "/placeholder.svg"}
                       alt="OckOck"
-                      width={32}
-                      height={32}
+                      width={20}
+                      height={20}
                       className="rounded-full"
                     />
-                  </div>
-                  <p className="text-white font-medium text-sm">OckOck</p>
-                  <p className="text-orange-400/70 text-xs">Your training coach</p>
-                </button>
-                <button
+                  }
+                  title="OckOck"
+                  subtitle="Your training coach"
+                />
+                <QuickAction
                   onClick={() => setActiveView("notes")}
-                  className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-left hover:bg-neutral-800/50 transition-colors"
-                >
-                  <FileText className="w-5 h-5 text-blue-500 mb-2" />
-                  <p className="text-white font-medium text-sm">Trainer Notes</p>
-                  <p className="text-neutral-500 text-xs">View feedback</p>
-                </button>
-                <button
+                  iconNode={<FileText className="w-4 h-4 text-zinc-400" />}
+                  title="Trainer notes"
+                  subtitle="View feedback"
+                />
+                <QuickAction
                   onClick={() => setActiveView("gyms")}
-                  className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-left hover:bg-neutral-800/50 transition-colors"
-                >
-                  <Search className="w-5 h-5 text-orange-500 mb-2" />
-                  <p className="text-white font-medium text-sm">Find Gyms</p>
-                  <p className="text-neutral-500 text-xs">Browse network</p>
-                </button>
-                <button
+                  iconNode={<Search className="w-4 h-4 text-zinc-400" />}
+                  title="Find gyms"
+                  subtitle="Browse network"
+                />
+                <QuickAction
                   onClick={() => setActiveView("courses")}
-                  className="bg-gradient-to-br from-purple-900/30 to-indigo-800/20 border border-purple-500/30 rounded-xl p-4 text-left hover:border-purple-500/50 transition-colors"
-                >
-                  <BookOpen className="w-5 h-5 text-purple-400 mb-2" />
-                  <p className="text-white font-medium text-sm">My Courses</p>
-                  <p className="text-purple-400/70 text-xs">Track progress</p>
-                </button>
-                <button
+                  iconNode={<BookOpen className="w-4 h-4 text-zinc-400" />}
+                  title="My courses"
+                  subtitle="Track progress"
+                />
+                <QuickAction
                   onClick={() => setActiveView("bookings")}
-                  className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 text-left hover:bg-neutral-800/50 transition-colors"
-                >
-                  <Calendar className="w-5 h-5 text-blue-500 mb-2" />
-                  <p className="text-white font-medium text-sm">My Bookings</p>
-                  <p className="text-neutral-500 text-xs">{bookings.length} total</p>
-                </button>
+                  iconNode={<Calendar className="w-4 h-4 text-zinc-400" />}
+                  title="My bookings"
+                  subtitle={`${bookings.length} total`}
+                />
               </div>
             </div>
           </div>
@@ -693,8 +674,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                 <CardContent className="p-8 text-center">
                   <Calendar className="w-12 h-12 text-neutral-700 mx-auto mb-4" />
                   <p className="text-neutral-400 mb-4">No bookings yet</p>
-                  <Button onClick={() => setActiveView("gyms")} className="bg-orange-600 hover:bg-orange-500">
-                    Book Your First Session
+                  <Button onClick={() => setActiveView("gyms")} className="bg-indigo-500 hover:bg-indigo-400 text-white">
+                    Book your first session
                   </Button>
                 </CardContent>
               </Card>
@@ -901,7 +882,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                       </div>
                       <div className="flex-1 min-w-0">
                         <Link href={`/gyms/${gym.slug}`}>
-                          <h3 className="font-medium text-white truncate hover:text-orange-400 transition-colors">{gym.name}</h3>
+                          <h3 className="font-medium text-white truncate hover:text-indigo-300 transition-colors">{gym.name}</h3>
                         </Link>
                         <p className="text-sm text-neutral-500 flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
@@ -914,7 +895,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                       </div>
                       <Link
                         href={`/book?gym=${gym.slug}`}
-                        className="flex-shrink-0 rounded-lg bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-400 hover:bg-orange-500/20 transition-colors"
+                        className="flex-shrink-0 rounded-lg bg-indigo-500/15 ring-1 ring-indigo-500/25 px-3 py-1.5 text-xs font-medium text-indigo-200 hover:bg-indigo-500/25 transition-colors"
                       >
                         Book
                       </Link>
@@ -1173,8 +1154,8 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         )}
       </main>
 
-      {/* Bottom Navigation - App Style - Added AI tab */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-neutral-950/95 backdrop-blur-md border-t border-neutral-800/50 pb-safe">
+      {/* Bottom navigation — frosted, indigo on active */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-900/80 pb-safe">
         <div className="max-w-lg mx-auto px-4 py-2">
           <div className="flex items-center justify-around">
             <NavButton
@@ -1193,7 +1174,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             <button
               onClick={() => setActiveView("ai")}
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors relative ${
-                activeView === "ai" ? "text-orange-500" : "text-neutral-500 hover:text-neutral-300"
+                activeView === "ai" ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
               <Image
@@ -1241,17 +1222,76 @@ function NavButton({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors relative ${
-        active ? "text-orange-500" : "text-neutral-500 hover:text-neutral-300"
+      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl relative transition-[color,transform] duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${
+        active ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
       }`}
     >
       {icon}
       <span className="text-[10px] font-medium">{label}</span>
+      {active && (
+        <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-400 shadow-[0_0_4px_rgba(129,140,248,0.8)]" />
+      )}
       {badge && (
-        <span className="absolute -top-1 right-0 w-4 h-4 bg-orange-500 rounded-full text-[10px] text-white flex items-center justify-center">
+        <span className="absolute -top-1 right-0 w-4 h-4 bg-indigo-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
           {badge}
         </span>
       )}
+    </button>
+  )
+}
+
+function MiniStat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  value: string | number
+  label: string
+}) {
+  return (
+    <div className="rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 backdrop-blur-sm p-3">
+      <Icon className="w-3.5 h-3.5 text-zinc-500 mb-1" />
+      <p className="text-[18px] font-semibold tracking-tight text-white tabular-nums">
+        {value}
+      </p>
+      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </p>
+    </div>
+  )
+}
+
+function QuickAction({
+  onClick,
+  iconNode,
+  title,
+  subtitle,
+  accent,
+}: {
+  onClick: () => void
+  iconNode: React.ReactNode
+  title: string
+  subtitle: string
+  accent?: "indigo"
+}) {
+  const ring = accent === "indigo" ? "ring-indigo-500/25" : "ring-zinc-900"
+  const hoverRing =
+    accent === "indigo" ? "hover:ring-indigo-500/40" : "hover:ring-zinc-800"
+  const bg =
+    accent === "indigo"
+      ? "bg-gradient-to-b from-indigo-500/[0.06] to-zinc-900/40"
+      : "bg-zinc-900/40"
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-xl ring-1 ${ring} ${hoverRing} ${bg} backdrop-blur-sm p-3 text-left transition-all`}
+    >
+      <div className="w-7 h-7 rounded-lg bg-zinc-950/40 ring-1 ring-zinc-800/60 flex items-center justify-center mb-2">
+        {iconNode}
+      </div>
+      <p className="text-[13px] font-medium text-white">{title}</p>
+      <p className="text-[11px] text-zinc-500 mt-0.5">{subtitle}</p>
     </button>
   )
 }

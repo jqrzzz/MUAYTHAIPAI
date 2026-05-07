@@ -343,7 +343,7 @@ export default function ProfileTab() {
             <Button
               onClick={saveMyProfile}
               disabled={myProfileSaving}
-              className="w-full bg-orange-600 hover:bg-orange-700"
+              className="w-full bg-indigo-500 hover:bg-indigo-400"
             >
               <Save className="w-4 h-4 mr-2" />
               {myProfileSaving ? "Saving..." : "Save Profile"}

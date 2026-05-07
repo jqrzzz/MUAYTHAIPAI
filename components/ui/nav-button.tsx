@@ -16,13 +16,13 @@ export default function NavButton({ icon, label, labelTh, active, onClick, badge
     <button
       onClick={onClick}
       className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg relative transition-colors ${
-        active ? "text-orange-500" : "text-neutral-400"
+        active ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
       }`}
     >
       <div className="relative">
         {icon}
         {badge !== undefined && badge > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-600 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
             {badge > 9 ? "9+" : badge}
           </span>
         )}
