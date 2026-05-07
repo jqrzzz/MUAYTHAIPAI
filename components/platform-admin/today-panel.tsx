@@ -13,6 +13,7 @@ import {
   BookOpen,
   RefreshCw,
   BellOff,
+  Sparkles,
 } from "lucide-react"
 
 interface TodayData {
@@ -62,6 +63,24 @@ interface TodayData {
     issued_at: string
   }>
   growth_7d: Array<{ date: string; count: number }>
+  new_discoveries: Array<{
+    id: string
+    name: string
+    where: string | null
+    status: string
+    website: string | null
+    summary: string | null
+    enriched: boolean
+    created_at: string
+  }>
+  drafts_ready: Array<{
+    id: string
+    name: string
+    where: string | null
+    email: string | null
+    subject: string | null
+    drafted_at: string | null
+  }>
 }
 
 export default function TodayPanel() {
@@ -232,6 +251,119 @@ export default function TodayPanel() {
             </AttentionCard>
           )}
         </div>
+      )}
+
+      {data.drafts_ready.length > 0 && (
+        <Card className="border-emerald-700/40 bg-gradient-to-br from-emerald-500/[0.06] to-zinc-900">
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-emerald-400" />
+                <p className="text-xs text-emerald-200 uppercase tracking-wider font-semibold">
+                  {data.drafts_ready.length} draft
+                  {data.drafts_ready.length === 1 ? "" : "s"} ready to approve
+                </p>
+              </div>
+              <Link
+                href="/platform-admin?full=1#network"
+                className="text-[11px] text-emerald-400/80 hover:text-emerald-200"
+              >
+                Review drafts →
+              </Link>
+            </div>
+            <p className="text-[11px] text-zinc-500 leading-relaxed">
+              OckOck personalized invite letters for these gyms overnight.
+              Tap a name to review the draft + send.
+            </p>
+            <ul className="space-y-1.5">
+              {data.drafts_ready.slice(0, 6).map((g) => (
+                <li key={g.id} className="text-sm">
+                  <Link
+                    href={`/platform-admin/onboard/${g.id}`}
+                    className="text-white hover:text-emerald-300"
+                  >
+                    {g.name}
+                  </Link>
+                  <span className="text-zinc-500 text-xs">
+                    {g.where ? ` · ${g.where}` : ""}
+                    {g.email ? ` · ${g.email}` : ""}
+                  </span>
+                  {g.subject && (
+                    <p className="text-[11px] text-zinc-400 italic line-clamp-1 mt-0.5">
+                      &ldquo;{g.subject}&rdquo;
+                    </p>
+                  )}
+                </li>
+              ))}
+              {data.drafts_ready.length > 6 && (
+                <li className="text-[11px] text-zinc-500 pt-1">
+                  +{data.drafts_ready.length - 6} more in /platform-admin → Network
+                </li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {data.new_discoveries.length > 0 && (
+        <Card className="border-zinc-800 bg-gradient-to-br from-orange-500/[0.04] to-zinc-900">
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-orange-400" />
+                <p className="text-xs text-zinc-400 uppercase tracking-wider">
+                  Newly discovered · last 7 days
+                </p>
+              </div>
+              <Link
+                href="/platform-admin?full=1#network"
+                className="text-[11px] text-zinc-500 hover:text-zinc-200"
+              >
+                Open network →
+              </Link>
+            </div>
+            <ul className="space-y-1.5">
+              {data.new_discoveries.slice(0, 8).map((g) => (
+                <li key={g.id} className="text-sm">
+                  <div className="flex items-start gap-2">
+                    <span
+                      className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${
+                        g.enriched ? "bg-emerald-400" : "bg-amber-400"
+                      }`}
+                      title={
+                        g.enriched
+                          ? "Enriched — ready to invite"
+                          : "Pending AI extraction"
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/platform-admin/onboard/${g.id}`}
+                        className="text-white hover:text-orange-300 truncate inline-block max-w-full"
+                      >
+                        {g.name}
+                      </Link>
+                      <span className="text-zinc-500 text-xs">
+                        {g.where ? ` · ${g.where}` : ""}
+                        {g.enriched ? " · enriched" : " · pending"}
+                      </span>
+                      {g.summary && (
+                        <p className="text-[11px] text-zinc-500 line-clamp-1 mt-0.5">
+                          {g.summary}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+              {data.new_discoveries.length > 8 && (
+                <li className="text-[11px] text-zinc-500 pt-1">
+                  +{data.new_discoveries.length - 8} more in /platform-admin → Network
+                </li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid gap-3 md:grid-cols-3">

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Save, Clock, Bell, Plus, X } from "lucide-react"
 import EmbedSnippetCard from "@/components/admin/embed-snippet-card"
+import WaiverEditorCard from "@/components/admin/waiver-editor-card"
 
 export interface SettingsOrgSettings {
   description?: string | null
@@ -635,6 +636,9 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
           </div>
         </CardContent>
       </Card>
+
+      {/* Liability waiver — versioned text students sign before first class */}
+      <WaiverEditorCard gymSlug={organization.slug ?? null} />
 
       {/* Embed widget snippet — only renders if we have a slug */}
       {organization.slug && <EmbedSnippetCard slug={organization.slug} />}

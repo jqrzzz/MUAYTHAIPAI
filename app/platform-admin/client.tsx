@@ -470,8 +470,14 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
           <div className="flex items-center gap-3">
             <Image src="/images/ockock-avatar.png" alt="OckOck" width={40} height={40} className="rounded-full" />
             <div>
-              <h1 className="text-lg font-bold">Platform Admin</h1>
-              <p className="text-xs text-zinc-400">Muay Thai Network</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold">Master admin</h1>
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  Network-wide
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400">MUAYTHAIPAI · everything across every gym</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -501,7 +507,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             { id: "students", label: "Students", icon: GraduationCap },
             { id: "trainers", label: "Trainers", icon: UserCheck },
             { id: "gyms", label: "Gyms", icon: Users },
-            { id: "courses", label: "Courses", icon: BookOpen },
+            { id: "courses", label: "Curriculum", icon: BookOpen },
             { id: "payouts", label: "Payouts", icon: DollarSign },
             { id: "blacklist", label: "Blacklist", icon: Shield },
             { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -547,7 +553,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         {activeTab === "courses" && (
           <CoursesTab
             apiBase="/api/platform-admin/courses"
-            scopeLabel="Country-wide certification ladder (Naga → Garuda). Visible read-only to every gym."
+            scopeLabel="Network curriculum — the canonical Muay Thai content owned by MUAYTHAIPAI. Every gym sees this read-only. Editing here changes what the entire network teaches."
           />
         )}
 

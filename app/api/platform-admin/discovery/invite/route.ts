@@ -30,7 +30,9 @@ export async function POST(request: Request) {
 
   const { data: gym, error: fetchErr } = await supabase
     .from("discovered_gyms")
-    .select("id, name, email, city, province, invite_token, invited_at")
+    .select(
+      "id, name, email, city, province, invite_token, invited_at, auto_draft_subject, auto_draft_body",
+    )
     .eq("id", id)
     .single()
   if (fetchErr || !gym) {
@@ -40,6 +42,19 @@ export async function POST(request: Request) {
   // Reuse existing token if one was generated previously
   const token = gym.invite_token || generateToken()
   const inviteEmail = email || gym.email || null
+
+  // The operator may have edited the AI draft inline before clicking
+  // approve, so the request body's subject/body win over the saved
+  // auto-draft. Saved auto-draft wins over the generic template.
+  // Empty/missing → fall through to the next layer.
+  const customSubject =
+    (body.subject as string | undefined)?.trim() ||
+    gym.auto_draft_subject ||
+    null
+  const customBody =
+    (body.body as string | undefined)?.trim() ||
+    gym.auto_draft_body ||
+    null
 
   const { error: updErr } = await supabase
     .from("discovered_gyms")
@@ -66,6 +81,8 @@ export async function POST(request: Request) {
       inviteUrl,
       city: gym.city,
       province: gym.province,
+      customSubject,
+      customBody,
     })
   }
 

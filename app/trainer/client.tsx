@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import ImpersonationBanner from "@/components/impersonation-banner"
 import {
   Dialog,
   DialogContent,
@@ -761,6 +762,7 @@ export default function TrainerDashboardClient({
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-20 overflow-x-hidden">
+      <ImpersonationBanner />
       {/* Header */}
       <header className="sticky top-0 z-40 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800/50">
         <div className="max-w-lg mx-auto px-4 py-3">

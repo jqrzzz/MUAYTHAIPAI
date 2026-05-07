@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import TodayTab from "@/components/admin/today-tab"
 import TodaySignalPanel from "@/components/admin/today-signal-panel"
 import TrialBanner from "@/components/admin/trial-banner"
+import ImpersonationBanner from "@/components/impersonation-banner"
+import PackagesTab from "@/components/admin/packages-tab"
 import RecentTab from "@/components/admin/recent-tab"
 import ServicesTab from "@/components/admin/services-tab"
 import TrainersTab from "@/components/admin/trainers-tab"
@@ -31,6 +33,7 @@ import {
   LogOut,
   Clock,
   Dumbbell,
+  Package as PackageIcon,
   RefreshCw,
   BarChart3,
   Settings,
@@ -202,7 +205,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -311,7 +314,7 @@ export default function AdminDashboardClient({
         { id: "inbox" as const, label: "Inbox", labelTh: "กล่องข้อความ", icon: Inbox, badge: inboxCounts.total },
         { id: "students" as const, label: "Students", labelTh: "นักเรียน", icon: GraduationCap },
         { id: "certificates" as const, label: "Certificates", labelTh: "ใบรับรอง", icon: Award },
-        { id: "courses" as const, label: "Courses", labelTh: "หลักสูตร", icon: BookOpen },
+        { id: "courses" as const, label: "Gym courses", labelTh: "หลักสูตรของยิม", icon: BookOpen },
       ],
     },
     {
@@ -320,6 +323,7 @@ export default function AdminDashboardClient({
       items: [
         { id: "reports" as const, label: "Reports", labelTh: "รายงาน", icon: BarChart3 },
         { id: "services" as const, label: "Services", labelTh: "บริการ", icon: Dumbbell },
+        { id: "packages" as const, label: "Packages", labelTh: "แพ็คเกจ", icon: PackageIcon },
         { id: "time-slots" as const, label: "Time Slots", labelTh: "ช่วงเวลา", icon: Clock },
         { id: "trainers" as const, label: "Trainers", labelTh: "ครูมวย", icon: Users },
       ],
@@ -351,6 +355,7 @@ export default function AdminDashboardClient({
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white overflow-x-hidden">
+      <ImpersonationBanner />
       {/* Trial / subscription banner — only renders when trial or past_due */}
       <TrialBanner orgId={membership.org_id} subscription={subscription} />
 
@@ -365,6 +370,7 @@ export default function AdminDashboardClient({
           </button>
           <div className="text-center">
             <h1 className="text-lg font-bold text-orange-500">{organization.name}</h1>
+            <p className="text-[10px] uppercase tracking-wider text-neutral-500 leading-none">Gym admin</p>
           </div>
           <div className="flex items-center gap-1">
             <NotificationBell />
@@ -384,7 +390,7 @@ export default function AdminDashboardClient({
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-bold text-orange-500">{organization.name}</h2>
-                  <p className="text-xs text-neutral-400">Admin Dashboard</p>
+                  <p className="text-xs text-neutral-400">Gym admin · {membership.role}</p>
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-neutral-800 rounded-lg">
                   <X className="w-5 h-5" />
@@ -443,7 +449,10 @@ export default function AdminDashboardClient({
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="font-bold text-orange-500 truncate">{organization.name}</h2>
-                <p className="text-xs text-neutral-400">Admin Dashboard</p>
+                <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                  Gym admin · {membership.role}
+                </span>
               </div>
               <NotificationBell />
             </div>
@@ -636,6 +645,8 @@ export default function AdminDashboardClient({
               onServicesChange={setServices}
             />
           )}
+
+          {activeTab === "packages" && <PackagesTab />}
 
           {activeTab === "trainers" && (
             <TrainersTab

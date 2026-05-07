@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import ImpersonationBanner from "@/components/impersonation-banner"
 import {
   LogOut,
   Calendar,
@@ -348,6 +349,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
 
   return (
     <div className="min-h-screen bg-neutral-950">
+      <ImpersonationBanner />
       {/* App-style Header */}
       <header className="sticky top-0 z-50 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800/50">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">

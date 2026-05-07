@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import StudentDashboardClient from "./client"
+import { getActiveImpersonation } from "@/lib/impersonation"
 
 export const metadata: Metadata = {
   title: "My Training | Muay Thai Thailand Network",
@@ -18,8 +19,26 @@ export default async function StudentDashboardPage() {
     redirect("/student/login")
   }
 
+  // Platform admin "view as student" — pull the impersonated user's data
+  // instead of the actor's. Falls back to the actor's own data if no
+  // impersonation cookie. Regular users hit the normal path.
+  const { data: actorRow } = await supabase
+    .from("users")
+    .select("is_platform_admin")
+    .eq("id", user.id)
+    .single()
+  const isPlatformAdmin = !!actorRow?.is_platform_admin
+
+  let viewUserId: string = user.id
+  if (isPlatformAdmin) {
+    const impersonation = await getActiveImpersonation()
+    if (impersonation?.type === "student" && impersonation.userId) {
+      viewUserId = impersonation.userId
+    }
+  }
+
   // Fetch user profile
-  const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).single()
+  const { data: profile } = await supabase.from("users").select("*").eq("id", viewUserId).single()
 
   // Fetch all bookings for this user (across all gyms)
   const { data: bookings } = await supabase
@@ -29,7 +48,7 @@ export default async function StudentDashboardPage() {
       organizations:org_id (name, slug, city, logo_url),
       services:service_id (name, category)
     `)
-    .eq("user_id", user.id)
+    .eq("user_id", viewUserId)
     .order("booking_date", { ascending: false })
 
   // Fetch certificates
@@ -39,7 +58,7 @@ export default async function StudentDashboardPage() {
       *,
       organizations:org_id (name, slug)
     `)
-    .eq("user_id", user.id)
+    .eq("user_id", viewUserId)
     .order("issued_at", { ascending: false })
 
   // Fetch all active gyms for discovery

@@ -26,6 +26,8 @@ export async function GET() {
     recentSignoffs,
     recentCerts,
     growthRows,
+    newDiscoveries,
+    draftsReady,
   ] = await Promise.all([
     // Invited > 7 days ago, not claimed, not snoozed within last 7 days
     supabase
@@ -87,6 +89,26 @@ export async function GET() {
       .select("claimed_at")
       .eq("status", "onboarded")
       .gte("claimed_at", ago(7)),
+    // Newly discovered (last 7 days) — surfaces what the rotating-cities
+    // cron pulled in. Status filter excludes already-onboarded so the
+    // operator only sees ones still in the pipeline.
+    supabase
+      .from("discovered_gyms")
+      .select("id, name, city, province, status, website, ai_summary, created_at, last_extracted_at")
+      .gte("created_at", ago(7))
+      .neq("status", "onboarded")
+      .order("created_at", { ascending: false })
+      .limit(15),
+    // Auto-drafted invites awaiting operator approval — gyms where the
+    // auto-draft cron has run but the operator hasn't sent yet
+    // (status='discovered', auto_drafted_at IS NOT NULL).
+    supabase
+      .from("discovered_gyms")
+      .select("id, name, city, province, email, auto_draft_subject, auto_drafted_at")
+      .eq("status", "discovered")
+      .not("auto_drafted_at", "is", null)
+      .order("auto_drafted_at", { ascending: false })
+      .limit(15),
   ])
 
   // Build a per-day chart for last 7 days
@@ -162,5 +184,23 @@ export async function GET() {
       }
     }),
     growth_7d: dayBuckets,
+    new_discoveries: (newDiscoveries.data || []).map((g) => ({
+      id: g.id,
+      name: g.name,
+      where: [g.city, g.province].filter(Boolean).join(", ") || null,
+      status: g.status,
+      website: g.website,
+      summary: g.ai_summary,
+      enriched: !!g.last_extracted_at,
+      created_at: g.created_at,
+    })),
+    drafts_ready: (draftsReady.data || []).map((g) => ({
+      id: g.id,
+      name: g.name,
+      where: [g.city, g.province].filter(Boolean).join(", ") || null,
+      email: g.email,
+      subject: g.auto_draft_subject,
+      drafted_at: g.auto_drafted_at,
+    })),
   })
 }

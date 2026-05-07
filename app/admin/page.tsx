@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import AdminDashboardClient from "./client"
 import { getTodayInPaiTimezone, DEFAULT_TIMEZONE } from "@/lib/timezone"
+import { getActiveImpersonation } from "@/lib/impersonation"
 
 export const metadata = {
   title: "Admin Dashboard | MUAYTHAIPAI",
@@ -21,33 +22,78 @@ export default async function AdminPage() {
     redirect("/admin/login")
   }
 
-  // Get user's org membership and role
-  const { data: membership } = await supabase
-    .from("org_members")
-    .select(`
-      *,
-      organizations (*)
-    `)
-    .eq("user_id", user.id)
-    .eq("status", "active")
+  // Platform admins land here when they click "View as gym admin" — they
+  // don't have a real org_members row, so we synthesize one from the
+  // impersonation cookie. Without the cookie they get bounced back to
+  // /platform-admin (their natural home).
+  const { data: userRow } = await supabase
+    .from("users")
+    .select("is_platform_admin")
+    .eq("id", user.id)
     .single()
+  const isPlatformAdmin = !!userRow?.is_platform_admin
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let membership: any = null
+
+  if (isPlatformAdmin) {
+    const impersonation = await getActiveImpersonation()
+    if (impersonation?.type === "gym_admin" && impersonation.orgId) {
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("*")
+        .eq("id", impersonation.orgId)
+        .single()
+      if (org) {
+        membership = {
+          org_id: impersonation.orgId,
+          role: "admin",
+          organizations: org,
+        }
+      }
+    }
+    if (!membership) {
+      redirect("/platform-admin")
+    }
+  } else {
+    const { data: realMembership } = await supabase
+      .from("org_members")
+      .select(`
+        *,
+        organizations (*)
+      `)
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .single()
+    membership = realMembership
+  }
 
   if (!membership) {
     redirect("/admin/login?error=no_access")
   }
 
+  // Role gate: /admin is for gym owners + admins only. Trainers go to
+  // /trainer (their dedicated dashboard); anyone else (including any
+  // legacy student-role members) lands on /student.
+  // See docs/roles-and-access.md for the full role/route matrix.
+  const role = String(membership.role)
+  if (role === "trainer") {
+    redirect("/trainer")
+  }
+  if (role !== "owner" && role !== "admin") {
+    redirect("/student")
+  }
+
   // First-time setup: owners/admins with no services yet get sent to the
   // onboarding wizard. Mirrors the inverse check in /onboarding/page.tsx
   // (which sends users back here once they have any services).
-  if (membership.role === "owner" || membership.role === "admin") {
-    const { count: serviceCount } = await supabase
-      .from("services")
-      .select("id", { count: "exact", head: true })
-      .eq("org_id", membership.org_id)
+  const { count: serviceCount } = await supabase
+    .from("services")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", membership.org_id)
 
-    if (!serviceCount) {
-      redirect("/onboarding")
-    }
+  if (!serviceCount) {
+    redirect("/onboarding")
   }
 
   const orgTimezone = (membership.organizations as { timezone?: string })?.timezone || DEFAULT_TIMEZONE
