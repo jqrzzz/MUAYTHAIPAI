@@ -34,7 +34,7 @@ import {
   UserCheck,
   Megaphone,
 } from "lucide-react"
-import CoursesTab from "@/components/admin/courses-tab"
+import CurriculumTab from "@/components/platform-admin/curriculum-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
@@ -552,12 +552,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         {activeTab === "campaigns" && <CampaignsTab />}
 
         {/* Courses Tab — author the platform-wide cert ladder */}
-        {activeTab === "courses" && (
-          <CoursesTab
-            apiBase="/api/platform-admin/courses"
-            scopeLabel="Network curriculum — the canonical Muay Thai content owned by MUAYTHAIPAI. Every gym sees this read-only. Editing here changes what the entire network teaches."
-          />
-        )}
+        {activeTab === "courses" && <CurriculumTab />}
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
