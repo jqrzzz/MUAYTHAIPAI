@@ -33,8 +33,10 @@ import {
   GraduationCap,
   UserCheck,
   Megaphone,
+  TrendingUp,
 } from "lucide-react"
 import CurriculumTab from "@/components/platform-admin/curriculum-tab"
+import AdoptionTab from "@/components/platform-admin/adoption-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
@@ -156,6 +158,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     | "students"
     | "trainers"
     | "campaigns"
+    | "adoption"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -509,6 +512,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               { id: "trainers", label: "Trainers", icon: UserCheck },
               { id: "gyms", label: "Gyms", icon: Users },
               { id: "courses", label: "Curriculum", icon: BookOpen },
+              { id: "adoption", label: "Adoption", icon: TrendingUp },
               { id: "payouts", label: "Payouts", icon: DollarSign },
               { id: "blacklist", label: "Blacklist", icon: Shield },
               { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -553,6 +557,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
 
         {/* Courses Tab — author the platform-wide cert ladder */}
         {activeTab === "courses" && <CurriculumTab />}
+
+        {activeTab === "adoption" && <AdoptionTab />}
 
         {/* Overview Tab */}
         {activeTab === "overview" && (

@@ -25,6 +25,9 @@ import MarketingTab from "@/components/admin/marketing-tab"
 import InboxTab from "@/components/admin/inbox-tab"
 import ChannelsTab from "@/components/admin/channels-tab"
 import CoursesTab from "@/components/admin/courses-tab"
+import WebsiteTab from "@/components/admin/website-tab"
+import SocialTab from "@/components/admin/social-tab"
+import PayoutsTab from "@/components/admin/payouts-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import {
   Award,
@@ -48,6 +51,9 @@ import {
   Megaphone,
   Inbox,
   Link2,
+  Globe,
+  Sparkles,
+  DollarSign,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -205,7 +211,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social" | "payouts"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -317,6 +323,8 @@ export default function AdminDashboardClient({
         { id: "packages" as const, label: "Packages", labelTh: "แพ็คเกจ", icon: PackageIcon },
         { id: "time-slots" as const, label: "Time Slots", labelTh: "ช่วงเวลา", icon: Clock },
         { id: "trainers" as const, label: "Trainers", labelTh: "ครูมวย", icon: Users },
+        { id: "payouts" as const, label: "Payouts", labelTh: "การจ่ายเงิน", icon: DollarSign },
+        { id: "website" as const, label: "Website", labelTh: "เว็บไซต์", icon: Globe },
       ],
     },
     {
@@ -324,6 +332,7 @@ export default function AdminDashboardClient({
       labelTh: "อ๊อกอ๊อก",
       items: [
         { id: "marketing" as const, label: "Marketing", labelTh: "การตลาด", icon: Megaphone },
+        { id: "social" as const, label: "Social", labelTh: "โซเชียล", icon: Sparkles },
         { id: "train-ockock" as const, label: "Train OckOck", labelTh: "สอน OckOck", icon: BookOpen },
         { id: "ockock" as const, label: "OckOck", labelTh: "OckOck", icon: null, isOckOck: true },
       ],
@@ -760,6 +769,12 @@ export default function AdminDashboardClient({
           {activeTab === "channels" && <ChannelsTab role={membership.role} />}
 
           {activeTab === "courses" && <CoursesTab orgId={membership.org_id} />}
+
+          {activeTab === "website" && <WebsiteTab gymSlug={organization.slug ?? null} />}
+
+          {activeTab === "social" && <SocialTab />}
+
+          {activeTab === "payouts" && <PayoutsTab />}
         </div>
       </main>
     </div>
