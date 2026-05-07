@@ -27,6 +27,7 @@ import ChannelsTab from "@/components/admin/channels-tab"
 import CoursesTab from "@/components/admin/courses-tab"
 import WebsiteTab from "@/components/admin/website-tab"
 import SocialTab from "@/components/admin/social-tab"
+import PayoutsTab from "@/components/admin/payouts-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import {
   Award,
@@ -52,6 +53,7 @@ import {
   Link2,
   Globe,
   Sparkles,
+  DollarSign,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -209,7 +211,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social" | "payouts"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -321,6 +323,7 @@ export default function AdminDashboardClient({
         { id: "packages" as const, label: "Packages", labelTh: "แพ็คเกจ", icon: PackageIcon },
         { id: "time-slots" as const, label: "Time Slots", labelTh: "ช่วงเวลา", icon: Clock },
         { id: "trainers" as const, label: "Trainers", labelTh: "ครูมวย", icon: Users },
+        { id: "payouts" as const, label: "Payouts", labelTh: "การจ่ายเงิน", icon: DollarSign },
         { id: "website" as const, label: "Website", labelTh: "เว็บไซต์", icon: Globe },
       ],
     },
@@ -770,6 +773,8 @@ export default function AdminDashboardClient({
           {activeTab === "website" && <WebsiteTab gymSlug={organization.slug ?? null} />}
 
           {activeTab === "social" && <SocialTab />}
+
+          {activeTab === "payouts" && <PayoutsTab />}
         </div>
       </main>
     </div>
