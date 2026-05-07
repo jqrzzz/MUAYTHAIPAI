@@ -19,6 +19,12 @@ import {
   Loader2,
   Users,
 } from "lucide-react"
+import {
+  Surface,
+  SectionHeader,
+  SegmentedControl,
+  SaasInput,
+} from "@/components/saas"
 
 type Mode = "gym_admin" | "trainer" | "student"
 
@@ -42,6 +48,12 @@ interface StudentRow {
   full_name: string | null
   email: string
 }
+
+const MODE_OPTIONS = [
+  { value: "gym_admin" as const, label: "Gym admin", icon: Building2 },
+  { value: "trainer" as const, label: "Trainer", icon: GraduationCap },
+  { value: "student" as const, label: "Student", icon: Users },
+] as const
 
 export default function ViewAsPicker() {
   const router = useRouter()
@@ -135,48 +147,24 @@ export default function ViewAsPicker() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 inline-flex items-center gap-1.5">
-          <Eye className="h-3 w-3 text-indigo-400" />
-          Impersonate
-        </p>
-        <h2 className="text-[18px] font-semibold tracking-tight text-white mt-0.5">
-          View as anyone
-        </h2>
-        <p className="text-[12px] text-zinc-500 mt-0.5">
-          Step into the shoes of a gym admin, trainer, or student to QA the
-          experience.
-        </p>
-      </div>
+      <SectionHeader
+        eyebrow="Impersonate"
+        eyebrowIcon={Eye}
+        title="View as anyone"
+        subtitle="Step into the shoes of a gym admin, trainer, or student to QA the experience."
+      />
 
-      <div className="rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 backdrop-blur-sm overflow-hidden">
-        {/* Mode tabs — segmented control */}
+      <Surface>
         <div className="p-1.5 border-b border-zinc-900/80">
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-zinc-950/40 p-1">
-            <ModeButton
-              active={mode === "gym_admin"}
-              onClick={() => setMode("gym_admin")}
-              icon={Building2}
-              label="Gym admin"
-            />
-            <ModeButton
-              active={mode === "trainer"}
-              onClick={() => setMode("trainer")}
-              icon={GraduationCap}
-              label="Trainer"
-            />
-            <ModeButton
-              active={mode === "student"}
-              onClick={() => setMode("student")}
-              icon={Users}
-              label="Student"
-            />
-          </div>
+          <SegmentedControl<Mode>
+            value={mode}
+            onValueChange={setMode}
+            options={MODE_OPTIONS}
+          />
         </div>
 
-        {/* Search */}
         <div className="px-4 pt-3 pb-2">
-          <input
+          <SaasInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search ${
@@ -186,7 +174,6 @@ export default function ViewAsPicker() {
                   ? "trainers"
                   : "students"
             }…`}
-            className="w-full bg-zinc-950/50 border-0 ring-1 ring-zinc-800 focus:ring-indigo-500/40 rounded-lg px-3 py-2 text-[13px] text-zinc-100 placeholder:text-zinc-600 outline-none transition-shadow"
           />
         </div>
 
@@ -196,7 +183,6 @@ export default function ViewAsPicker() {
           </div>
         )}
 
-        {/* List */}
         <div className="max-h-72 overflow-y-auto px-1.5 pb-2">
           {loading ? (
             <div className="text-center text-[12px] text-zinc-500 py-8">
@@ -267,34 +253,8 @@ export default function ViewAsPicker() {
             ))
           )}
         </div>
-      </div>
+      </Surface>
     </section>
-  )
-}
-
-function ModeButton({
-  active,
-  onClick,
-  icon: Icon,
-  label,
-}: {
-  active: boolean
-  onClick: () => void
-  icon: typeof Eye
-  label: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[12px] font-medium transition-all ${
-        active
-          ? "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700/60"
-          : "text-zinc-500 hover:text-zinc-200"
-      }`}
-    >
-      <Icon className="h-3 w-3" />
-      {label}
-    </button>
   )
 }
 

@@ -11,6 +11,12 @@ import {
   X,
   ShieldQuestion,
 } from "lucide-react"
+import {
+  Surface,
+  SectionHeader,
+  SaasButton,
+  SaasTextarea,
+} from "@/components/saas"
 
 interface PendingAction {
   action: string
@@ -112,20 +118,14 @@ export default function PlatformCommandBar() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 inline-flex items-center gap-1.5">
-          <Sparkles className="h-3 w-3 text-indigo-400" />
-          Ask
-        </p>
-        <h2 className="text-[18px] font-semibold tracking-tight text-white mt-0.5">
-          Talk to your network
-        </h2>
-        <p className="text-[12px] text-zinc-500 mt-0.5">
-          Read-only by default. Write actions ask for confirmation.
-        </p>
-      </div>
+      <SectionHeader
+        eyebrow="Ask"
+        eyebrowIcon={Sparkles}
+        title="Talk to your network"
+        subtitle="Read-only by default. Write actions ask for confirmation."
+      />
 
-      <div className="rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 backdrop-blur-sm overflow-hidden">
+      <Surface>
         <div
           ref={scrollRef}
           className="max-h-[55vh] min-h-[180px] overflow-y-auto p-4 space-y-3"
@@ -219,14 +219,14 @@ export default function PlatformCommandBar() {
 
         <div className="border-t border-zinc-900/80 p-2.5 bg-zinc-950/40">
           <div className="flex gap-2 items-end">
-            <textarea
+            <SaasTextarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKey}
               placeholder="Ask anything…"
               rows={1}
               disabled={loading}
-              className="flex-1 bg-transparent text-zinc-100 placeholder:text-zinc-600 resize-none outline-none text-[13px] py-2 px-2 focus:ring-0 disabled:opacity-50"
+              className="flex-1 ring-0 bg-transparent"
               style={{ minHeight: 36 }}
             />
             <button
@@ -238,7 +238,7 @@ export default function PlatformCommandBar() {
             </button>
           </div>
         </div>
-      </div>
+      </Surface>
     </section>
   )
 }
@@ -326,25 +326,23 @@ function PendingActionChip({
         </p>
       )}
       <div className="flex gap-2">
-        <button
+        <SaasButton
+          variant="primary"
+          size="sm"
           onClick={confirm}
-          disabled={status === "running"}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-500 hover:bg-indigo-400 text-white text-[11px] font-medium disabled:opacity-60"
+          loading={status === "running"}
         >
-          {status === "running" ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Check className="h-3 w-3" />
-          )}
+          <Check className="h-3 w-3" />
           Confirm
-        </button>
-        <button
+        </SaasButton>
+        <SaasButton
+          variant="ghost"
+          size="sm"
           onClick={cancel}
           disabled={status === "running"}
-          className="px-2.5 py-1 rounded-md text-zinc-400 hover:text-zinc-200 text-[11px]"
         >
           Cancel
-        </button>
+        </SaasButton>
       </div>
     </div>
   )

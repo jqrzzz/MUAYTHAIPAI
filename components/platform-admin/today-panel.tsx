@@ -14,6 +14,13 @@ import {
   Sparkles,
   ArrowUpRight,
 } from "lucide-react"
+import {
+  Surface,
+  SectionHeader,
+  EmptyState,
+  SaasButton,
+} from "@/components/saas"
+import { toneStyles, type SaasTone } from "@/lib/saas-design"
 
 interface TodayData {
   pending_invites: Array<{
@@ -138,29 +145,24 @@ export default function TodayPanel() {
 
   return (
     <div className="space-y-5">
-      {/* Section header — subtle, type-driven, no oversized icons */}
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-            Signal
-          </p>
-          <h2 className="text-[18px] font-semibold tracking-tight text-white mt-0.5">
-            What needs you
-          </h2>
-        </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="text-[12px] text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1.5 transition-colors"
-        >
-          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
-      </div>
+      <SectionHeader
+        eyebrow="Signal"
+        title="What needs you"
+        action={
+          <SaasButton
+            variant="ghost"
+            size="sm"
+            onClick={refresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </SaasButton>
+        }
+      />
 
-      {/* Attention queue — single unified surface, severity from indigo to zinc */}
       {attentionCount > 0 ? (
-        <Surface accent>
+        <Surface>
           <div className="divide-y divide-zinc-900/80">
             {data.pending_invites.length > 0 && (
               <AttentionRow
@@ -253,24 +255,14 @@ export default function TodayPanel() {
           </div>
         </Surface>
       ) : (
-        <Surface>
-          <div className="px-4 py-6 flex items-center gap-3">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            </span>
-            <div>
-              <p className="text-[13px] font-medium text-white">
-                Inbox zero across the network
-              </p>
-              <p className="text-[12px] text-zinc-500">
-                Nothing pending — discovery + outreach are caught up.
-              </p>
-            </div>
-          </div>
-        </Surface>
+        <EmptyState
+          icon={CheckCircle2}
+          tone="emerald"
+          title="Inbox zero across the network"
+          description="Nothing pending — discovery + outreach are caught up."
+        />
       )}
 
-      {/* Drafts ready — promoted state, indigo accent */}
       {data.drafts_ready.length > 0 && (
         <Surface accent="indigo">
           <div className="px-4 pt-4 pb-3 flex items-center justify-between">
@@ -326,7 +318,6 @@ export default function TodayPanel() {
         </Surface>
       )}
 
-      {/* Newly discovered — secondary, lighter chrome */}
       {data.new_discoveries.length > 0 && (
         <Surface>
           <div className="px-4 pt-3.5 pb-2 flex items-center justify-between">
@@ -354,9 +345,7 @@ export default function TodayPanel() {
                   <div className="flex items-center gap-2.5">
                     <span
                       className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                        g.enriched
-                          ? "bg-emerald-400"
-                          : "bg-amber-400"
+                        g.enriched ? "bg-emerald-400" : "bg-amber-400"
                       }`}
                       title={
                         g.enriched
@@ -384,7 +373,6 @@ export default function TodayPanel() {
         </Surface>
       )}
 
-      {/* Recent activity — three lanes, equal but quiet */}
       <div className="grid gap-3 md:grid-cols-3">
         <ActivityLane
           icon={Trophy}
@@ -420,7 +408,6 @@ export default function TodayPanel() {
         />
       </div>
 
-      {/* Growth strip — minimal sparkbars, indigo on activity, zinc on empty */}
       {data.growth_7d.length > 0 && (
         <Surface>
           <div className="px-4 py-3.5">
@@ -455,9 +442,7 @@ export default function TodayPanel() {
                   >
                     <div
                       className={`w-full rounded-sm transition-colors ${
-                        b.count > 0
-                          ? "bg-indigo-400/80"
-                          : "bg-zinc-800"
+                        b.count > 0 ? "bg-indigo-400/80" : "bg-zinc-800"
                       }`}
                       style={{ height: `${h}%` }}
                     />
@@ -475,32 +460,6 @@ export default function TodayPanel() {
   )
 }
 
-/* ─── primitives ─────────────────────────────────────────────────── */
-
-function Surface({
-  children,
-  accent,
-}: {
-  children: React.ReactNode
-  accent?: "indigo" | true
-}) {
-  const ring =
-    accent === "indigo"
-      ? "ring-1 ring-indigo-500/20"
-      : accent
-        ? "ring-1 ring-zinc-800"
-        : "ring-1 ring-zinc-900"
-  const bg =
-    accent === "indigo"
-      ? "bg-gradient-to-b from-indigo-500/[0.04] to-zinc-900/40"
-      : "bg-zinc-900/40"
-  return (
-    <div className={`rounded-xl ${bg} ${ring} backdrop-blur-sm overflow-hidden`}>
-      {children}
-    </div>
-  )
-}
-
 function AttentionRow({
   icon: Icon,
   tone,
@@ -509,36 +468,23 @@ function AttentionRow({
   children,
 }: {
   icon: typeof Mail
-  tone: "indigo" | "amber" | "zinc"
+  tone: SaasTone
   title: string
   hint?: string
   children?: React.ReactNode
 }) {
-  const iconBg =
-    tone === "indigo"
-      ? "bg-indigo-500/15 ring-indigo-500/25"
-      : tone === "amber"
-        ? "bg-amber-500/15 ring-amber-500/25"
-        : "bg-zinc-800 ring-zinc-700/50"
-  const iconColor =
-    tone === "indigo"
-      ? "text-indigo-300"
-      : tone === "amber"
-        ? "text-amber-300"
-        : "text-zinc-400"
+  const styles = toneStyles[tone]
   return (
     <div className="px-4 py-3.5">
       <div className="flex items-start gap-3">
         <span
-          className={`inline-flex h-6 w-6 items-center justify-center rounded-md ring-1 ${iconBg} shrink-0 mt-0.5`}
+          className={`inline-flex h-6 w-6 items-center justify-center rounded-md ring-1 ${styles.iconBg} ${styles.ring} shrink-0 mt-0.5`}
         >
-          <Icon className={`h-3 w-3 ${iconColor}`} />
+          <Icon className={`h-3 w-3 ${styles.iconColor}`} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-medium text-white">{title}</p>
-          {hint && (
-            <p className="text-[12px] text-zinc-500 mt-0.5">{hint}</p>
-          )}
+          {hint && <p className="text-[12px] text-zinc-500 mt-0.5">{hint}</p>}
           {children && <div className="mt-2.5">{children}</div>}
         </div>
       </div>
@@ -558,7 +504,7 @@ function ActivityLane({
   empty: string
 }) {
   return (
-    <div className="rounded-xl ring-1 ring-zinc-900 bg-zinc-900/40 backdrop-blur-sm overflow-hidden">
+    <Surface>
       <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-zinc-900/80">
         <Icon className="h-3 w-3 text-zinc-500" />
         <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">
@@ -581,7 +527,7 @@ function ActivityLane({
           </ul>
         )}
       </div>
-    </div>
+    </Surface>
   )
 }
 
