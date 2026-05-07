@@ -13,12 +13,13 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { generateObject } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
+import { MODEL_VOICE } from "@/lib/ai-models"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-const MODEL = "openai/gpt-4o-mini"
+const MODEL = MODEL_VOICE
 
 const PLATFORMS = [
   "instagram",

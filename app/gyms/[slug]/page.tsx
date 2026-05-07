@@ -26,12 +26,22 @@ export async function generateMetadata({ params }: GymPageProps): Promise<Metada
     return { title: "Gym Not Found" }
   }
 
-  // If they have published SEO meta, prefer it.
-  const { data: site } = await supabase
-    .from("gym_websites")
-    .select("seo_title, seo_description, status")
-    .eq("status", "published")
+  // If they have published SEO meta, prefer it. Must scope by org —
+  // .single() without the org filter would match the first published
+  // website alphabetically and surface the wrong gym's meta.
+  const { data: gymRow } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("slug", slug)
     .single()
+  const { data: site } = gymRow
+    ? await supabase
+        .from("gym_websites")
+        .select("seo_title, seo_description, status")
+        .eq("org_id", gymRow.id)
+        .eq("status", "published")
+        .maybeSingle()
+    : { data: null }
 
   return {
     title:

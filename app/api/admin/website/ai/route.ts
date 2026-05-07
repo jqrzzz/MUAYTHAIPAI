@@ -24,6 +24,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { generateObject } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
+import { MODEL_VOICE } from "@/lib/ai-models"
 import {
   newSectionId,
   type WebsiteSection,
@@ -34,7 +35,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-const MODEL = "openai/gpt-4o-mini"
+const MODEL = MODEL_VOICE
 
 const ActionSchema = z.discriminatedUnion("type", [
   z.object({
