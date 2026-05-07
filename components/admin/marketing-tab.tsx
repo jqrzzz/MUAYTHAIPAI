@@ -183,7 +183,7 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-300" />
       </div>
     )
   }
@@ -221,7 +221,7 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
             <p className="text-[10px] text-neutral-500">All Students</p>
           </div>
           <div className="rounded-xl bg-neutral-900/50 border border-neutral-800 px-4 py-3 text-center">
-            <p className="text-xl font-bold text-orange-400">{weeklyStats.inactiveCount}</p>
+            <p className="text-xl font-bold text-indigo-300">{weeklyStats.inactiveCount}</p>
             <p className="text-[10px] text-neutral-500">Inactive 14d+</p>
           </div>
         </div>
@@ -231,9 +231,9 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
       <Card className="bg-neutral-900/50 border-neutral-800">
         <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="w-4 h-4 text-orange-400" />
+            <MessageSquare className="w-4 h-4 text-indigo-300" />
             <h3 className="font-semibold text-white text-sm">Lead Inbox</h3>
-            <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px]">OckOck Reply</Badge>
+            <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 text-[10px]">OckOck Reply</Badge>
           </div>
           <p className="text-xs text-neutral-500 mb-3">
             Paste a customer message from WhatsApp, Facebook, or Instagram. OckOck drafts a reply.
@@ -245,13 +245,13 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
               onChange={(e) => setLeadMessage(e.target.value)}
               placeholder="e.g. Hi, how much for private lessons? I'm in Pai next week"
               rows={3}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-orange-500/50 resize-none"
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-indigo-500/50 resize-none"
             />
 
             <Button
               onClick={generateLeadReply}
               disabled={generatingReply || !leadMessage.trim()}
-              className="bg-orange-600 hover:bg-orange-500"
+              className="bg-indigo-500 hover:bg-indigo-400"
               size="sm"
             >
               {generatingReply ? (
@@ -301,10 +301,10 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <UserX className="w-4 h-4 text-orange-400" />
+              <UserX className="w-4 h-4 text-indigo-300" />
               <h3 className="font-semibold text-white text-sm">Re-engage Students</h3>
               {visibleInactive.length > 0 && (
-                <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px]">
+                <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 text-[10px]">
                   {visibleInactive.length}
                 </Badge>
               )}
@@ -376,7 +376,7 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
                         size="sm"
                         onClick={() => generateReEngageMessage(student)}
                         disabled={generatingFor === student.userId}
-                        className="bg-orange-600/80 hover:bg-orange-500 text-xs h-7"
+                        className="bg-indigo-500/80 hover:bg-indigo-400 text-xs h-7"
                       >
                         {generatingFor === student.userId ? (
                           <Loader2 className="w-3 h-3 animate-spin mr-1" />
@@ -412,14 +412,14 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Instagram className="w-4 h-4 text-orange-400" />
+              <Instagram className="w-4 h-4 text-indigo-300" />
               <h3 className="font-semibold text-white text-sm">Content Ideas</h3>
             </div>
             <Button
               size="sm"
               onClick={generateContentIdeas}
               disabled={generatingContent}
-              className="bg-orange-600/80 hover:bg-orange-500 text-xs h-7"
+              className="bg-indigo-500/80 hover:bg-indigo-400 text-xs h-7"
             >
               {generatingContent ? (
                 <><Loader2 className="w-3 h-3 animate-spin mr-1" />Generating...</>
@@ -437,7 +437,7 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
             </div>
           ) : generatingContent ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-orange-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-300" />
             </div>
           ) : (
             <div className="space-y-3">

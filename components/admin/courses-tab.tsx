@@ -204,7 +204,7 @@ export default function CoursesTab({
           <h2 className="text-lg font-semibold text-white">Courses</h2>
           <p className="text-sm text-neutral-400">{scopeLabel || "Manage your training curriculum"}</p>
         </div>
-        <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAdd}>
+        <Button size="sm" className="bg-indigo-500 hover:bg-indigo-400" onClick={openAdd}>
           <Plus className="h-4 w-4 mr-1" /> Add Course
         </Button>
       </div>
@@ -384,7 +384,7 @@ export default function CoursesTab({
 
             {error && <p className="text-red-400 text-sm">{error}</p>}
 
-            <Button onClick={handleSave} disabled={saving} className="w-full bg-orange-600 hover:bg-orange-700">
+            <Button onClick={handleSave} disabled={saving} className="w-full bg-indigo-500 hover:bg-indigo-400">
               {saving ? "Saving..." : editing ? "Update Course" : "Create Course"}
             </Button>
           </div>

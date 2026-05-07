@@ -39,7 +39,7 @@ export default function EmbedSnippetCard({ slug }: EmbedSnippetCardProps) {
     <Card className="bg-neutral-900/50 border-neutral-800">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-2">
-          <Code2 className="w-5 h-5 text-orange-400" />
+          <Code2 className="w-5 h-5 text-indigo-300" />
           Embed widget
         </CardTitle>
         <CardDescription>
@@ -56,7 +56,7 @@ export default function EmbedSnippetCard({ slug }: EmbedSnippetCardProps) {
           <Button
             onClick={onCopy}
             size="sm"
-            className="bg-orange-500 hover:bg-orange-400 text-white"
+            className="bg-indigo-500 hover:bg-indigo-400 text-white"
           >
             {copied ? (
               <>
@@ -81,7 +81,7 @@ export default function EmbedSnippetCard({ slug }: EmbedSnippetCardProps) {
           </a>
         </div>
 
-        <div className="rounded-lg border border-orange-500/20 bg-orange-500/[0.04] p-3 text-xs text-neutral-300 leading-relaxed">
+        <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/[0.04] p-3 text-xs text-neutral-300 leading-relaxed">
           <p className="font-semibold text-white mb-1.5">How it works</p>
           <ul className="space-y-1 text-neutral-400">
             <li>

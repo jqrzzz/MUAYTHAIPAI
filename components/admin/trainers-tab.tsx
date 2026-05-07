@@ -343,7 +343,7 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
 
             <Dialog open={isTrainerDialogOpen} onOpenChange={setIsTrainerDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAddTrainer}>
+                <Button size="sm" className="bg-indigo-500 hover:bg-indigo-400" onClick={openAddTrainer}>
                   <Plus className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">Add Trainer</span>
                 </Button>
@@ -466,7 +466,7 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
                   <Button
                     onClick={handleSaveTrainer}
                     disabled={isSavingTrainer}
-                    className="w-full bg-orange-600 hover:bg-orange-700"
+                    className="w-full bg-indigo-500 hover:bg-indigo-400"
                   >
                     {isSavingTrainer ? "Saving..." : editingTrainer ? "Update Trainer" : "Add Trainer"}
                   </Button>
@@ -513,7 +513,7 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-white">{trainer.display_name}</p>
                         {trainer.is_featured && (
-                          <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs">Featured</Badge>
+                          <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 text-xs">Featured</Badge>
                         )}
                       </div>
                       {trainer.title && <p className="text-sm text-neutral-400">{trainer.title}</p>}

@@ -179,7 +179,7 @@ export default function StudentsTab({
           </Button>
           <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+              <Button size="sm" className="bg-indigo-500 hover:bg-indigo-400">
                 <Plus className="w-4 h-4 mr-2" /> Add Student
               </Button>
             </DialogTrigger>
@@ -298,7 +298,7 @@ export default function StudentsTab({
                 <Button
                   onClick={handleAddStudent}
                   disabled={isSaving}
-                  className="w-full bg-orange-600 hover:bg-orange-700"
+                  className="w-full bg-indigo-500 hover:bg-indigo-400"
                 >
                   {isSaving ? "Saving..." : "Add Student"}
                 </Button>
@@ -351,13 +351,13 @@ export default function StudentsTab({
                 {student.cert_progress && (student.cert_progress.current || student.cert_progress.earned_count > 0) && (
                   <button
                     onClick={() => setPassportStudentId(student.id)}
-                    className="w-full mb-3 rounded-md border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-left hover:border-orange-500/40 transition group"
+                    className="w-full mb-3 rounded-md border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-left hover:border-indigo-500/40 transition group"
                   >
                     <div className="flex items-center gap-2">
                       <Award
                         className={`h-3.5 w-3.5 shrink-0 ${
                           student.cert_progress.earned_count > 0
-                            ? "text-orange-400"
+                            ? "text-indigo-300"
                             : "text-amber-400"
                         }`}
                       />
@@ -402,14 +402,14 @@ export default function StudentsTab({
                           </p>
                         )}
                       </div>
-                      <Eye className="h-3 w-3 text-neutral-600 group-hover:text-orange-400 shrink-0" />
+                      <Eye className="h-3 w-3 text-neutral-600 group-hover:text-indigo-300 shrink-0" />
                     </div>
                   </button>
                 )}
                 {student.cert_progress && student.cert_progress.levels.length === 0 && (
                   <button
                     onClick={() => setPassportStudentId(student.id)}
-                    className="w-full mb-3 rounded-md border border-dashed border-neutral-800 px-2.5 py-1.5 text-left hover:border-orange-500/40 transition text-xs text-neutral-500"
+                    className="w-full mb-3 rounded-md border border-dashed border-neutral-800 px-2.5 py-1.5 text-left hover:border-indigo-500/40 transition text-xs text-neutral-500"
                   >
                     No cert progress yet · open passport
                   </button>
@@ -467,7 +467,7 @@ export default function StudentsTab({
                 </div>
                 <Link
                   href={`/admin/students/${student.id}`}
-                  className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-orange-500/30 bg-orange-500/[0.06] py-1.5 text-xs text-orange-300 hover:bg-orange-500/15 hover:text-orange-200 transition-colors"
+                  className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/[0.06] py-1.5 text-xs text-indigo-200 hover:bg-indigo-500/15 hover:text-indigo-200 transition-colors"
                 >
                   <ExternalLink className="h-3 w-3" />
                   Open full profile — bookings, LTV, attendance, notes
@@ -605,7 +605,7 @@ export default function StudentsTab({
             <Button
               onClick={handleAddCredits}
               disabled={isSaving}
-              className="w-full bg-orange-600 hover:bg-orange-700"
+              className="w-full bg-indigo-500 hover:bg-indigo-400"
             >
               {isSaving ? "Saving..." : "Add Credits"}
             </Button>

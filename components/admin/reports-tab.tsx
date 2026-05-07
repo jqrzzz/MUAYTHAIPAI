@@ -52,7 +52,7 @@ interface ReportData {
 const TONE_COLOR = {
   amber: "text-amber-400",
   emerald: "text-emerald-400",
-  orange: "text-orange-400",
+  orange: "text-indigo-300",
   blue: "text-blue-400",
 } as const
 
@@ -258,7 +258,7 @@ export default function ReportsTab({ analyticsBookings, todayDate }: ReportsTabP
           <Card className="bg-neutral-900/50 border-neutral-800">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Award className="h-5 w-5 text-orange-400" />
+                <Award className="h-5 w-5 text-indigo-300" />
                 Cert Ladder Pipeline
               </CardTitle>
               <CardDescription>
@@ -277,7 +277,7 @@ export default function ReportsTab({ analyticsBookings, todayDate }: ReportsTabP
                       key={lvl.id}
                       className={`rounded border p-2.5 text-center ${
                         active
-                          ? "border-orange-500/40 bg-orange-500/5"
+                          ? "border-indigo-500/40 bg-indigo-500/5"
                           : "border-neutral-800 bg-neutral-900/30"
                       }`}
                     >
@@ -300,7 +300,7 @@ export default function ReportsTab({ analyticsBookings, todayDate }: ReportsTabP
                           </p>
                         )}
                         {lvl.issued_30d > 0 && (
-                          <p className="text-orange-400 inline-flex items-center gap-0.5">
+                          <p className="text-indigo-300 inline-flex items-center gap-0.5">
                             <Trophy className="h-2.5 w-2.5" /> {lvl.issued_30d}
                             <span className="text-neutral-600 ml-0.5">/30d</span>
                           </p>
@@ -396,7 +396,7 @@ export default function ReportsTab({ analyticsBookings, todayDate }: ReportsTabP
               <Card className="bg-neutral-900/50 border-neutral-800">
                 <CardHeader>
                   <CardTitle className="text-white text-base flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-orange-400" />
+                    <GraduationCap className="h-4 w-4 text-indigo-300" />
                     Top signoff productivity · 30d
                   </CardTitle>
                 </CardHeader>
@@ -458,7 +458,7 @@ export default function ReportsTab({ analyticsBookings, todayDate }: ReportsTabP
       {!report && !loading && (
         <p className="text-xs text-neutral-500 text-center">
           Could not load extended reports.{" "}
-          <button onClick={refresh} className="text-orange-400 underline">
+          <button onClick={refresh} className="text-indigo-300 underline">
             Try again
           </button>
         </p>

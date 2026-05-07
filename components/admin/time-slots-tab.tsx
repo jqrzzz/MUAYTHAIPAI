@@ -137,7 +137,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-300" />
       </div>
     )
   }
@@ -159,7 +159,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
         </div>
         <Button
           size="sm"
-          className="bg-orange-600 hover:bg-orange-700"
+          className="bg-indigo-500 hover:bg-indigo-400"
           onClick={() => setShowAdd(!showAdd)}
         >
           <Plus className="w-4 h-4 mr-1" />
@@ -178,7 +178,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
                   type="time"
                   value={addForm.start_time}
                   onChange={(e) => setAddForm({ ...addForm, start_time: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-orange-500"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -187,7 +187,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
                   type="time"
                   value={addForm.end_time}
                   onChange={(e) => setAddForm({ ...addForm, end_time: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-orange-500"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -197,7 +197,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
                   min={1}
                   value={addForm.max_bookings}
                   onChange={(e) => setAddForm({ ...addForm, max_bookings: parseInt(e.target.value) || 1 })}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-orange-500"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -205,7 +205,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
                 <select
                   value={addForm.day_of_week}
                   onChange={(e) => setAddForm({ ...addForm, day_of_week: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-orange-500"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">Every day</option>
                   {DAYS.map((d, i) => (
@@ -219,7 +219,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
               <select
                 value={addForm.service_id}
                 onChange={(e) => setAddForm({ ...addForm, service_id: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-orange-500"
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:border-indigo-500"
               >
                 <option value="">All services (default)</option>
                 {services.map((s) => (
@@ -230,7 +230,7 @@ export default function TimeSlotsTab({ services }: { services: Service[] }) {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                className="bg-orange-600 hover:bg-orange-700"
+                className="bg-indigo-500 hover:bg-indigo-400"
                 onClick={handleAdd}
                 disabled={saving}
               >

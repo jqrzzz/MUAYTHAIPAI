@@ -57,7 +57,7 @@ function getPaymentBadge(status: string, method: string | null) {
       </Badge>
     )
   }
-  return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Pending</Badge>
+  return <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">Pending</Badge>
 }
 
 export default function RecentTab({ bookings }: { bookings: Booking[] }) {

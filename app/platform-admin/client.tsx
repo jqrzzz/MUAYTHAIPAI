@@ -596,7 +596,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">All Gyms</h2>
-              <Button onClick={() => setShowAddGym(true)} className="bg-orange-500 hover:bg-orange-600">
+              <Button onClick={() => setShowAddGym(true)} className="bg-indigo-500 hover:bg-indigo-400">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Gym
               </Button>
@@ -699,7 +699,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                     const now = new Date()
                     setPayoutDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)
                   }}
-                  className={payoutPeriod === "month" ? "bg-orange-500 hover:bg-orange-600" : "border-zinc-700"}
+                  className={payoutPeriod === "month" ? "bg-indigo-500 hover:bg-indigo-400" : "border-zinc-700"}
                 >
                   Monthly
                 </Button>
@@ -715,7 +715,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                     )
                     setPayoutDate(`${now.getFullYear()}-W${String(weekNum).padStart(2, "0")}`)
                   }}
-                  className={payoutPeriod === "week" ? "bg-orange-500 hover:bg-orange-600" : "border-zinc-700"}
+                  className={payoutPeriod === "week" ? "bg-indigo-500 hover:bg-indigo-400" : "border-zinc-700"}
                 >
                   Weekly
                 </Button>
@@ -783,7 +783,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                     </div>
                     <div>
                       <p className="text-xs text-zinc-400">Owed to Gyms</p>
-                      <p className="text-lg font-bold text-orange-400">${payoutData.totals.totalOwedUsd.toFixed(2)}</p>
+                      <p className="text-lg font-bold text-indigo-300">${payoutData.totals.totalOwedUsd.toFixed(2)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -838,7 +838,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                           <div className="flex items-center gap-4">
                             <div className="text-right">
                               <p className="text-sm text-zinc-400">Owed</p>
-                              <p className="font-bold text-orange-400">${gymPayout.summary.amountOwedUsd.toFixed(2)}</p>
+                              <p className="font-bold text-indigo-300">${gymPayout.summary.amountOwedUsd.toFixed(2)}</p>
                               <p className="text-xs text-zinc-500">฿{thbAmount.toLocaleString()}</p>
                             </div>
 
@@ -1033,7 +1033,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                           )}
                           <div
                             className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                              msg.role === "user" ? "bg-orange-500 text-white" : "bg-zinc-800 text-zinc-100"
+                              msg.role === "user" ? "bg-indigo-500 text-white" : "bg-zinc-800 text-zinc-100"
                             }`}
                           >
                             <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
@@ -1078,7 +1078,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                     <Button
                       type="submit"
                       disabled={!ockockInput.trim() || ockockLoading}
-                      className="bg-orange-500 hover:bg-orange-600"
+                      className="bg-indigo-500 hover:bg-indigo-400"
                     >
                       <Send className="h-4 w-4" />
                     </Button>
@@ -1164,7 +1164,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             <Button
               onClick={handleAddGym}
               disabled={loading || !gymForm.name || !gymForm.slug || !gymForm.ownerEmail}
-              className="w-full bg-orange-500 hover:bg-orange-600"
+              className="w-full bg-indigo-500 hover:bg-indigo-400"
             >
               {loading ? "Adding..." : "Add Gym & Send Invite"}
             </Button>
@@ -1233,7 +1233,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                   <p>Bookings: {selectedGymPayout.summary.bookingCount}</p>
                   <p>Total Collected: ${selectedGymPayout.summary.totalCollectedUsd.toFixed(2)}</p>
                   <p>Your Commission: ${selectedGymPayout.summary.commissionUsd.toFixed(2)}</p>
-                  <p className="text-lg font-bold text-orange-400">
+                  <p className="text-lg font-bold text-indigo-300">
                     Amount Owed: ${selectedGymPayout.summary.amountOwedUsd.toFixed(2)}
                   </p>
                 </div>

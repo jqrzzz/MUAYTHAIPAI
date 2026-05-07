@@ -131,7 +131,7 @@ function PassportBody({ passport }: { passport: Passport }) {
         <h3 className="text-base font-semibold text-white">{name}</h3>
         <p className="text-xs text-zinc-500">{s.email}</p>
         {cn.gyms_visited > 1 && (
-          <p className="text-xs text-orange-400 mt-1 inline-flex items-center gap-1">
+          <p className="text-xs text-indigo-300 mt-1 inline-flex items-center gap-1">
             <Globe className="h-3 w-3" />
             {cn.total_signoffs_anywhere} signoffs across {cn.gyms_visited} gyms
           </p>
@@ -185,7 +185,7 @@ function LadderRow({ lvl }: { lvl: PassportLadder }) {
   const elsewhereOnly = lvl.signed_off_anywhere - lvl.signed_off_here
 
   const tone = lvl.earned_here
-    ? "border-orange-700/40 bg-orange-500/5"
+    ? "border-indigo-700/40 bg-indigo-500/5"
     : lvl.enrolled_here
       ? "border-amber-700/40 bg-amber-500/5"
       : lvl.signed_off_anywhere > 0
@@ -206,7 +206,7 @@ function LadderRow({ lvl }: { lvl: PassportLadder }) {
                 </span>
               </p>
               {lvl.earned_here ? (
-                <Badge className="bg-orange-600 text-white text-xs gap-1">
+                <Badge className="bg-indigo-500 text-white text-xs gap-1">
                   <Award className="h-3 w-3" /> Earned
                 </Badge>
               ) : lvl.enrolled_here ? (
@@ -238,7 +238,7 @@ function LadderRow({ lvl }: { lvl: PassportLadder }) {
                 {/* This-gym progress (front, highlighted) */}
                 <div
                   className={`absolute inset-y-0 left-0 ${
-                    lvl.earned_here ? "bg-orange-500" : "bg-amber-500"
+                    lvl.earned_here ? "bg-indigo-500" : "bg-amber-500"
                   }`}
                   style={{ width: `${pctHere}%` }}
                 />

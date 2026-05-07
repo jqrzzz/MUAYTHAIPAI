@@ -114,17 +114,17 @@ export default function TodaySignalPanel({
   return (
     <div className="space-y-3">
       {showSetup && checklist && (
-        <Card className="border-orange-700/40 bg-orange-500/10">
+        <Card className="border-indigo-700/40 bg-indigo-500/10">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-orange-400" />
+                <Sparkles className="h-4 w-4 text-indigo-300" />
                 <p className="text-sm font-semibold text-white">
                   Finish setting up your gym
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-orange-200">
+                <span className="text-xs text-indigo-200">
                   {checklist.completed}/{checklist.total}
                 </span>
                 <button
@@ -137,7 +137,7 @@ export default function TodaySignalPanel({
             </div>
             <div className="h-1.5 rounded-full bg-zinc-900 overflow-hidden mb-3">
               <div
-                className="h-full bg-orange-500 transition-all"
+                className="h-full bg-indigo-500 transition-all"
                 style={{ width: `${checklist.percent}%` }}
               />
             </div>
@@ -270,7 +270,7 @@ export default function TodaySignalPanel({
               <Card className="border-zinc-800 bg-zinc-900">
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-orange-400" />
+                    <Clock className="h-4 w-4 text-indigo-300" />
                     <p className="text-xs uppercase tracking-wider text-zinc-400">
                       Recent signoffs · last 7d
                     </p>
@@ -294,7 +294,7 @@ export default function TodaySignalPanel({
               <Card className="border-zinc-800 bg-zinc-900">
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-orange-400" />
+                    <Trophy className="h-4 w-4 text-indigo-300" />
                     <p className="text-xs uppercase tracking-wider text-zinc-400">
                       Certs issued · last 30d
                     </p>

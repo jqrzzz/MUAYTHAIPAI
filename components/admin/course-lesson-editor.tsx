@@ -443,7 +443,7 @@ export default function CourseLessonEditor({
         </div>
         <Button
           size="sm"
-          className={saved ? "bg-green-600" : "bg-orange-600 hover:bg-orange-700"}
+          className={saved ? "bg-green-600" : "bg-indigo-500 hover:bg-indigo-400"}
           onClick={handleSave}
           disabled={saving}
         >
@@ -528,7 +528,7 @@ export default function CourseLessonEditor({
                         variant="ghost"
                         onClick={() => runImprove(mode)}
                         disabled={improving !== null || !form.text_content?.trim()}
-                        className="text-orange-400 hover:text-orange-300 h-7 text-xs"
+                        className="text-indigo-300 hover:text-indigo-200 h-7 text-xs"
                       >
                         {improving === mode ? (
                           <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -597,7 +597,7 @@ export default function CourseLessonEditor({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
+                      className="border-indigo-500/50 text-indigo-300 hover:bg-indigo-500/10"
                       onClick={generateQuiz}
                       disabled={generatingQuiz}
                     >
@@ -608,7 +608,7 @@ export default function CourseLessonEditor({
                       )}
                       OckOck generates
                     </Button>
-                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAddQuestion}>
+                    <Button size="sm" className="bg-indigo-500 hover:bg-indigo-400" onClick={openAddQuestion}>
                       <Plus className="h-4 w-4 mr-1" /> Add Question
                     </Button>
                   </div>
@@ -702,7 +702,7 @@ export default function CourseLessonEditor({
                 <Label className="text-neutral-200">Free Preview</Label>
                 <button
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    form.is_preview ? "bg-orange-600" : "bg-neutral-700"
+                    form.is_preview ? "bg-indigo-500" : "bg-neutral-700"
                   }`}
                   onClick={() => setForm((p) => ({ ...p, is_preview: !p.is_preview }))}
                 >
@@ -825,7 +825,7 @@ export default function CourseLessonEditor({
             <Button
               onClick={handleSaveQuestion}
               disabled={savingQuestion || !questionForm.question_text.trim()}
-              className="w-full bg-orange-600 hover:bg-orange-700"
+              className="w-full bg-indigo-500 hover:bg-indigo-400"
             >
               {savingQuestion ? "Saving..." : editingQuestion ? "Update Question" : "Add Question"}
             </Button>
@@ -838,7 +838,7 @@ export default function CourseLessonEditor({
         <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-orange-400" />
+              <Sparkles className="h-4 w-4 text-indigo-300" />
               OckOck drafted a quiz
             </DialogTitle>
             <DialogDescription>
@@ -847,7 +847,7 @@ export default function CourseLessonEditor({
           </DialogHeader>
           {generatingQuiz ? (
             <div className="text-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-400" />
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-indigo-300" />
               <p className="text-sm text-neutral-400 mt-3">Drafting questions…</p>
             </div>
           ) : quizError ? (
@@ -872,14 +872,14 @@ export default function CourseLessonEditor({
                     }}
                     className={`w-full text-left rounded border p-3 transition ${
                       picked
-                        ? "border-orange-500/60 bg-orange-500/5"
+                        ? "border-indigo-500/60 bg-indigo-500/5"
                         : "border-neutral-700 bg-neutral-950 hover:bg-neutral-900"
                     }`}
                   >
                     <div className="flex items-start gap-2">
                       <div
                         className={`h-4 w-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
-                          picked ? "border-orange-500 bg-orange-500" : "border-neutral-600"
+                          picked ? "border-indigo-500 bg-indigo-500" : "border-neutral-600"
                         }`}
                       >
                         {picked && <Check className="h-3 w-3 text-white" />}
@@ -922,7 +922,7 @@ export default function CourseLessonEditor({
                 <Button
                   onClick={acceptQuizSuggestions}
                   disabled={quizSaving || quizPicked.size === 0}
-                  className="bg-orange-600 hover:bg-orange-700"
+                  className="bg-indigo-500 hover:bg-indigo-400"
                 >
                   {quizSaving ? (
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />

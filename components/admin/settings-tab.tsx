@@ -629,8 +629,8 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
             </div>
           </div>
 
-          <div className="rounded-lg bg-orange-500/5 border border-orange-500/20 p-3">
-            <p className="text-xs text-orange-300/80">
+          <div className="rounded-lg bg-indigo-500/5 border border-indigo-500/20 p-3">
+            <p className="text-xs text-indigo-200/80">
               In-app notifications always appear in the bell icon at the top of your dashboard, regardless of email settings.
             </p>
           </div>
@@ -648,7 +648,7 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
         <Button
           onClick={handleSaveSettings}
           disabled={isSavingSettings}
-          className="bg-orange-600 hover:bg-orange-700"
+          className="bg-indigo-500 hover:bg-indigo-400"
         >
           <Save className="h-4 w-4 mr-2" />
           {isSavingSettings ? "Saving..." : "Save Settings"}

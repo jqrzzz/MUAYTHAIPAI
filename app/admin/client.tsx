@@ -294,15 +294,6 @@ export default function AdminDashboardClient({
     setTimeout(() => setIsRefreshing(false), 1000)
   }
 
-  const todayStats = {
-    total: initialTodaysBookings.length,
-    completed: initialTodaysBookings.filter((b) => b.status === "completed").length,
-    paid: initialTodaysBookings.filter((b) => b.payment_status === "paid").length,
-    revenue: initialTodaysBookings
-      .filter((b) => b.payment_status === "paid")
-      .reduce((sum, b) => sum + (b.payment_amount_thb || 0), 0),
-  }
-
   // Navigation items grouped by category
   const navGroups = [
     {
@@ -608,21 +599,6 @@ export default function AdminDashboardClient({
         sidebarCollapsed ? "md:ml-16" : "md:ml-56"
       }`}>
         <div className="p-4 md:p-6">
-          {/* Stats Cards - Add Thai translations */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-neutral-900/50 border-neutral-800">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-neutral-400">Today (วันนี้)</p>
-                    <p className="text-2xl font-bold text-white">{todayStats.total}</p>
-                  </div>
-                  <Calendar className="h-8 w-8 text-orange-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {activeTab === "profile" && <ProfileTab />}
 
           {/* Action Feedback Banner */}

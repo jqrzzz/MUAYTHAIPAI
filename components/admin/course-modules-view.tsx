@@ -336,7 +336,7 @@ export default function CourseModulesView({
             {modules.length} modules • {modules.reduce((sum, m) => sum + m.lessons.length, 0)} lessons
           </p>
         </div>
-        <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAddModule}>
+        <Button size="sm" className="bg-indigo-500 hover:bg-indigo-400" onClick={openAddModule}>
           <Plus className="h-4 w-4 mr-1" /> Add Module
         </Button>
       </div>
@@ -380,7 +380,7 @@ export default function CourseModulesView({
                     )}
                   </div>
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="ghost" onClick={() => openSuggest(mod)} className="text-orange-400 hover:text-orange-300 h-8 w-8 p-0" title="OckOck suggests lessons">
+                    <Button size="sm" variant="ghost" onClick={() => openSuggest(mod)} className="text-indigo-300 hover:text-indigo-200 h-8 w-8 p-0" title="OckOck suggests lessons">
                       <Sparkles className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => openAddLesson(mod.id)} className="text-neutral-400 hover:text-white h-8 w-8 p-0" title="Add lesson">
@@ -400,7 +400,7 @@ export default function CourseModulesView({
                     {mod.lessons.length === 0 ? (
                       <div className="px-4 py-6 text-center text-neutral-500 text-sm">
                         No lessons yet.{" "}
-                        <button className="text-orange-400 hover:underline" onClick={() => openAddLesson(mod.id)}>
+                        <button className="text-indigo-300 hover:underline" onClick={() => openAddLesson(mod.id)}>
                           Add one
                         </button>
                       </div>
@@ -473,7 +473,7 @@ export default function CourseModulesView({
               />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
-            <Button onClick={handleSaveModule} disabled={saving} className="w-full bg-orange-600 hover:bg-orange-700">
+            <Button onClick={handleSaveModule} disabled={saving} className="w-full bg-indigo-500 hover:bg-indigo-400">
               {saving ? "Saving..." : editingModule ? "Update Module" : "Create Module"}
             </Button>
           </div>
@@ -510,7 +510,7 @@ export default function CourseModulesView({
                     key={value}
                     className={`flex flex-col items-center gap-1 p-3 rounded-md border text-sm transition-colors ${
                       lessonForm.content_type === value
-                        ? "border-orange-500 bg-orange-500/10 text-orange-400"
+                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-300"
                         : "border-neutral-700 text-neutral-400 hover:border-neutral-600"
                     }`}
                     onClick={() => setLessonForm((p) => ({ ...p, content_type: value }))}
@@ -521,7 +521,7 @@ export default function CourseModulesView({
                 ))}
               </div>
             </div>
-            <Button onClick={handleSaveLesson} disabled={savingLesson || !lessonForm.title.trim()} className="w-full bg-orange-600 hover:bg-orange-700">
+            <Button onClick={handleSaveLesson} disabled={savingLesson || !lessonForm.title.trim()} className="w-full bg-indigo-500 hover:bg-indigo-400">
               {savingLesson ? "Creating..." : "Create Lesson"}
             </Button>
           </div>
@@ -533,7 +533,7 @@ export default function CourseModulesView({
         <DialogContent className="bg-neutral-900 border-neutral-700 max-w-2xl mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-orange-400" />
+              <Sparkles className="h-4 w-4 text-indigo-300" />
               OckOck suggests lessons{suggestModule ? ` for "${suggestModule.title}"` : ""}
             </DialogTitle>
             <DialogDescription>
@@ -543,7 +543,7 @@ export default function CourseModulesView({
 
           {suggestLoading ? (
             <div className="text-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-orange-400" />
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-indigo-300" />
               <p className="text-sm text-neutral-400 mt-3">Drafting lessons…</p>
             </div>
           ) : suggestError ? (
@@ -560,7 +560,7 @@ export default function CourseModulesView({
                     onClick={() => togglePick(i)}
                     className={`w-full text-left rounded border p-3 transition ${
                       picked
-                        ? "border-orange-500/60 bg-orange-500/5"
+                        ? "border-indigo-500/60 bg-indigo-500/5"
                         : "border-neutral-700 bg-neutral-950 hover:bg-neutral-900"
                     }`}
                   >
@@ -568,7 +568,7 @@ export default function CourseModulesView({
                       <div
                         className={`h-4 w-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
                           picked
-                            ? "border-orange-500 bg-orange-500"
+                            ? "border-indigo-500 bg-indigo-500"
                             : "border-neutral-600"
                         }`}
                       >
@@ -602,7 +602,7 @@ export default function CourseModulesView({
                 <Button
                   onClick={acceptSuggestions}
                   disabled={suggestSaving || suggestPicked.size === 0}
-                  className="bg-orange-600 hover:bg-orange-700"
+                  className="bg-indigo-500 hover:bg-indigo-400"
                 >
                   {suggestSaving ? (
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />

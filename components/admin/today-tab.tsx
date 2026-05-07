@@ -214,7 +214,7 @@ export default function TodayTab({
           </div>
           <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+            <Button size="sm" className="bg-indigo-500 hover:bg-indigo-400">
               <Plus className="h-4 w-4 mr-1 md:mr-2" />
               <span className="hidden md:inline">New Booking</span>
               <span className="md:hidden">New</span>
@@ -352,7 +352,7 @@ export default function TodayTab({
               <Button
                 onClick={handleCreateBooking}
                 disabled={isCreatingBooking}
-                className="w-full bg-orange-600 hover:bg-orange-700"
+                className="w-full bg-indigo-500 hover:bg-indigo-400"
               >
                 {isCreatingBooking ? "Creating..." : "Create Booking"}
               </Button>
@@ -386,7 +386,7 @@ export default function TodayTab({
                   <p className="text-sm text-neutral-400">{booking.services?.name || "Service"}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-orange-400 font-medium">
+                  <span className="text-indigo-300 font-medium">
                     {booking.payment_currency === "USD" ? "$" : "฿"}
                     {booking.payment_currency === "USD"
                       ? booking.payment_amount_usd?.toLocaleString()

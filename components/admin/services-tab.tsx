@@ -175,7 +175,7 @@ export default function ServicesTab({ initialServices, orgId, onFeedback, onServ
             <CardTitle className="text-white">Services</CardTitle>
             <CardDescription>Manage services and pricing</CardDescription>
           </div>
-          <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={openAdd}>
+          <Button size="sm" className="bg-indigo-500 hover:bg-indigo-400" onClick={openAdd}>
             <Plus className="h-4 w-4 mr-1" /> Add
           </Button>
         </CardHeader>
@@ -194,7 +194,7 @@ export default function ServicesTab({ initialServices, orgId, onFeedback, onServ
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-white">{service.name}</p>
                     {service.is_featured && (
-                      <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs">Featured</Badge>
+                      <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 text-xs">Featured</Badge>
                     )}
                   </div>
                   <p className="text-sm text-neutral-400 capitalize">{service.category}</p>
@@ -331,7 +331,7 @@ export default function ServicesTab({ initialServices, orgId, onFeedback, onServ
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full bg-orange-600 hover:bg-orange-700"
+              className="w-full bg-indigo-500 hover:bg-indigo-400"
             >
               {isSaving ? "Saving..." : editingService ? "Update Service" : "Add Service"}
             </Button>

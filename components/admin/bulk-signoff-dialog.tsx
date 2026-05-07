@@ -144,7 +144,7 @@ export default function BulkSignoffDialog({
       <DialogContent className="bg-neutral-900 border-neutral-700 max-w-xl mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-orange-400" />
+            <Sparkles className="h-4 w-4 text-indigo-300" />
             Bulk skill signoff
           </DialogTitle>
           <DialogDescription>
@@ -187,7 +187,7 @@ export default function BulkSignoffDialog({
                     setSkillIndex(skillIndex + 1)
                   }
                 }}
-                className="bg-orange-500 hover:bg-orange-600"
+                className="bg-indigo-500 hover:bg-indigo-400"
               >
                 Sign off another skill
               </Button>
@@ -236,7 +236,7 @@ export default function BulkSignoffDialog({
                     onClick={() => setSkillIndex(idx)}
                     className={`w-full text-left rounded px-2 py-1 text-sm flex items-center gap-2 ${
                       idx === skillIndex
-                        ? "bg-orange-500/15 text-orange-200"
+                        ? "bg-indigo-500/15 text-indigo-200"
                         : "text-zinc-300 hover:bg-zinc-900"
                     }`}
                   >
@@ -245,7 +245,7 @@ export default function BulkSignoffDialog({
                     </span>
                     <span className="flex-1 truncate">{label}</span>
                     {idx === skillIndex && (
-                      <Check className="h-3 w-3 text-orange-400 shrink-0" />
+                      <Check className="h-3 w-3 text-indigo-300 shrink-0" />
                     )}
                   </button>
                 ))}
@@ -263,7 +263,7 @@ export default function BulkSignoffDialog({
                   <div className="flex gap-2 text-xs">
                     <button
                       onClick={pickAll}
-                      className="text-orange-400 hover:underline"
+                      className="text-indigo-300 hover:underline"
                     >
                       All
                     </button>
@@ -339,7 +339,7 @@ export default function BulkSignoffDialog({
               <Button
                 onClick={submit}
                 disabled={submitting || pickedIds.size === 0}
-                className="bg-orange-500 hover:bg-orange-600"
+                className="bg-indigo-500 hover:bg-indigo-400"
               >
                 {submitting ? (
                   <Loader2 className="h-3 w-3 animate-spin mr-1" />

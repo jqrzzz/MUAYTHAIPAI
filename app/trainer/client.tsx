@@ -839,7 +839,7 @@ export default function TrainerDashboardClient({
                     variant="outline"
                     size="sm"
                     onClick={() => fetchBookingsForDate(new Date().toISOString().split("T")[0])}
-                    className="border-neutral-700 bg-transparent text-xs"
+                    className="border-zinc-800 bg-transparent text-xs"
                   >
                     Back to Today
                   </Button>
@@ -847,7 +847,7 @@ export default function TrainerDashboardClient({
                 <button
                   onClick={() => fetchBookingsForDate(selectedDate)}
                   disabled={isLoading}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                  className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                   aria-label="Refresh"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -857,13 +857,13 @@ export default function TrainerDashboardClient({
 
             {/* Calendar View */}
             {scheduleView === "calendar" && (
-              <Card className="bg-neutral-900/50 border-neutral-800">
+              <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
                 <CardContent className="p-4">
                   {/* Month Navigation */}
                   <div className="flex items-center justify-between mb-4">
                     <button
                       onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1))}
-                      className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+                      className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -872,7 +872,7 @@ export default function TrainerDashboardClient({
                     </h3>
                     <button
                       onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1))}
-                      className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+                      className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
@@ -881,7 +881,7 @@ export default function TrainerDashboardClient({
                   {/* Day Headers */}
                   <div className="grid grid-cols-7 gap-1 mb-2">
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                      <div key={day} className="text-center text-xs text-neutral-500 py-1">
+                      <div key={day} className="text-center text-xs text-zinc-500 py-1">
                         {day}
                       </div>
                     ))}
@@ -906,17 +906,17 @@ export default function TrainerDashboardClient({
                           onClick={() => fetchBookingsForDate(dateKey)}
                           className={`aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-colors relative ${
                             isSelected
-                              ? "bg-orange-600 text-white"
+                              ? "bg-indigo-500 text-white"
                               : isToday
-                              ? "bg-neutral-700 text-white"
-                              : "hover:bg-neutral-800"
+                              ? "bg-zinc-800 text-white"
+                              : "hover:bg-zinc-800"
                           }`}
                         >
                           <span>{day}</span>
                           {dayBookings.length > 0 && (
                             <div className="flex gap-0.5 mt-0.5">
                               {hasGroup && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
                               )}
                               {hasPrivate && (
                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -929,20 +929,20 @@ export default function TrainerDashboardClient({
                   </div>
 
                   {/* Legend */}
-                  <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-neutral-800">
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-                      <div className="w-2 h-2 rounded-full bg-orange-400" />
+                  <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-zinc-900">
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                      <div className="w-2 h-2 rounded-full bg-indigo-400" />
                       <span>Group</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400">
                       <div className="w-2 h-2 rounded-full bg-blue-400" />
                       <span>Private</span>
                     </div>
                   </div>
 
                   {isLoadingMonth && (
-                    <div className="absolute inset-0 bg-neutral-900/50 flex items-center justify-center rounded-lg">
-                      <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                    <div className="absolute inset-0 bg-zinc-900/40 flex items-center justify-center rounded-lg">
+                      <Loader2 className="w-6 h-6 animate-spin text-indigo-300" />
                     </div>
                   )}
                 </CardContent>
@@ -955,7 +955,7 @@ export default function TrainerDashboardClient({
                 {/* Date Header for non-today dates */}
                 {selectedDate !== new Date().toISOString().split("T")[0] && (
                   <div className="text-center py-2">
-                    <p className="text-sm text-neutral-400">
+                    <p className="text-sm text-zinc-400">
                       {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", {
                         weekday: "long",
                         month: "long",
@@ -968,20 +968,20 @@ export default function TrainerDashboardClient({
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-3">
-                  <Card className="bg-neutral-900/50 border-neutral-800">
+                  <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-orange-600/20 flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-orange-500" />
+                        <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-indigo-300" />
                         </div>
                         <div>
                           <p className="text-2xl font-bold">{pendingBookings.length}</p>
-                          <p className="text-xs text-neutral-400">Upcoming (รอ)</p>
+                          <p className="text-xs text-zinc-400">Upcoming (รอ)</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="bg-neutral-900/50 border-neutral-800">
+                  <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-green-600/20 flex items-center justify-center">
@@ -989,7 +989,7 @@ export default function TrainerDashboardClient({
                         </div>
                         <div>
                           <p className="text-2xl font-bold">{completedBookings.length}</p>
-                          <p className="text-xs text-neutral-400">Done (เสร็จ)</p>
+                          <p className="text-xs text-zinc-400">Done (เสร็จ)</p>
                         </div>
                       </div>
                     </CardContent>
@@ -999,11 +999,11 @@ export default function TrainerDashboardClient({
                 {/* Bookings List */}
                 <div className="space-y-4">
                   {bookings.length === 0 ? (
-                    <Card className="bg-neutral-900/50 border-neutral-800">
+                    <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
                       <CardContent className="p-6 text-center">
-                        <Calendar className="w-10 h-10 text-neutral-600 mx-auto mb-2" />
-                        <p className="text-neutral-400">No bookings today</p>
-                        <p className="text-xs text-neutral-500">ไม่มีการจองวันนี้</p>
+                        <Calendar className="w-10 h-10 text-zinc-600 mx-auto mb-2" />
+                        <p className="text-zinc-400">No bookings today</p>
+                        <p className="text-xs text-zinc-500">ไม่มีการจองวันนี้</p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -1011,7 +1011,7 @@ export default function TrainerDashboardClient({
                       {/* Needs Attention Section */}
                       {needsAttentionBookings.length > 0 && (
                         <div className="space-y-3">
-                          <h2 className="text-sm font-medium text-neutral-400">
+                          <h2 className="text-sm font-medium text-zinc-400">
                             Needs Attention ({needsAttentionBookings.length})
                           </h2>
                           {needsAttentionBookings.map((booking) => {
@@ -1019,11 +1019,11 @@ export default function TrainerDashboardClient({
                             const needsCashCollection = booking.payment_status !== "paid" && booking.status === "completed"
                             
                             return (
-                              <Card key={booking.id} className="bg-neutral-900/50 border-neutral-800">
+                              <Card key={booking.id} className="bg-zinc-900/40 ring-1 ring-zinc-900">
                                 <CardContent className="p-4">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                      <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
                                         {booking.users?.avatar_url ? (
                                           <Image
                                             src={booking.users.avatar_url || "/placeholder.svg"}
@@ -1033,14 +1033,14 @@ export default function TrainerDashboardClient({
                                             className="w-full h-full object-cover"
                                           />
                                         ) : (
-                                          <User className="w-5 h-5 text-neutral-400" />
+                                          <User className="w-5 h-5 text-zinc-400" />
                                         )}
                                       </div>
                                       <div className="min-w-0">
                                         <p className="font-medium text-white truncate">
                                           {booking.users?.full_name || booking.guest_name || booking.users?.email || booking.guest_email || "Walk-in"}
                                         </p>
-                                        <p className="text-xs text-neutral-400">
+                                        <p className="text-xs text-zinc-400">
                                           {booking.booking_time || "Flexible"} • {booking.services?.name}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
@@ -1065,7 +1065,7 @@ export default function TrainerDashboardClient({
 
                                   {/* Check-in buttons for pending bookings */}
                                   {booking.status === "confirmed" && (
-                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-800">
+                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-900">
                                       <Button
                                         size="sm"
                                         onClick={() => handleMarkAttendance(booking.id, "completed")}
@@ -1095,7 +1095,7 @@ export default function TrainerDashboardClient({
                                       variant="outline"
                                       onClick={() => handleMarkPaid(booking.id)}
                                       disabled={isLoading}
-                                      className={`w-full mt-2 ${needsCashCollection ? "border-orange-500/50 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20" : "border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"}`}
+                                      className={`w-full mt-2 ${needsCashCollection ? "ring-1 ring-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20" : "ring-1 ring-amber-500/25 text-amber-300/80 hover:bg-amber-500/10"}`}
                                     >
                                       <DollarSign className="w-4 h-4 mr-1" />
                                       {needsCashCollection ? "Collect Cash (เก็บเงินสด)" : "Mark Paid (ชำระแล้ว)"}
@@ -1111,18 +1111,18 @@ export default function TrainerDashboardClient({
                       {/* Completed Section - Collapsed Cards */}
                       {fullyCompletedBookings.length > 0 && (
                         <div className="space-y-2">
-                          <h2 className="text-sm font-medium text-neutral-400">
+                          <h2 className="text-sm font-medium text-zinc-400">
                             Completed ({fullyCompletedBookings.length})
                           </h2>
-                          <Card className="bg-neutral-900/30 border-neutral-800">
-                            <CardContent className="p-2 divide-y divide-neutral-800">
+                          <Card className="bg-zinc-900/30 ring-1 ring-zinc-900">
+                            <CardContent className="p-2 divide-y divide-zinc-900">
                               {fullyCompletedBookings.map((booking) => (
                                 <div key={booking.id} className="flex items-center gap-3 py-2 px-2">
                                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                  <span className="text-sm text-neutral-300 truncate flex-1">
+                                  <span className="text-sm text-zinc-300 truncate flex-1">
                                     {booking.users?.full_name || booking.guest_name || "Guest"}
                                   </span>
-                                  <span className="text-xs text-neutral-500">
+                                  <span className="text-xs text-zinc-500">
                                     {booking.booking_time || ""}
                                   </span>
                                   <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/20">
@@ -1148,17 +1148,17 @@ export default function TrainerDashboardClient({
             {/* Search and Add */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <Input
                   placeholder="Search students... (ค้นหา)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-neutral-800 border-neutral-700 text-white"
+                  className="pl-9 bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                 />
               </div>
               <Button
                 onClick={() => setShowAddStudent(true)}
-                className="bg-orange-600 hover:bg-orange-500"
+                className="bg-indigo-500 hover:bg-indigo-400"
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -1167,22 +1167,22 @@ export default function TrainerDashboardClient({
             {/* Students List */}
             <div className="space-y-2">
               {filteredStudents.length === 0 ? (
-                <Card className="bg-neutral-900/50 border-neutral-800">
+                <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
                   <CardContent className="p-6 text-center">
-                    <Users className="w-10 h-10 text-neutral-600 mx-auto mb-2" />
-                    <p className="text-neutral-400">No students found</p>
+                    <Users className="w-10 h-10 text-zinc-600 mx-auto mb-2" />
+                    <p className="text-zinc-400">No students found</p>
                   </CardContent>
                 </Card>
               ) : (
                 filteredStudents.map((student) => (
                   <Card 
                     key={student.id} 
-                    className="bg-neutral-900/50 border-neutral-800 cursor-pointer hover:bg-neutral-800/50 transition-colors"
+                    className="bg-zinc-900/40 ring-1 ring-zinc-900 cursor-pointer hover:bg-zinc-800/50 transition-colors"
                     onClick={() => openStudentDetail(student)}
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {student.avatar_url ? (
                             <Image
                               src={student.avatar_url || "/placeholder.svg"}
@@ -1192,16 +1192,16 @@ export default function TrainerDashboardClient({
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <User className="w-5 h-5 text-neutral-400" />
+                            <User className="w-5 h-5 text-zinc-400" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-white truncate">
                             {student.full_name || "Unknown"}
                           </p>
-                          <p className="text-xs text-neutral-400 truncate">{student.email}</p>
+                          <p className="text-xs text-zinc-400 truncate">{student.email}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-neutral-500" />
+                        <ChevronRight className="w-4 h-4 text-zinc-500" />
                         {student.credits_remaining > 0 && (
                           <Badge className="bg-green-500/10 text-green-400 border-green-500/20">
                             {student.credits_remaining} credits
@@ -1220,10 +1220,10 @@ export default function TrainerDashboardClient({
         {activeView === "profile" && (
           <div className="space-y-4">
             {/* Profile Photo */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
+            <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
-                  <label className="relative w-20 h-20 rounded-full bg-neutral-700 border-2 border-neutral-600 overflow-hidden flex-shrink-0 cursor-pointer group">
+                  <label className="relative w-20 h-20 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden flex-shrink-0 cursor-pointer group">
                     {profile.photo_url ? (
                       <Image
                         src={profile.photo_url || "/placeholder.svg"}
@@ -1234,7 +1234,7 @@ export default function TrainerDashboardClient({
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Camera className="w-8 h-8 text-neutral-500" />
+                        <Camera className="w-8 h-8 text-zinc-500" />
                       </div>
                     )}
                     {/* Camera overlay */}
@@ -1246,7 +1246,7 @@ export default function TrainerDashboardClient({
                       )}
                     </div>
                     {/* Camera badge */}
-                    <div className="absolute bottom-0 right-0 w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center border-2 border-neutral-900">
+                    <div className="absolute bottom-0 right-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center border-2 border-neutral-900">
                       <Camera className="w-3 h-3 text-white" />
                     </div>
                     <input
@@ -1259,7 +1259,7 @@ export default function TrainerDashboardClient({
                   </label>
                   <div>
                     <h2 className="text-xl font-bold">{profile.display_name}</h2>
-                    <p className="text-sm text-neutral-400">{profile.title || "Trainer"}</p>
+                    <p className="text-sm text-zinc-400">{profile.title || "Trainer"}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Switch
                         checked={profile.is_available}
@@ -1267,7 +1267,7 @@ export default function TrainerDashboardClient({
                           setProfile((prev) => ({ ...prev, is_available: checked }))
                         }
                       />
-                      <span className="text-xs text-neutral-400">
+                      <span className="text-xs text-zinc-400">
                         {profile.is_available ? "Available (พร้อมสอน)" : "Unavailable (ไม่ว่าง)"}
                       </span>
                     </div>
@@ -1277,14 +1277,14 @@ export default function TrainerDashboardClient({
             </Card>
 
             {/* Photos */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
+            <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
               <CardContent className="p-4 space-y-3">
-                <Label className="text-neutral-300">Photos (รูปภาพ) - Max 5</Label>
+                <Label className="text-zinc-300">Photos (รูปภาพ) - Max 5</Label>
                 <div className="flex gap-2 flex-wrap">
                   {(profile.photos || []).map((photo, idx) => (
                     <div
                       key={idx}
-                      className="w-16 h-16 rounded-lg bg-neutral-700 overflow-hidden relative group"
+                      className="w-16 h-16 rounded-lg bg-zinc-800 overflow-hidden relative group"
                     >
                       <Image
                         src={photo || "/placeholder.svg"}
@@ -1302,11 +1302,11 @@ export default function TrainerDashboardClient({
                     </div>
                   ))}
                   {(profile.photos?.length || 0) < 5 && (
-                    <label className="w-16 h-16 rounded-lg bg-neutral-800 border border-dashed border-neutral-600 flex items-center justify-center cursor-pointer hover:border-orange-500 transition-colors">
+                    <label className="w-16 h-16 rounded-lg bg-zinc-900 border border-dashed border-zinc-700 flex items-center justify-center cursor-pointer hover:border-indigo-500/40 transition-colors">
                       {isUploadingPhoto ? (
-                        <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
+                        <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
                       ) : (
-                        <Camera className="w-5 h-5 text-neutral-400" />
+                        <Camera className="w-5 h-5 text-zinc-400" />
                       )}
                       <input
                         type="file"
@@ -1318,53 +1318,53 @@ export default function TrainerDashboardClient({
                     </label>
                   )}
                 </div>
-                <p className="text-xs text-neutral-500">Tap the camera icon to upload a photo</p>
+                <p className="text-xs text-zinc-500">Tap the camera icon to upload a photo</p>
               </CardContent>
             </Card>
 
             {/* Basic Info */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
+            <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
               <CardContent className="p-4 space-y-3">
                 <div className="space-y-2">
-                  <Label className="text-neutral-300">Display Name (ชื่อที่แสดง)</Label>
+                  <Label className="text-zinc-300">Display Name (ชื่อที่แสดง)</Label>
                   <Input
                     value={profile.display_name}
                     onChange={(e) => setProfile((prev) => ({ ...prev, display_name: e.target.value }))}
-                    className="bg-neutral-800 border-neutral-700 text-white"
+                    className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label className="text-neutral-300">Title (ตำแหน่ง)</Label>
+                    <Label className="text-zinc-300">Title (ตำแหน่ง)</Label>
                     <Input
                       value={profile.title || ""}
                       onChange={(e) => setProfile((prev) => ({ ...prev, title: e.target.value }))}
                       placeholder="Head Trainer"
-                      className="bg-neutral-800 border-neutral-700 text-white"
+                      className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-neutral-300">Years Experience</Label>
+                    <Label className="text-zinc-300">Years Experience</Label>
                     <Input
                       type="number"
                       value={profile.years_experience || ""}
                       onChange={(e) => setProfile((prev) => ({ ...prev, years_experience: parseInt(e.target.value) || 0 }))}
                       placeholder="10"
-                      className="bg-neutral-800 border-neutral-700 text-white"
+                      className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-neutral-300">Bio (ประวัติ)</Label>
+                  <Label className="text-zinc-300">Bio (ประวัติ)</Label>
                   <Textarea
                     value={profile.bio || ""}
                     onChange={(e) => setProfile((prev) => ({ ...prev, bio: e.target.value }))}
                     placeholder="Tell students about yourself... (เล่าเกี่ยวกับตัวคุณ...)"
-                    className="bg-neutral-800 border-neutral-700 text-white min-h-[100px]"
+                    className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white min-h-[100px]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-neutral-300">Specialties (ความเชี่ยวชาญ)</Label>
+                  <Label className="text-zinc-300">Specialties (ความเชี่ยวชาญ)</Label>
                   <Input
                     value={(profile.specialties || []).join(", ")}
                     onChange={(e) =>
@@ -1374,48 +1374,48 @@ export default function TrainerDashboardClient({
                       }))
                     }
                     placeholder="Clinch, Elbows, Pad Work (comma separated)"
-                    className="bg-neutral-800 border-neutral-700 text-white"
+                    className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                   />
                 </div>
               </CardContent>
             </Card>
 
             {/* Fight Record */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
+            <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
               <CardContent className="p-4 space-y-3">
-                <Label className="text-neutral-300">Fight Record (สถิติการชก)</Label>
+                <Label className="text-zinc-300">Fight Record (สถิติการชก)</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label className="text-xs text-neutral-500">Wins (ชนะ)</Label>
+                    <Label className="text-xs text-zinc-500">Wins (ชนะ)</Label>
                     <Input
                       type="number"
                       value={profile.fight_record_wins || 0}
                       onChange={(e) =>
                         setProfile((prev) => ({ ...prev, fight_record_wins: parseInt(e.target.value) || 0 }))
                       }
-                      className="bg-neutral-800 border-neutral-700 text-white"
+                      className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-neutral-500">Losses (แพ้)</Label>
+                    <Label className="text-xs text-zinc-500">Losses (แพ้)</Label>
                     <Input
                       type="number"
                       value={profile.fight_record_losses || 0}
                       onChange={(e) =>
                         setProfile((prev) => ({ ...prev, fight_record_losses: parseInt(e.target.value) || 0 }))
                       }
-                      className="bg-neutral-800 border-neutral-700 text-white"
+                      className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-neutral-500">Draws (เสมอ)</Label>
+                    <Label className="text-xs text-zinc-500">Draws (เสมอ)</Label>
                     <Input
                       type="number"
                       value={profile.fight_record_draws || 0}
                       onChange={(e) =>
                         setProfile((prev) => ({ ...prev, fight_record_draws: parseInt(e.target.value) || 0 }))
                       }
-                      className="bg-neutral-800 border-neutral-700 text-white"
+                      className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
                     />
                   </div>
                 </div>
@@ -1423,14 +1423,14 @@ export default function TrainerDashboardClient({
             </Card>
 
             {/* Availability */}
-            <Card className="bg-neutral-900/50 border-neutral-800">
+            <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
               <CardContent className="p-4 space-y-4">
-                <Label className="text-neutral-300">Availability (ความพร้อม)</Label>
+                <Label className="text-zinc-300">Availability (ความพร้อม)</Label>
                 
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-white">Available for Training</p>
-                    <p className="text-xs text-neutral-500">พร้อมรับสอน</p>
+                    <p className="text-xs text-zinc-500">พร้อมรับสอน</p>
                   </div>
                   <Switch
                     checked={profile.is_available ?? true}
@@ -1441,7 +1441,7 @@ export default function TrainerDashboardClient({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-white">Open to Fights</p>
-                    <p className="text-xs text-neutral-500">เปิดรับแมทช์ชก</p>
+                    <p className="text-xs text-zinc-500">เปิดรับแมทช์ชก</p>
                   </div>
                   <Switch
                     checked={profile.open_to_fights ?? false}
@@ -1452,7 +1452,7 @@ export default function TrainerDashboardClient({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-white">Open to Events</p>
-                    <p className="text-xs text-neutral-500">เปิดรับงานอีเว้นท์</p>
+                    <p className="text-xs text-zinc-500">เปิดรับงานอีเว้นท์</p>
                   </div>
                   <Switch
                     checked={profile.open_to_events ?? false}
@@ -1461,13 +1461,13 @@ export default function TrainerDashboardClient({
                 </div>
 
                 {!profile.is_available && (
-                  <div className="space-y-2 pt-2 border-t border-neutral-800">
-                    <Label className="text-neutral-400 text-xs">Availability Note (optional)</Label>
+                  <div className="space-y-2 pt-2 border-t border-zinc-900">
+                    <Label className="text-zinc-400 text-xs">Availability Note (optional)</Label>
                     <Input
                       value={profile.availability_note || ""}
                       onChange={(e) => setProfile((prev) => ({ ...prev, availability_note: e.target.value }))}
                       placeholder="e.g., On vacation until March 1st"
-                      className="bg-neutral-800 border-neutral-700 text-white text-sm"
+                      className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white text-sm"
                     />
                   </div>
                 )}
@@ -1478,7 +1478,7 @@ export default function TrainerDashboardClient({
             <Button
               onClick={handleSaveProfile}
               disabled={isSavingProfile}
-              className="w-full bg-orange-600 hover:bg-orange-500"
+              className="w-full bg-indigo-500 hover:bg-indigo-400"
             >
               {isSavingProfile ? (
                 <>
@@ -1496,7 +1496,7 @@ export default function TrainerDashboardClient({
                 href={`/gyms/${organization.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full rounded-lg border border-neutral-700 py-2.5 text-sm text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors"
+                className="flex items-center justify-center gap-2 w-full rounded-lg border border-zinc-800 py-2.5 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
                 View Public Gym Page
@@ -1541,7 +1541,7 @@ export default function TrainerDashboardClient({
                           setInputMessage("")
                         })
                     }}
-                    className="rounded-full border border-neutral-700 bg-neutral-800/50 px-3 py-1.5 text-xs text-neutral-300 hover:border-orange-500/50 hover:text-white transition-colors"
+                    className="rounded-full border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-xs text-zinc-300 hover:border-indigo-500/40/50 hover:text-white transition-colors"
                   >
                     {prompt}
                   </button>
@@ -1568,8 +1568,8 @@ export default function TrainerDashboardClient({
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                       msg.role === "user"
-                        ? "bg-orange-600 text-white"
-                        : "bg-neutral-800 text-white"
+                        ? "bg-indigo-500 text-white"
+                        : "bg-zinc-900 text-white"
                     }`}
                   >
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -1585,8 +1585,8 @@ export default function TrainerDashboardClient({
                     height={32}
                     className="w-8 h-8 rounded-full flex-shrink-0"
                   />
-                  <div className="bg-neutral-800 rounded-2xl px-4 py-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
+                  <div className="bg-zinc-900 rounded-2xl px-4 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
                   </div>
                 </div>
               )}
@@ -1594,18 +1594,18 @@ export default function TrainerDashboardClient({
             </div>
 
             {/* Input */}
-            <div className="flex gap-2 pt-3 border-t border-neutral-800">
+            <div className="flex gap-2 pt-3 border-t border-zinc-900">
               <Input
                 placeholder="Ask OckOck... (ถาม OckOck)"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                className="bg-neutral-800 border-neutral-700 text-white"
+                className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={isSending || !inputMessage.trim()}
-                className="bg-orange-600 hover:bg-orange-500"
+                className="bg-indigo-500 hover:bg-indigo-400"
               >
                 <Send className="w-4 h-4" />
               </Button>
@@ -1661,10 +1661,10 @@ export default function TrainerDashboardClient({
 
       {/* Student Detail Dialog */}
       <Dialog open={!!selectedStudent} onOpenChange={(open) => !open && setSelectedStudent(null)}>
-        <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-md mx-4 max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-zinc-950 border-zinc-900 text-white max-w-md mx-4 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-neutral-700 flex items-center justify-center overflow-hidden">
+              <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden">
                 {selectedStudent?.avatar_url ? (
                   <Image
                     src={selectedStudent.avatar_url || "/placeholder.svg"}
@@ -1674,12 +1674,12 @@ export default function TrainerDashboardClient({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <User className="w-6 h-6 text-neutral-400" />
+                  <User className="w-6 h-6 text-zinc-400" />
                 )}
               </div>
               <div>
                 <DialogTitle>{selectedStudent?.full_name || "Unknown Student"}</DialogTitle>
-                <DialogDescription className="text-neutral-400">
+                <DialogDescription className="text-zinc-400">
                   {selectedStudent?.email}
                 </DialogDescription>
               </div>
@@ -1688,33 +1688,33 @@ export default function TrainerDashboardClient({
 
           {isLoadingStudent ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-300" />
             </div>
           ) : (
             <div className="space-y-5 mt-2">
               {/* Quick Stats */}
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-neutral-800/50 rounded-lg p-3 text-center">
+                <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
                   <p className="text-lg font-bold text-white">{selectedStudent?.total_sessions || 0}</p>
-                  <p className="text-[10px] text-neutral-500">Sessions</p>
+                  <p className="text-[10px] text-zinc-500">Sessions</p>
                 </div>
-                <div className="bg-neutral-800/50 rounded-lg p-3 text-center">
+                <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
                   <p className="text-lg font-bold text-white">{selectedStudent?.credits_remaining || 0}</p>
-                  <p className="text-[10px] text-neutral-500">Credits</p>
+                  <p className="text-[10px] text-zinc-500">Credits</p>
                 </div>
-                <div className="bg-neutral-800/50 rounded-lg p-3 text-center">
+                <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
                   <p className="text-sm font-medium text-white">
                     {selectedStudent?.last_visit
                       ? new Date(selectedStudent.last_visit).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                       : "—"}
                   </p>
-                  <p className="text-[10px] text-neutral-500">Last Visit</p>
+                  <p className="text-[10px] text-zinc-500">Last Visit</p>
                 </div>
               </div>
 
               {/* Notes Section */}
               <div className="space-y-2">
-                <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                   <MessageSquare className="w-3 h-3" />
                   Notes
                 </p>
@@ -1724,12 +1724,12 @@ export default function TrainerDashboardClient({
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder="Add a note about this student..."
                     rows={2}
-                    className="bg-neutral-800 border-neutral-700 text-white text-sm resize-none"
+                    className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white text-sm resize-none"
                   />
                   <Button
                     onClick={handleAddNote}
                     disabled={isLoading || !newNote.trim()}
-                    className="bg-orange-600 hover:bg-orange-500 self-end"
+                    className="bg-indigo-500 hover:bg-indigo-400 self-end"
                     size="sm"
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -1738,9 +1738,9 @@ export default function TrainerDashboardClient({
                 {studentNotes.length > 0 && (
                   <div className="space-y-1.5 max-h-36 overflow-y-auto">
                     {studentNotes.map((note) => (
-                      <div key={note.id} className="bg-neutral-800/30 rounded-lg px-3 py-2 text-sm">
+                      <div key={note.id} className="bg-zinc-900/30 rounded-lg px-3 py-2 text-sm">
                         <p className="text-neutral-200">{note.content}</p>
-                        <p className="text-[10px] text-neutral-600 mt-1">
+                        <p className="text-[10px] text-zinc-600 mt-1">
                           {note.trainer_name} · {new Date(note.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </p>
                       </div>
@@ -1752,18 +1752,18 @@ export default function TrainerDashboardClient({
               {/* Recent Sessions */}
               {studentBookingHistory.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Calendar className="w-3 h-3" />
                     Recent Sessions
                   </p>
                   <div className="space-y-1">
                     {studentBookingHistory.slice(0, 5).map((booking) => (
-                      <div key={booking.id} className="flex items-center justify-between text-sm py-1.5 border-b border-neutral-800/50 last:border-0">
-                        <span className="text-neutral-300">
+                      <div key={booking.id} className="flex items-center justify-between text-sm py-1.5 border-b border-zinc-900/50 last:border-0">
+                        <span className="text-zinc-300">
                           {new Date(booking.booking_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </span>
-                        <span className="text-neutral-500 text-xs">{booking.services?.name || "Session"}</span>
-                        <Badge className={`text-[10px] ${booking.status === "completed" ? "bg-green-500/10 text-green-400" : "bg-neutral-500/10 text-neutral-400"}`}>
+                        <span className="text-zinc-500 text-xs">{booking.services?.name || "Session"}</span>
+                        <Badge className={`text-[10px] ${booking.status === "completed" ? "bg-green-500/10 text-green-400" : "bg-neutral-500/10 text-zinc-400"}`}>
                           {booking.status}
                         </Badge>
                       </div>
@@ -1775,14 +1775,14 @@ export default function TrainerDashboardClient({
               {/* Issue Certificate */}
               {selectedStudent?.email && (
                 <div className="space-y-3">
-                  <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Award className="w-3 h-3" />
                     Certification
                   </p>
                   {certSuccess ? (
                     <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm">
                       <p className="text-emerald-400 font-medium">Certificate issued!</p>
-                      <p className="text-neutral-400 text-xs mt-1">#{certSuccess}</p>
+                      <p className="text-zinc-400 text-xs mt-1">#{certSuccess}</p>
                       <a
                         href={`/verify/${certSuccess}`}
                         target="_blank"
@@ -1797,7 +1797,7 @@ export default function TrainerDashboardClient({
                       <select
                         value={certLevel}
                         onChange={(e) => handleLevelChange(e.target.value)}
-                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white"
+                        className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
                       >
                         <option value="">Select level...</option>
                         <option value="naga">🐍 Naga (Level 1)</option>
@@ -1809,11 +1809,11 @@ export default function TrainerDashboardClient({
 
                       {/* Skills Checklist */}
                       {certLevel && (
-                        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3 space-y-2">
+                        <div className="rounded-lg border border-zinc-900 bg-zinc-900/40 p-3 space-y-2">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-neutral-300">Skills Assessment</p>
+                            <p className="text-xs font-medium text-zinc-300">Skills Assessment</p>
                             {skillSignoffs && (
-                              <Badge className={`text-[10px] ${skillSignoffs.allComplete ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-neutral-700 text-neutral-300 border-neutral-600"}`}>
+                              <Badge className={`text-[10px] ${skillSignoffs.allComplete ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-zinc-800 text-zinc-300 border-zinc-700"}`}>
                                 {skillSignoffs.completedCount}/{skillSignoffs.totalCount}
                               </Badge>
                             )}
@@ -1821,7 +1821,7 @@ export default function TrainerDashboardClient({
 
                           {loadingSkills ? (
                             <div className="flex items-center justify-center py-4">
-                              <Loader2 className="w-4 h-4 animate-spin text-neutral-500" />
+                              <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
                             </div>
                           ) : skillSignoffs ? (
                             <div className="space-y-1.5 max-h-48 overflow-y-auto">
@@ -1832,26 +1832,26 @@ export default function TrainerDashboardClient({
                                   className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-xs transition-colors ${
                                     skill.signedOff
                                       ? "bg-emerald-500/10 text-emerald-300"
-                                      : "bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800"
+                                      : "bg-zinc-900/50 text-zinc-400 hover:bg-zinc-800"
                                   }`}
                                 >
                                   {skill.signedOff ? (
                                     <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                                   ) : (
-                                    <div className="w-3.5 h-3.5 rounded-full border border-neutral-600 shrink-0" />
+                                    <div className="w-3.5 h-3.5 rounded-full border border-zinc-700 shrink-0" />
                                   )}
                                   <span className="flex-1">{skill.name}</span>
                                 </button>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-neutral-500 py-2">Select a level to see required skills</p>
+                            <p className="text-xs text-zinc-500 py-2">Select a level to see required skills</p>
                           )}
 
                           {/* Progress bar */}
                           {skillSignoffs && skillSignoffs.totalCount > 0 && (
                             <div className="mt-2">
-                              <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                              <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
                                 <div
                                   className={`h-full rounded-full transition-all duration-300 ${skillSignoffs.allComplete ? "bg-emerald-500" : "bg-orange-500"}`}
                                   style={{ width: `${(skillSignoffs.completedCount / skillSignoffs.totalCount) * 100}%` }}
@@ -1867,7 +1867,7 @@ export default function TrainerDashboardClient({
                         <Button
                           onClick={handleIssueCertificate}
                           disabled={isIssuingCert || !certLevel}
-                          className={`w-full ${skillSignoffs?.allComplete ? "bg-emerald-600 hover:bg-emerald-500" : "bg-orange-600 hover:bg-orange-500"}`}
+                          className={`w-full ${skillSignoffs?.allComplete ? "bg-emerald-600 hover:bg-emerald-500" : "bg-indigo-500 hover:bg-indigo-400"}`}
                           size="sm"
                         >
                           {isIssuingCert ? (
@@ -1889,38 +1889,38 @@ export default function TrainerDashboardClient({
 
       {/* Add Student Dialog */}
       <Dialog open={showAddStudent} onOpenChange={setShowAddStudent}>
-        <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-sm mx-4">
+        <DialogContent className="bg-zinc-950 border-zinc-900 text-white max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle>Add Student (เพิ่มนักเรียน)</DialogTitle>
-            <DialogDescription className="text-neutral-400">
+            <DialogDescription className="text-zinc-400">
               Add a walk-in student and send them an invite
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddStudent} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-neutral-300">Name (ชื่อ)</Label>
+              <Label className="text-zinc-300">Name (ชื่อ)</Label>
               <Input
                 value={newStudent.name}
                 onChange={(e) => setNewStudent((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="Student name"
-                className="bg-neutral-800 border-neutral-700 text-white"
+                className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-neutral-300">Email (อีเมล) *</Label>
+              <Label className="text-zinc-300">Email (อีเมล) *</Label>
               <Input
                 type="email"
                 value={newStudent.email}
                 onChange={(e) => setNewStudent((prev) => ({ ...prev, email: e.target.value }))}
                 placeholder="student@email.com"
                 required
-                className="bg-neutral-800 border-neutral-700 text-white"
+                className="bg-zinc-900/50 ring-1 ring-zinc-800 text-white"
               />
             </div>
             <Button
               type="submit"
               disabled={isAddingStudent || !newStudent.email}
-              className="w-full bg-orange-600 hover:bg-orange-500"
+              className="w-full bg-indigo-500 hover:bg-indigo-400"
             >
               {isAddingStudent ? (
                 <>

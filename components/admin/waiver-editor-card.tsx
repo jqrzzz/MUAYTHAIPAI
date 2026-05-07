@@ -138,7 +138,7 @@ export default function WaiverEditorCard({ gymSlug }: Props) {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <CardTitle className="text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-orange-400" />
+              <FileText className="w-5 h-5 text-indigo-300" />
               Liability waiver
             </CardTitle>
             <CardDescription>
@@ -197,7 +197,7 @@ export default function WaiverEditorCard({ gymSlug }: Props) {
                 disabled={
                   saving || !title.trim() || body.trim().length < 50
                 }
-                className="bg-orange-500 hover:bg-orange-400 text-white"
+                className="bg-indigo-500 hover:bg-indigo-400 text-white"
               >
                 {saving ? (
                   <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -231,19 +231,19 @@ export default function WaiverEditorCard({ gymSlug }: Props) {
               {data.active.body}
             </div>
             {publicUrl && (
-              <div className="rounded-md bg-orange-500/[0.04] border border-orange-500/20 p-3">
+              <div className="rounded-md bg-indigo-500/[0.04] border border-indigo-500/20 p-3">
                 <p className="text-xs text-neutral-400 mb-2">
                   Share this link with students before their first class:
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-xs text-orange-300 truncate bg-neutral-950 px-2 py-1 rounded border border-neutral-800">
+                  <code className="flex-1 text-xs text-indigo-200 truncate bg-neutral-950 px-2 py-1 rounded border border-neutral-800">
                     {publicUrl}
                   </code>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={copyLink}
-                    className="shrink-0 text-orange-300 hover:text-orange-200"
+                    className="shrink-0 text-indigo-200 hover:text-indigo-200"
                   >
                     {linkCopied ? (
                       <Check className="h-3.5 w-3.5" />
@@ -255,7 +255,7 @@ export default function WaiverEditorCard({ gymSlug }: Props) {
                     href={publicUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 text-orange-300 hover:text-orange-200 text-xs inline-flex items-center"
+                    className="shrink-0 text-indigo-200 hover:text-indigo-200 text-xs inline-flex items-center"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -280,7 +280,7 @@ export default function WaiverEditorCard({ gymSlug }: Props) {
             </p>
             <Button
               onClick={() => setEditing(true)}
-              className="bg-orange-500 hover:bg-orange-400 text-white"
+              className="bg-indigo-500 hover:bg-indigo-400 text-white"
             >
               Set up waiver
             </Button>
