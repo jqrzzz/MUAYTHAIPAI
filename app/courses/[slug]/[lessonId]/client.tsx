@@ -26,6 +26,12 @@ interface Course {
   slug: string
 }
 
+interface GalleryItem {
+  url: string
+  caption?: string | null
+  alt?: string | null
+}
+
 interface Lesson {
   id: string
   title: string
@@ -38,6 +44,8 @@ interface Lesson {
   drill_duration_minutes: number | null
   estimated_minutes: number | null
   is_preview: boolean
+  hero_image_url: string | null
+  gallery: GalleryItem[] | null
 }
 
 interface NavLesson {
@@ -182,6 +190,18 @@ export default function LessonPlayerClient({
         <main className="flex-1">
           {/* Content area */}
           <div className="mx-auto max-w-3xl px-4 py-8">
+            {/* Hero image — shows above the video / body for any lesson type */}
+            {lesson.hero_image_url && (
+              <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={lesson.hero_image_url}
+                  alt={lesson.title}
+                  className="w-full max-h-[480px] object-cover"
+                />
+              </div>
+            )}
+
             {/* Video lesson */}
             {lesson.content_type === "video" && lesson.video_url && (
               <VideoPlayer url={lesson.video_url} />
@@ -229,6 +249,35 @@ export default function LessonPlayerClient({
               <div className="mt-6 text-sm text-neutral-400 leading-relaxed">
                 {lesson.description}
               </div>
+            )}
+
+            {/* Photo gallery — step-by-step photos, freeze frames, target zones */}
+            {lesson.gallery && lesson.gallery.length > 0 && (
+              <section className="mt-8">
+                <h2 className="text-sm font-medium text-neutral-300 mb-3">
+                  Reference photos
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {lesson.gallery.map((item, i) => (
+                    <figure
+                      key={i}
+                      className="rounded-lg overflow-hidden border border-white/10 bg-black/40"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.url}
+                        alt={item.alt || item.caption || `Reference ${i + 1}`}
+                        className="w-full aspect-square object-cover"
+                      />
+                      {item.caption && (
+                        <figcaption className="px-2 py-1.5 text-[11px] text-neutral-400 leading-snug">
+                          {item.caption}
+                        </figcaption>
+                      )}
+                    </figure>
+                  ))}
+                </div>
+              </section>
             )}
 
             {/* Error message */}

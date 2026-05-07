@@ -43,6 +43,7 @@ interface SuggestedLesson {
 
 interface Course {
   id: string
+  org_id: string | null
   title: string
   slug: string
   description: string | null
@@ -317,6 +318,7 @@ export default function CourseModulesView({
       <CourseLessonEditor
         lessonId={editingLesson.id}
         courseId={course.id}
+        courseOrgId={course.org_id}
         moduleId={editingLesson.moduleId}
         apiBase={apiBase}
         onBack={() => { setEditingLesson(null); fetchModules() }}
