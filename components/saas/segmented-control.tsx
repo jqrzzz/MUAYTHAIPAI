@@ -33,10 +33,10 @@ export function SegmentedControl<T extends string>({
           <button
             key={opt.value}
             onClick={() => onValueChange(opt.value)}
-            className={`inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[12px] font-medium transition-all ${
+            className={`inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[12px] font-medium transition-[background-color,color,transform,box-shadow] duration-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${
               active
-                ? "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700/60"
-                : "text-zinc-500 hover:text-zinc-200"
+                ? "bg-zinc-800 text-white shadow-[0_1px_2px_rgba(0,0,0,0.3)] ring-1 ring-zinc-700/60"
+                : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40"
             }`}
           >
             {Icon && <Icon className="h-3 w-3" />}

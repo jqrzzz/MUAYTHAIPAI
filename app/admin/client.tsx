@@ -413,10 +413,10 @@ export default function AdminDashboardClient({
                     <button
                       key={item.id}
                       onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-[13px] transition-colors ${
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-[13px] transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${
                         activeTab === item.id
-                          ? "bg-indigo-500/15 text-indigo-200 ring-1 ring-indigo-500/25"
-                          : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900"
+                          ? "bg-indigo-500/15 text-indigo-200 ring-1 ring-indigo-500/25 shadow-[inset_2px_0_0_rgb(99,102,241)]"
+                          : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60"
                       }`}
                     >
                       {item.icon === null ? (
@@ -495,10 +495,10 @@ export default function AdminDashboardClient({
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
                     title={sidebarCollapsed ? `${item.label} (${item.labelTh})` : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-[13px] transition-colors mb-0.5 relative ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-[13px] mb-0.5 relative transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${
                       activeTab === item.id
-                        ? "bg-indigo-500/15 text-indigo-200 ring-1 ring-indigo-500/25"
-                        : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900"
+                        ? "bg-indigo-500/15 text-indigo-200 ring-1 ring-indigo-500/25 shadow-[inset_2px_0_0_rgb(99,102,241)]"
+                        : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60"
                     } ${sidebarCollapsed ? "justify-center" : ""}`}
                   >
                     {item.icon === null ? (
@@ -545,52 +545,40 @@ export default function AdminDashboardClient({
       {/* Mobile bottom navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-900/80 px-2 py-2 safe-area-inset-bottom">
         <div className="flex items-center justify-around">
-          <button
+          <BottomNavBtn
+            active={activeTab === "today"}
+            icon={<Calendar className="w-5 h-5" />}
+            label="Today"
             onClick={() => setActiveTab("today")}
-            className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${
-              activeTab === "today" ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            <Calendar className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Today</span>
-          </button>
-          <button
+          />
+          <BottomNavBtn
+            active={activeTab === "students"}
+            icon={<GraduationCap className="w-5 h-5" />}
+            label="Students"
             onClick={() => setActiveTab("students")}
-            className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${
-              activeTab === "students" ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            <GraduationCap className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Students</span>
-          </button>
+          />
           <button
             onClick={() => setActiveTab("ockock")}
-            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl -mt-4 bg-gradient-to-br from-indigo-400 to-indigo-600 ring-1 ring-indigo-300/30 shadow-[0_8px_24px_-6px_rgba(99,102,241,0.6)] ${
-              activeTab === "ockock" ? "ring-2 ring-indigo-300/60" : ""
+            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl -mt-4 bg-gradient-to-br from-indigo-400 to-indigo-600 ring-1 ring-indigo-300/30 shadow-[0_8px_24px_-6px_rgba(99,102,241,0.6)] transition-[transform,box-shadow] duration-200 active:scale-95 ${
+              activeTab === "ockock" ? "ring-2 ring-indigo-300/60 scale-[1.02]" : ""
             }`}
           >
             <OckOckAvatar size={26} />
             <span className="text-[10px] text-white font-medium">OckOck</span>
           </button>
-          <button
+          <BottomNavBtn
+            active={activeTab === "marketing"}
+            icon={<Megaphone className="w-5 h-5" />}
+            label="Marketing"
             onClick={() => setActiveTab("marketing")}
-            className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${
-              activeTab === "marketing" ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            <Megaphone className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Marketing</span>
-          </button>
-          <button
+          />
+          <BottomNavBtn
+            active={false}
+            icon={<MoreHorizontal className="w-5 h-5" />}
+            label="More"
             onClick={() => setMobileMenuOpen(true)}
-            className="relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 transition-colors"
-          >
-            <MoreHorizontal className="w-5 h-5" />
-            <span className="text-[10px] font-medium">More</span>
-            {inboxCounts.total > 0 && (
-              <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-zinc-950" />
-            )}
-          </button>
+            badgeDot={inboxCounts.total > 0}
+          />
         </div>
       </nav>
 
@@ -598,7 +586,12 @@ export default function AdminDashboardClient({
       <main className={`min-h-screen pb-20 md:pb-0 transition-all duration-300 ${
         sidebarCollapsed ? "md:ml-16" : "md:ml-56"
       }`}>
-        <div className="p-4 md:p-6">
+        {/* keyed wrapper so each tab change replays a quick fade-in,
+            making the transition feel intentional instead of abrupt */}
+        <div
+          key={activeTab}
+          className="p-4 md:p-6 animate-in fade-in duration-200"
+        >
           {activeTab === "profile" && <ProfileTab />}
 
           {/* Action Feedback Banner */}
@@ -770,5 +763,42 @@ export default function AdminDashboardClient({
         </div>
       </main>
     </div>
+  )
+}
+
+/**
+ * Mobile bottom-nav button. Active state lifts color to indigo + adds a
+ * subtle indicator dot above the icon. Press state shrinks slightly for
+ * tactile feedback.
+ */
+function BottomNavBtn({
+  active,
+  icon,
+  label,
+  onClick,
+  badgeDot,
+}: {
+  active: boolean
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+  badgeDot?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-[color,transform] duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${
+        active ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
+      }`}
+    >
+      {icon}
+      <span className="text-[10px] font-medium">{label}</span>
+      {active && (
+        <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-400 shadow-[0_0_4px_rgba(129,140,248,0.8)]" />
+      )}
+      {badgeDot && (
+        <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-zinc-950" />
+      )}
+    </button>
   )
 }

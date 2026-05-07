@@ -516,10 +516,10 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[12px] font-medium transition-all ${
+                className={`flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[12px] font-medium transition-[color,border-color,background-color] duration-150 focus-visible:outline-none focus-visible:bg-zinc-900/50 ${
                   activeTab === tab.id
                     ? "border-indigo-400 text-white"
-                    : "border-transparent text-zinc-500 hover:text-zinc-200"
+                    : "border-transparent text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40"
                 }`}
               >
                 {tab.id === "ockock" ? (
@@ -534,8 +534,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         </div>
       </div>
 
-      {/* Content */}
-      <main className="mx-auto max-w-6xl p-4">
+      {/* Content — keyed wrapper so each tab change replays a quick fade */}
+      <main key={activeTab} className="mx-auto max-w-6xl p-4 animate-in fade-in duration-200">
         {/* Command Tab — AI command bar over the network */}
         {activeTab === "command" && <PlatformCommandBar />}
 

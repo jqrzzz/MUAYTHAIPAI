@@ -42,7 +42,7 @@ export function AuthCard({
       />
 
       <div className="relative flex min-h-screen items-center justify-center px-5 py-10">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-2 duration-500">
           {!hideBack && (
             <Link
               href={backHref}

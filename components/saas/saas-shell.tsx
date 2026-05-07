@@ -20,6 +20,9 @@ export function SaasShell({
     <div
       className={cn(
         "min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased overflow-x-hidden",
+        // Page mount: subtle fade so content arrives instead of pops.
+        // Combined with reduced-motion respect via global CSS.
+        "animate-in fade-in duration-300",
         className,
       )}
     >

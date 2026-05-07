@@ -1222,12 +1222,15 @@ function NavButton({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors relative ${
+      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl relative transition-[color,transform] duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${
         active ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-200"
       }`}
     >
       {icon}
       <span className="text-[10px] font-medium">{label}</span>
+      {active && (
+        <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-400 shadow-[0_0_4px_rgba(129,140,248,0.8)]" />
+      )}
       {badge && (
         <span className="absolute -top-1 right-0 w-4 h-4 bg-indigo-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
           {badge}
