@@ -39,6 +39,7 @@ import {
 import CurriculumTab from "@/components/platform-admin/curriculum-tab"
 import AdoptionTab from "@/components/platform-admin/adoption-tab"
 import BookingsTab from "@/components/platform-admin/bookings-tab"
+import SubscriptionsTab from "@/components/platform-admin/subscriptions-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
@@ -162,6 +163,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     | "campaigns"
     | "adoption"
     | "bookings"
+    | "subscriptions"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -517,6 +519,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               { id: "courses", label: "Curriculum", icon: BookOpen },
               { id: "adoption", label: "Adoption", icon: TrendingUp },
               { id: "bookings", label: "Bookings", icon: Receipt },
+              { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
               { id: "payouts", label: "Payouts", icon: DollarSign },
               { id: "blacklist", label: "Blacklist", icon: Shield },
               { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -565,6 +568,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         {activeTab === "adoption" && <AdoptionTab />}
 
         {activeTab === "bookings" && <BookingsTab />}
+
+        {activeTab === "subscriptions" && <SubscriptionsTab />}
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
