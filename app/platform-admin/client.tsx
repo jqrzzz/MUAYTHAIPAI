@@ -36,12 +36,14 @@ import {
   TrendingUp,
   Receipt,
   LifeBuoy,
+  Activity,
 } from "lucide-react"
 import CurriculumTab from "@/components/platform-admin/curriculum-tab"
 import AdoptionTab from "@/components/platform-admin/adoption-tab"
 import BookingsTab from "@/components/platform-admin/bookings-tab"
 import SubscriptionsTab from "@/components/platform-admin/subscriptions-tab"
 import SupportTab from "@/components/platform-admin/support-tab"
+import AuditLogTab from "@/components/platform-admin/audit-log-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
@@ -167,6 +169,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     | "bookings"
     | "subscriptions"
     | "support"
+    | "audit"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -524,6 +527,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               { id: "bookings", label: "Bookings", icon: Receipt },
               { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
               { id: "support", label: "Support", icon: LifeBuoy },
+              { id: "audit", label: "Audit", icon: Activity },
               { id: "payouts", label: "Payouts", icon: DollarSign },
               { id: "blacklist", label: "Blacklist", icon: Shield },
               { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -576,6 +580,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         {activeTab === "subscriptions" && <SubscriptionsTab />}
 
         {activeTab === "support" && <SupportTab />}
+
+        {activeTab === "audit" && <AuditLogTab />}
 
         {/* Overview Tab */}
         {activeTab === "overview" && (

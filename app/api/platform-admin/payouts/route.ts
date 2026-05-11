@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit-log"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -224,6 +225,31 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // Resolve gym name for the audit label (best effort)
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", orgId)
+    .maybeSingle()
+
+  await logAudit(supabase, {
+    action: "payout.settle",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    targetType: "gym_payout",
+    targetId: payout?.id,
+    targetLabel: org?.name ?? null,
+    metadata: {
+      org_id: orgId,
+      period_start: periodStart,
+      period_end: periodEnd,
+      amount_usd: amountUsd,
+      commission_usd: commissionUsd,
+      amount_thb: amountThb,
+    },
+    request,
+  })
 
   return NextResponse.json({ success: true, payout })
 }

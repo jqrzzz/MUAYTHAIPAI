@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit-log"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -34,6 +35,17 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
+
+  await logAudit(supabase, {
+    action: "blacklist.add",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    targetType: "blacklist_entry",
+    targetId: data.id,
+    targetLabel: name,
+    metadata: { nationality, description },
+    request,
+  })
 
   return NextResponse.json({ success: true, entry: data })
 }

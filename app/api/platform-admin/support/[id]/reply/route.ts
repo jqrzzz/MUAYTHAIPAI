@@ -17,6 +17,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { EmailService } from "@/lib/email-service"
+import { logAudit } from "@/lib/audit-log"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -112,6 +113,23 @@ export async function POST(
       status: mark_status === "resolved" ? "closed" : "open",
     })
     .eq("id", ticket.conversation_id)
+
+  await logAudit(supabase, {
+    action: mark_status === "resolved" ? "support.resolve" : "support.reply",
+    actorUserId: user?.id ?? null,
+    actorEmail: user?.email ?? null,
+    targetType: "support_ticket",
+    targetId: id,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    targetLabel: ((ticket as any).subject ?? null) as string | null,
+    metadata: {
+      gym_name: gymName,
+      recipient_email: recipientEmail,
+      mark_status,
+      body_preview: body.slice(0, 200),
+    },
+    request,
+  })
 
   // Email the gym admin so they don't have to keep checking. Best-effort
   // — the reply is already saved in the ticket thread, email is just a
