@@ -129,6 +129,7 @@ export default function NetworkTab() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [sourceFilter, setSourceFilter] = useState("all")
   const [search, setSearch] = useState("")
+  const [view, setView] = useState<"list" | "pipeline">("list")
   const [selected, setSelected] = useState<DiscoveredGymRow | null>(null)
   const detailRef = useRef<HTMLDivElement>(null)
 
@@ -561,9 +562,41 @@ export default function NetworkTab() {
             ))}
           </SelectContent>
         </Select>
+        <div className="inline-flex rounded-md ring-1 ring-zinc-800 bg-zinc-900 overflow-hidden">
+          <button
+            onClick={() => setView("list")}
+            className={`px-3 py-2 text-xs font-medium transition-colors ${
+              view === "list"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:text-zinc-100"
+            }`}
+            title="Flat list view"
+          >
+            List
+          </button>
+          <button
+            onClick={() => setView("pipeline")}
+            className={`px-3 py-2 text-xs font-medium transition-colors border-l border-zinc-800 ${
+              view === "pipeline"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:text-zinc-100"
+            }`}
+            title="Pipeline / kanban view"
+          >
+            Pipeline
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
+        {view === "pipeline" ? (
+          <PipelineKanban
+            gyms={gyms}
+            loading={loading}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        ) : (
         <Card className="border-zinc-800 bg-zinc-900">
           <CardContent className="p-0">
             {loading ? (
@@ -641,6 +674,7 @@ export default function NetworkTab() {
             )}
           </CardContent>
         </Card>
+        )}
 
         <div ref={detailRef}>
           <DetailPanel
@@ -1049,5 +1083,147 @@ function DetailPanel({
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+/* ─── Pipeline kanban view ─────────────────────────────────────── */
+
+const PIPELINE_COLUMNS: Array<{
+  id: string
+  label: string
+  statuses: DiscoveryStatus[]
+  tone: string
+}> = [
+  {
+    id: "discovered",
+    label: "Discovered",
+    statuses: ["pending", "reviewed"],
+    tone: "ring-zinc-700/60 text-zinc-300",
+  },
+  {
+    id: "verified",
+    label: "Verified",
+    statuses: ["verified"],
+    tone: "ring-emerald-500/30 text-emerald-300",
+  },
+  {
+    id: "invited",
+    label: "Invited",
+    statuses: ["invited"],
+    tone: "ring-amber-500/30 text-amber-300",
+  },
+  {
+    id: "onboarded",
+    label: "Onboarded",
+    statuses: ["onboarded"],
+    tone: "ring-orange-500/30 text-orange-300",
+  },
+  {
+    id: "cold",
+    label: "Cold / dup",
+    statuses: ["ignored", "duplicate"],
+    tone: "ring-zinc-800 text-zinc-500",
+  },
+]
+
+function PipelineKanban({
+  gyms,
+  loading,
+  selected,
+  onSelect,
+}: {
+  gyms: DiscoveredGymRow[]
+  loading: boolean
+  selected: DiscoveredGymRow | null
+  onSelect: (g: DiscoveredGymRow) => void
+}) {
+  if (loading) {
+    return (
+      <Card className="border-zinc-800 bg-zinc-900">
+        <CardContent className="text-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-zinc-500" />
+        </CardContent>
+      </Card>
+    )
+  }
+  if (gyms.length === 0) {
+    return (
+      <Card className="border-zinc-800 bg-zinc-900">
+        <CardContent className="text-center py-12 text-zinc-500">
+          <Map className="h-10 w-10 mx-auto mb-3 opacity-40" />
+          <p>No discovered gyms yet</p>
+          <p className="text-sm mt-1">Hit Discover to start crawling.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Bucket by column
+  const buckets: Record<string, DiscoveredGymRow[]> = {}
+  for (const col of PIPELINE_COLUMNS) buckets[col.id] = []
+  for (const g of gyms) {
+    const col = PIPELINE_COLUMNS.find((c) => c.statuses.includes(g.status))
+    if (col) buckets[col.id].push(g)
+  }
+
+  return (
+    <div className="overflow-x-auto -mx-1">
+      <div className="flex gap-3 px-1 min-w-min">
+        {PIPELINE_COLUMNS.map((col) => (
+          <div
+            key={col.id}
+            className="flex-1 min-w-[220px] rounded-xl ring-1 ring-zinc-800 bg-zinc-900/50 overflow-hidden flex flex-col"
+          >
+            <div className={`px-3 py-2 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80`}>
+              <span className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] font-medium ${col.tone.split(" ")[1] ?? "text-zinc-300"}`}>
+                {col.label}
+              </span>
+              <span className="text-[11px] tabular-nums text-zinc-500">
+                {buckets[col.id].length}
+              </span>
+            </div>
+            <div className="p-2 space-y-1.5 max-h-[64vh] overflow-y-auto">
+              {buckets[col.id].length === 0 ? (
+                <p className="text-[11px] text-zinc-700 text-center py-4">—</p>
+              ) : (
+                buckets[col.id].map((gym) => (
+                  <button
+                    key={gym.id}
+                    onClick={() => onSelect(gym)}
+                    className={`w-full text-left rounded-lg p-2 transition-colors ring-1 ${
+                      selected?.id === gym.id
+                        ? "bg-indigo-500/10 ring-indigo-500/30"
+                        : "bg-zinc-950/40 ring-zinc-800 hover:bg-zinc-900/70 hover:ring-zinc-700"
+                    }`}
+                  >
+                    <p className="text-[12px] text-zinc-100 font-medium line-clamp-2 leading-snug">
+                      {gym.name}
+                    </p>
+                    {(gym.city || gym.province) && (
+                      <p className="text-[10px] text-zinc-500 mt-0.5 truncate flex items-center gap-1">
+                        <MapPin className="h-2.5 w-2.5 shrink-0" />
+                        {gym.city}
+                        {gym.province ? `, ${gym.province}` : ""}
+                      </p>
+                    )}
+                    <div className="mt-1 flex items-center gap-1.5 text-[10px] text-zinc-600">
+                      {gym.google_rating != null && (
+                        <span className="inline-flex items-center gap-0.5">
+                          <Star className="h-2.5 w-2.5" />
+                          {gym.google_rating}
+                        </span>
+                      )}
+                      {gym.source && (
+                        <span className="capitalize">{gym.source.replace(/_/g, " ")}</span>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
