@@ -117,7 +117,8 @@ export default async function VerifyCertificatePage({ params }: Props) {
     .select(`
       skill_index, notes, signed_off_at,
       signed_off_by_user:signed_off_by (
-        full_name, public_instructor_enabled, public_instructor_handle
+        full_name, public_instructor_enabled, public_instructor_handle,
+        is_verified_examiner
       )
     `)
     .eq("student_id", student.id)
@@ -138,19 +139,22 @@ export default async function VerifyCertificatePage({ params }: Props) {
       signed_at: s.signed_off_at as string,
       signer_name: (signer?.full_name as string | null) ?? null,
       signer_handle: instructorHandle,
+      signer_verified: !!signer?.is_verified_examiner,
       notes: s.notes as string | null,
     }
   })
   const signoffByIndex = new Map(signoffs.map((s) => [s.skill_index, s]))
 
-  // Unique examiners — preserve handle if any, deduped by name
-  const examinerMap = new Map<string, string | null>()
+  // Unique examiners — preserve handle + verified flag, deduped by name
+  const examinerMap = new Map<string, { handle: string | null; verified: boolean }>()
   for (const s of signoffs) {
     if (s.signer_name && !examinerMap.has(s.signer_name)) {
-      examinerMap.set(s.signer_name, s.signer_handle)
+      examinerMap.set(s.signer_name, { handle: s.signer_handle, verified: s.signer_verified })
     }
   }
-  const examiners = Array.from(examinerMap.entries()) as Array<[string, string | null]>
+  const examiners = Array.from(examinerMap.entries()) as Array<
+    [string, { handle: string | null; verified: boolean }]
+  >
 
   const shareText = `I earned the ${levelName} certification (Level ${cert.level_number}) in Muay Thai at ${org.name}! 🥊`
 
@@ -255,11 +259,11 @@ export default async function VerifyCertificatePage({ params }: Props) {
                   {examiners.length === 1 ? "Examiner" : "Examiners"}
                 </p>
                 <p className="text-neutral-200 text-[13px]">
-                  {examiners.map(([name, handle], i) => (
-                    <span key={name}>
-                      {handle ? (
+                  {examiners.map(([name, info], i) => (
+                    <span key={name} className="inline-flex items-center gap-1">
+                      {info.handle ? (
                         <a
-                          href={`/i/${handle}`}
+                          href={`/i/${info.handle}`}
                           className="text-neutral-100 underline decoration-orange-400/40 underline-offset-2 hover:decoration-orange-300 transition-colors"
                         >
                           {name}
@@ -267,7 +271,13 @@ export default async function VerifyCertificatePage({ params }: Props) {
                       ) : (
                         name
                       )}
-                      {i < examiners.length - 1 ? ", " : ""}
+                      {info.verified && (
+                        <BadgeCheck
+                          className="h-3 w-3 text-blue-400"
+                          aria-label="Federation-verified examiner"
+                        />
+                      )}
+                      {i < examiners.length - 1 ? <span>,&nbsp;</span> : null}
                     </span>
                   ))}
                 </p>
@@ -311,7 +321,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
                         {signoff && (
                           <p className="text-[11px] text-neutral-500 mt-0.5">
                             {signoff.signer_name ? (
-                              <>
+                              <span className="inline-flex items-center gap-1">
                                 Signed by{" "}
                                 {signoff.signer_handle ? (
                                   <a
@@ -325,7 +335,13 @@ export default async function VerifyCertificatePage({ params }: Props) {
                                     {signoff.signer_name}
                                   </strong>
                                 )}
-                              </>
+                                {signoff.signer_verified && (
+                                  <BadgeCheck
+                                    className="h-2.5 w-2.5 text-blue-400"
+                                    aria-label="Federation-verified examiner"
+                                  />
+                                )}
+                              </span>
                             ) : (
                               "Signed by gym staff"
                             )}

@@ -20,7 +20,9 @@ import {
   Users,
   Building2,
   CheckCircle2,
+  BadgeCheck,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface TrainerRow {
   id: string
@@ -43,6 +45,11 @@ interface TrainerPassport {
     display_name: string | null
     phone: string | null
     created_at: string
+    is_verified_examiner: boolean
+    verified_examiner_at: string | null
+    verified_examiner_note: string | null
+    public_instructor_enabled: boolean
+    public_instructor_handle: string | null
   }
   summary: {
     total_signoffs: number
@@ -252,7 +259,18 @@ export default function TrainersTab() {
         </Card>
 
         <div ref={detailRef}>
-          <TrainerPanel passport={passport} loading={passportLoading} />
+          <TrainerPanel
+            passport={passport}
+            loading={passportLoading}
+            onPassportChanged={() => {
+              if (!selectedId) return
+              fetch(`/api/platform-admin/trainers/${selectedId}`)
+                .then(async (r) => {
+                  if (r.ok) setPassport(await r.json())
+                })
+                .catch(() => {})
+            }}
+          />
         </div>
       </div>
     </div>
@@ -262,9 +280,11 @@ export default function TrainersTab() {
 function TrainerPanel({
   passport,
   loading,
+  onPassportChanged,
 }: {
   passport: TrainerPassport | null
   loading: boolean
+  onPassportChanged: () => void
 }) {
   if (loading) {
     return (
@@ -296,12 +316,38 @@ function TrainerPanel({
             {name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-semibold text-white">{name}</h3>
+            <h3 className="text-base font-semibold text-white inline-flex items-center gap-1.5">
+              {name}
+              {t.is_verified_examiner && (
+                <BadgeCheck
+                  className="h-4 w-4 text-blue-400"
+                  aria-label="Verified examiner"
+                />
+              )}
+            </h3>
             <p className="text-xs text-zinc-500 truncate">{t.email}</p>
             <p className="text-xs text-zinc-500 mt-0.5">
               Joined {new Date(t.created_at).toLocaleDateString()}
+              {t.public_instructor_handle && (
+                <>
+                  {" · "}
+                  <a
+                    href={`/i/${t.public_instructor_handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-300 hover:text-indigo-200"
+                  >
+                    /i/{t.public_instructor_handle}
+                  </a>
+                </>
+              )}
             </p>
           </div>
+          <VerifyToggle
+            userId={t.id}
+            verified={t.is_verified_examiner}
+            onChanged={onPassportChanged}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -458,4 +504,76 @@ function timeAgo(iso: string) {
   if (days < 30) return `${days}d ago`
   if (days < 365) return `${Math.floor(days / 30)}mo ago`
   return `${Math.floor(days / 365)}y ago`
+}
+
+/**
+ * Tiny shield-toggle to grant or revoke the "Verified Examiner" badge.
+ * Platform-admin only. Writes to audit log via the POST endpoint.
+ */
+function VerifyToggle({
+  userId,
+  verified,
+  onChanged,
+}: {
+  userId: string
+  verified: boolean
+  onChanged: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+
+  const toggle = async () => {
+    if (busy) return
+    const next = !verified
+    let note: string | undefined
+    if (next) {
+      const input = window.prompt(
+        "Verification note (optional — appears on the public profile)",
+        "",
+      )
+      if (input === null) return // user cancelled
+      note = input.trim() || undefined
+    } else {
+      const ok = window.confirm("Revoke verified-examiner badge?")
+      if (!ok) return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/platform-admin/trainers/${userId}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verified: next, note }),
+      })
+      if (res.ok) onChanged()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Button
+      variant={verified ? "default" : "outline"}
+      size="sm"
+      onClick={toggle}
+      disabled={busy}
+      className={
+        verified
+          ? "bg-blue-500/15 text-blue-200 hover:bg-blue-500/25 border border-blue-500/30 shrink-0"
+          : "bg-transparent text-zinc-400 hover:text-zinc-100 border-zinc-700 shrink-0"
+      }
+      title={
+        verified
+          ? "Revoke verified-examiner badge"
+          : "Grant verified-examiner badge"
+      }
+    >
+      {busy ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <BadgeCheck className="h-3 w-3" />
+      )}
+      <span className="ml-1 text-[11px]">
+        {verified ? "Verified" : "Verify"}
+      </span>
+    </Button>
+  )
 }

@@ -49,7 +49,7 @@ export default async function InstructorPage({ params }: Props) {
   const { data: user } = await supabase
     .from("users")
     .select(
-      "id, full_name, email, public_instructor_enabled, public_instructor_handle, public_passport_enabled, public_passport_handle",
+      "id, full_name, email, public_instructor_enabled, public_instructor_handle, public_passport_enabled, public_passport_handle, is_verified_examiner, verified_examiner_at, verified_examiner_note",
     )
     .eq("public_instructor_handle", slug)
     .maybeSingle()
@@ -168,11 +168,22 @@ export default async function InstructorPage({ params }: Props) {
           )}
           <p className="font-display text-[11px] uppercase tracking-[0.28em] text-neutral-500 mb-3 inline-flex items-center gap-1.5">
             <BadgeCheck className="h-3 w-3 text-emerald-400" />
-            Verified Instructor
+            {user.is_verified_examiner ? "Verified Examiner · Federation Trusted" : "Verified Instructor"}
           </p>
-          <h1 className="font-display text-[44px] sm:text-[56px] leading-[1.05] text-white">
+          <h1 className="font-display text-[44px] sm:text-[56px] leading-[1.05] text-white inline-flex items-center justify-center gap-3">
             {displayName}
+            {user.is_verified_examiner && (
+              <BadgeCheck
+                className="h-7 w-7 text-blue-400 shrink-0"
+                aria-label="Federation-verified examiner"
+              />
+            )}
           </h1>
+          {user.is_verified_examiner && user.verified_examiner_note && (
+            <p className="font-serif italic text-[13px] text-blue-300/70 mt-2 max-w-xl mx-auto">
+              {user.verified_examiner_note}
+            </p>
+          )}
           {primary?.title && (
             <p className="font-serif italic text-[18px] text-neutral-400 mt-2">
               {primary.title}
