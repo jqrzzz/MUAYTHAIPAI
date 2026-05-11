@@ -401,6 +401,14 @@ export default function CourseDetailClient({
                       <p className="text-sm font-medium text-emerald-400">Course Completed</p>
                     </div>
                   )}
+                  <Link
+                    href={`/courses/${course.slug}/study-pack`}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 py-2 text-sm text-neutral-300 transition-colors"
+                    title="Open a printable study pack of the entire course"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Download study pack
+                  </Link>
                 </>
               ) : (
                 <>

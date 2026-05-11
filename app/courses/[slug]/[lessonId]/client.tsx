@@ -13,7 +13,9 @@ import {
   Dumbbell,
   HelpCircle,
   BookOpen,
+  BookText,
   Loader2,
+  Printer,
 } from "lucide-react"
 
 // ============================================
@@ -95,6 +97,25 @@ export default function LessonPlayerClient({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
+  // Reading mode: serif typography + off-white background, hides video,
+  // for long-form reading on a phone in transit / before training.
+  // Persisted to localStorage so it sticks across lessons.
+  const [readingMode, setReadingMode] = useState(false)
+  useEffect(() => {
+    setReadingMode(
+      typeof window !== "undefined" &&
+        window.localStorage.getItem("mtp_reading_mode") === "1",
+    )
+  }, [])
+  const toggleReadingMode = () => {
+    setReadingMode((on) => {
+      const next = !on
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("mtp_reading_mode", next ? "1" : "0")
+      }
+      return next
+    })
+  }
 
   // Build flat lesson list for prev/next navigation
   const flatLessons = modules.flatMap((m) => m.lessons)
@@ -158,30 +179,89 @@ export default function LessonPlayerClient({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div
+      className={`min-h-screen ${
+        readingMode ? "bg-stone-50 text-stone-900" : "bg-neutral-950"
+      }`}
+    >
       {/* Top bar */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-neutral-950/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3">
+      <header
+        className={`sticky top-0 z-50 backdrop-blur-sm border-b ${
+          readingMode
+            ? "border-stone-200 bg-stone-50/95"
+            : "border-white/10 bg-neutral-950/95"
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-3 gap-2">
           <Link
             href={`/courses/${course.slug}`}
-            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
+            className={`flex items-center gap-1.5 text-sm shrink-0 ${
+              readingMode
+                ? "text-stone-600 hover:text-stone-900"
+                : "text-neutral-400 hover:text-white"
+            }`}
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">{course.title}</span>
           </Link>
 
-          <div className="text-center">
-            <p className="text-xs text-neutral-500">{moduleName}</p>
-            <p className="text-sm font-medium text-white">{lesson.title}</p>
+          <div className="text-center min-w-0 flex-1">
+            <p
+              className={`text-xs truncate ${
+                readingMode ? "text-stone-500" : "text-neutral-500"
+              }`}
+            >
+              {moduleName}
+            </p>
+            <p
+              className={`text-sm font-medium truncate ${
+                readingMode ? "text-stone-900" : "text-white"
+              }`}
+            >
+              {lesson.title}
+            </p>
           </div>
 
-          <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-neutral-400 hover:text-white"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Contents</span>
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={toggleReadingMode}
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                readingMode
+                  ? "border-stone-300 bg-stone-100 text-stone-700 hover:bg-stone-200"
+                  : "border-white/10 text-neutral-400 hover:text-white"
+              }`}
+              title="Toggle reading mode"
+              aria-pressed={readingMode}
+            >
+              <BookText className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                {readingMode ? "Reading" : "Read"}
+              </span>
+            </button>
+            <Link
+              href={`/courses/${course.slug}/study-pack`}
+              className={`hidden sm:inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                readingMode
+                  ? "border-stone-300 text-stone-700 hover:bg-stone-100"
+                  : "border-white/10 text-neutral-400 hover:text-white"
+              }`}
+              title="Open the printable study pack for this whole course"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              Study pack
+            </Link>
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                readingMode
+                  ? "border-stone-300 text-stone-700 hover:bg-stone-100"
+                  : "border-white/10 text-neutral-400 hover:text-white"
+              }`}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Contents</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -189,10 +269,31 @@ export default function LessonPlayerClient({
         {/* Main content */}
         <main className="flex-1">
           {/* Content area */}
-          <div className="mx-auto max-w-3xl px-4 py-8">
+          <div className={`mx-auto px-4 py-8 ${readingMode ? "max-w-[680px]" : "max-w-3xl"}`}>
+            {/* Reading mode: large display title at the top of the page */}
+            {readingMode && (
+              <div className="mb-6 text-center">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">
+                  {moduleName}
+                </p>
+                <h1
+                  className="text-[36px] leading-tight text-stone-900 mt-2"
+                  style={{ fontFamily: 'Cinzel, "Cormorant Garamond", Georgia, serif' }}
+                >
+                  {lesson.title}
+                </h1>
+              </div>
+            )}
+
             {/* Hero image — shows above the video / body for any lesson type */}
             {lesson.hero_image_url && (
-              <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
+              <div
+                className={`mb-6 overflow-hidden rounded-2xl border ${
+                  readingMode
+                    ? "border-stone-200 bg-stone-100"
+                    : "border-white/10 bg-black"
+                }`}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={lesson.hero_image_url}
@@ -202,39 +303,101 @@ export default function LessonPlayerClient({
               </div>
             )}
 
-            {/* Video lesson */}
+            {/* Video lesson — replaced with poster + link in reading mode */}
             {lesson.content_type === "video" && lesson.video_url && (
-              <VideoPlayer url={lesson.video_url} />
+              readingMode ? (
+                <a
+                  href={lesson.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mb-6 block rounded-xl border border-stone-200 bg-stone-100 p-4 text-stone-700 hover:bg-stone-200 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-sm">
+                    <Play className="h-4 w-4" />
+                    <span>Watch the demonstration online</span>
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-1 truncate">
+                    {lesson.video_url}
+                  </p>
+                </a>
+              ) : (
+                <VideoPlayer url={lesson.video_url} />
+              )
             )}
 
             {/* Text lesson */}
             {lesson.content_type === "text" && lesson.text_content && (
-              <div className="prose prose-invert prose-sm max-w-none rounded-xl border border-white/10 bg-white/[0.02] p-6">
+              <div
+                className={
+                  readingMode
+                    ? "max-w-none text-stone-800 leading-[1.7] text-[16px]"
+                    : "prose prose-invert prose-sm max-w-none rounded-xl border border-white/10 bg-white/[0.02] p-6"
+                }
+                style={
+                  readingMode
+                    ? {
+                        fontFamily:
+                          '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+                      }
+                    : undefined
+                }
+              >
                 <div className="whitespace-pre-line">{lesson.text_content}</div>
               </div>
             )}
 
             {/* Drill lesson */}
             {lesson.content_type === "drill" && (
-              <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-6">
+              <div
+                className={`rounded-xl border p-6 ${
+                  readingMode
+                    ? "border-orange-300 bg-orange-50"
+                    : "border-orange-500/20 bg-orange-500/5"
+                }`}
+              >
                 <div className="flex items-center gap-2 mb-4">
-                  <Dumbbell className="h-5 w-5 text-orange-400" />
-                  <h2 className="text-lg font-semibold text-white">Training Drill</h2>
+                  <Dumbbell
+                    className={`h-5 w-5 ${
+                      readingMode ? "text-orange-700" : "text-orange-400"
+                    }`}
+                  />
+                  <h2
+                    className={`text-lg font-semibold ${
+                      readingMode ? "text-stone-900" : "text-white"
+                    }`}
+                  >
+                    Training Drill
+                  </h2>
                   {lesson.drill_duration_minutes && (
-                    <span className="ml-auto text-sm text-orange-400">
+                    <span
+                      className={`ml-auto text-sm ${
+                        readingMode ? "text-orange-700" : "text-orange-400"
+                      }`}
+                    >
                       {lesson.drill_duration_minutes} min
                     </span>
                   )}
                 </div>
                 {lesson.drill_instructions && (
-                  <div className="text-sm text-neutral-300 whitespace-pre-line leading-relaxed">
+                  <div
+                    className={`whitespace-pre-line leading-relaxed ${
+                      readingMode
+                        ? "text-stone-800 text-[16px]"
+                        : "text-sm text-neutral-300"
+                    }`}
+                    style={
+                      readingMode
+                        ? { fontFamily: '"Cormorant Garamond", Georgia, serif' }
+                        : undefined
+                    }
+                  >
                     {lesson.drill_instructions}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Quiz lesson */}
+            {/* Quiz lesson — keep dark in both modes for legibility (high contrast = answers) */}
             {lesson.content_type === "quiz" && quizQuestions && (
               <QuizPlayer
                 questions={quizQuestions}
@@ -246,7 +409,18 @@ export default function LessonPlayerClient({
 
             {/* Description */}
             {lesson.description && (
-              <div className="mt-6 text-sm text-neutral-400 leading-relaxed">
+              <div
+                className={`mt-6 leading-relaxed ${
+                  readingMode
+                    ? "text-stone-600 text-[15px] italic"
+                    : "text-sm text-neutral-400"
+                }`}
+                style={
+                  readingMode
+                    ? { fontFamily: '"Cormorant Garamond", Georgia, serif' }
+                    : undefined
+                }
+              >
                 {lesson.description}
               </div>
             )}
@@ -254,14 +428,24 @@ export default function LessonPlayerClient({
             {/* Photo gallery — step-by-step photos, freeze frames, target zones */}
             {lesson.gallery && lesson.gallery.length > 0 && (
               <section className="mt-8">
-                <h2 className="text-sm font-medium text-neutral-300 mb-3">
+                <h2
+                  className={`mb-3 ${
+                    readingMode
+                      ? "text-xs uppercase tracking-[0.18em] text-stone-500"
+                      : "text-sm font-medium text-neutral-300"
+                  }`}
+                >
                   Reference photos
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {lesson.gallery.map((item, i) => (
                     <figure
                       key={i}
-                      className="rounded-lg overflow-hidden border border-white/10 bg-black/40"
+                      className={`rounded-lg overflow-hidden border ${
+                        readingMode
+                          ? "border-stone-200 bg-stone-100"
+                          : "border-white/10 bg-black/40"
+                      }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -270,7 +454,11 @@ export default function LessonPlayerClient({
                         className="w-full aspect-square object-cover"
                       />
                       {item.caption && (
-                        <figcaption className="px-2 py-1.5 text-[11px] text-neutral-400 leading-snug">
+                        <figcaption
+                          className={`px-2 py-1.5 text-[11px] leading-snug ${
+                            readingMode ? "text-stone-700" : "text-neutral-400"
+                          }`}
+                        >
                           {item.caption}
                         </figcaption>
                       )}
@@ -286,11 +474,19 @@ export default function LessonPlayerClient({
             )}
 
             {/* Bottom actions */}
-            <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
+            <div
+              className={`mt-8 flex items-center justify-between border-t pt-6 ${
+                readingMode ? "border-stone-200" : "border-white/10"
+              }`}
+            >
               {prevLesson ? (
                 <Link
                   href={`/courses/${course.slug}/${prevLesson.id}`}
-                  className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
+                  className={`flex items-center gap-1.5 text-sm ${
+                    readingMode
+                      ? "text-stone-600 hover:text-stone-900"
+                      : "text-neutral-400 hover:text-white"
+                  }`}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
