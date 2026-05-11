@@ -4,6 +4,7 @@ import { randomBytes } from "crypto"
 import { LEVEL_IDS, getLevelById, getLevelIndex } from "@/lib/certification-levels"
 import { notifyStudentCertificateIssued } from "@/lib/student-notifications"
 import { notifyCertificateIssued } from "@/lib/notifications"
+import { EmailService } from "@/lib/email-service"
 
 // GET - List certificates issued by this gym
 export async function GET() {
@@ -261,7 +262,72 @@ export async function POST(request: Request) {
       .eq("status", "active")
   }
 
-  return NextResponse.json({ certificate })
+  // First-cert milestone — true when this insert took the gym's active
+  // cert count from 0 to 1. Drives the in-app celebration modal AND a
+  // one-time congrats email to the gym's owner.
+  let isFirstCert = false
+  let studentName: string | null = null
+  let gymName: string | null = null
+  if (certificate) {
+    const { count } = await supabase
+      .from("certificates")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", membership.org_id)
+      .eq("status", "active")
+    isFirstCert = (count ?? 0) === 1
+
+    if (isFirstCert) {
+      // Look up enrichment for both the modal AND the celebration email.
+      const [studentRes, ownerRes] = await Promise.all([
+        supabase
+          .from("users")
+          .select("full_name")
+          .eq("id", student.id)
+          .maybeSingle(),
+        supabase
+          .from("org_members")
+          .select(
+            "user_id, users:user_id (full_name, email), organizations:org_id (name)",
+          )
+          .eq("org_id", membership.org_id)
+          .eq("status", "active")
+          .eq("role", "owner")
+          .limit(1)
+          .maybeSingle(),
+      ])
+      studentName = (studentRes.data?.full_name as string | null) || null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ownerRow = ownerRes.data as any
+      const ownerEmail = ownerRow?.users?.email as string | undefined
+      const ownerName = ownerRow?.users?.full_name as string | undefined
+      gymName = (ownerRow?.organizations?.name as string) || null
+
+      if (ownerEmail) {
+        // Fire-and-forget; failures are logged but don't block the
+        // response. The in-app modal still works without the email.
+        EmailService.getInstance()
+          .sendFirstCertCelebrationEmail({
+            ownerEmail,
+            ownerName: ownerName || null,
+            orgName: gymName || "your gym",
+            levelName: levelConfig.name,
+            levelNumber: levelConfig.number,
+            certificateNumber: certNumber,
+            verifyUrl: `${siteUrl}/verify/${certNumber}`,
+          })
+          .catch((err) => {
+            console.error("[first-cert celebration email] failed:", err)
+          })
+      }
+    }
+  }
+
+  return NextResponse.json({
+    certificate,
+    is_first_cert: isFirstCert,
+    student_name: studentName,
+    gym_name: gymName,
+  })
 }
 
 // PATCH - Revoke or reinstate a certificate
