@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 import BulkSignoffDialog from "./bulk-signoff-dialog"
+import SkillReviewsPanel from "./skill-reviews-panel"
 
 interface Certificate {
   id: string
@@ -277,6 +278,8 @@ export default function CertificatesTab({ role }: { role: string }) {
           {feedback.message}
         </div>
       )}
+
+      <SkillReviewsPanel />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

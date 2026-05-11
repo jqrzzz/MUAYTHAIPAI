@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Metadata } from "next"
-import { BadgeCheck, XCircle, MapPin, Calendar, Share2, ExternalLink, ScrollText, ChevronRight } from "lucide-react"
+import { BadgeCheck, XCircle, MapPin, Calendar, Share2, ExternalLink, ScrollText, ChevronRight, Video } from "lucide-react"
 import { getLevelById } from "@/lib/certification-levels"
 
 const supabase = createClient(
@@ -144,6 +144,19 @@ export default async function VerifyCertificatePage({ params }: Props) {
     }
   })
   const signoffByIndex = new Map(signoffs.map((s) => [s.skill_index, s]))
+
+  // Approved video demonstrations for this student+level. We map by
+  // skill_index so each row in the syllabus can carry a "video-verified"
+  // pill + a play link without an extra round-trip.
+  const { data: videoSubsRaw } = await supabase
+    .from("skill_submissions")
+    .select("skill_index, video_url")
+    .eq("student_id", student.id)
+    .eq("level", cert.level)
+    .eq("status", "approved")
+  const videoByIndex = new Map<number, string>(
+    (videoSubsRaw ?? []).map((v) => [v.skill_index as number, v.video_url as string]),
+  )
 
   // Unique examiners — preserve handle + verified flag, deduped by name
   const examinerMap = new Map<string, { handle: string | null; verified: boolean }>()
@@ -300,6 +313,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
               <ol className="space-y-2">
                 {levelConfig.skills.map((skill, i) => {
                   const signoff = signoffByIndex.get(i)
+                  const videoUrl = videoByIndex.get(i)
                   return (
                     <li
                       key={i}
@@ -317,7 +331,21 @@ export default async function VerifyCertificatePage({ params }: Props) {
                         {signoff ? "✓" : i + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-neutral-200 leading-snug">{skill}</p>
+                        <p className="text-neutral-200 leading-snug inline-flex items-center gap-2 flex-wrap">
+                          <span>{skill}</span>
+                          {videoUrl && (
+                            <a
+                              href={videoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+                              aria-label="View video demonstration"
+                            >
+                              <Video className="h-2.5 w-2.5" />
+                              Video-verified
+                            </a>
+                          )}
+                        </p>
                         {signoff && (
                           <p className="text-[11px] text-neutral-500 mt-0.5">
                             {signoff.signer_name ? (

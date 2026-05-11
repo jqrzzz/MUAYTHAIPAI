@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import StudentCoursesView from "@/components/student/courses-view"
+import { SkillDemoUploader } from "@/components/student/skill-demo-uploader"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
 
@@ -157,9 +158,15 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
     id: string; number: number; name: string; icon: string; creature: string;
     duration: string; color: string; earned: boolean; earnedAt: string | null;
     certificateNumber: string | null; enrolled: boolean; enrolledAt: string | null;
-    enrolledGym: string | null; skillsSignedOff: number; skillsTotal: number;
+    enrolledGym: string | null; enrolledOrgId: string | null;
+    skillsSignedOff: number; skillsTotal: number;
     courseCompleted: boolean;
-    skills: { name: string; signedOff: boolean; signedOffAt: string | null }[];
+    skills: {
+      name: string; signedOff: boolean; signedOffAt: string | null;
+      submissionStatus: string | null;
+      submissionVideoUrl: string | null;
+      submissionReviewerNotes: string | null;
+    }[];
     eligible: boolean; daysUntilEligible: number;
   }[]>([])
   const [loadingProgress, setLoadingProgress] = useState(false)
@@ -757,6 +764,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                     id: level, number: i + 1, name: level.replace(/[-_]/g, " "), icon: getLevelInfo(level).icon,
                     creature: "", duration: "", color: "", earned: certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, "")),
                     earnedAt: null, certificateNumber: null, enrolled: false, enrolledAt: null, enrolledGym: null,
+                    enrolledOrgId: null,
                     courseCompleted: false, skills: [], skillsSignedOff: 0, skillsTotal: 0, eligible: false, daysUntilEligible: 0,
                   }))).map((level) => (
                     <div
@@ -812,17 +820,32 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                               style={{ width: `${Math.round((level.skillsSignedOff / level.skillsTotal) * 100)}%` }}
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             {level.skills.map((skill, si) => (
-                              <div key={si} className="flex items-center gap-2">
-                                {skill.signedOff ? (
-                                  <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                                ) : (
-                                  <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 flex-shrink-0" />
+                              <div key={si}>
+                                <div className="flex items-center gap-2">
+                                  {skill.signedOff ? (
+                                    <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 flex-shrink-0" />
+                                  )}
+                                  <span className={`text-[11px] ${skill.signedOff ? "text-green-400/80" : "text-neutral-500"}`}>
+                                    {skill.name}
+                                  </span>
+                                </div>
+                                {!skill.signedOff && level.enrolled && (
+                                  <SkillDemoUploader
+                                    level={level.id}
+                                    skillIndex={si}
+                                    skillName={skill.name}
+                                    studentId={user.id}
+                                    orgId={level.enrolledOrgId}
+                                    submissionStatus={skill.submissionStatus ?? null}
+                                    submissionVideoUrl={skill.submissionVideoUrl ?? null}
+                                    submissionReviewerNotes={skill.submissionReviewerNotes ?? null}
+                                    onSubmitted={fetchCertProgress}
+                                  />
                                 )}
-                                <span className={`text-[11px] ${skill.signedOff ? "text-green-400/80" : "text-neutral-500"}`}>
-                                  {skill.name}
-                                </span>
                               </div>
                             ))}
                           </div>

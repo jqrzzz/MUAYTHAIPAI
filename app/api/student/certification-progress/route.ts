@@ -13,8 +13,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Fetch certificates, enrollments, skill signoffs, and completed courses in parallel
-  const [certsRes, enrollmentsRes, signoffsRes, completedCoursesRes] = await Promise.all([
+  // Fetch certificates, enrollments, skill signoffs, completed courses,
+  // and pending video submissions in parallel.
+  const [certsRes, enrollmentsRes, signoffsRes, completedCoursesRes, submissionsRes] = await Promise.all([
     supabase
       .from("certificates")
       .select("id, level, level_number, issued_at, certificate_number, org_id, status, organizations:org_id (name)")
@@ -34,12 +35,41 @@ export async function GET() {
       .select("course_id, status, completed_at, courses!inner(certificate_level)")
       .eq("user_id", user.id)
       .eq("status", "completed"),
+    supabase
+      .from("skill_submissions")
+      .select("level, skill_index, status, video_url, reviewer_notes, created_at, decided_at")
+      .eq("student_id", user.id),
   ])
 
   const certificates = certsRes.data || []
   const enrollments = enrollmentsRes.data || []
   const signoffs = signoffsRes.data || []
   const completedCourses = completedCoursesRes.data || []
+  const submissions = submissionsRes.data || []
+
+  // Index submissions by (level, skill_index). Multiple rows per skill
+  // are possible (rejected + resubmit), so keep the most recent.
+  type SubInfo = {
+    status: string
+    videoUrl: string | null
+    reviewerNotes: string | null
+    submittedAt: string
+    decidedAt: string | null
+  }
+  const submissionsByKey = new Map<string, SubInfo>()
+  for (const s of submissions) {
+    const key = `${s.level}:${s.skill_index}`
+    const prev = submissionsByKey.get(key)
+    if (!prev || new Date(s.created_at) > new Date(prev.submittedAt)) {
+      submissionsByKey.set(key, {
+        status: s.status,
+        videoUrl: s.video_url,
+        reviewerNotes: s.reviewer_notes,
+        submittedAt: s.created_at,
+        decidedAt: s.decided_at,
+      })
+    }
+  }
 
   // Build set of levels with completed courses
   const courseCompletedLevels = new Set<string>()
@@ -69,10 +99,10 @@ export async function GET() {
   }
 
   // Build enrollment map
-  const enrollmentMap = new Map<string, { enrolled_at: string; org_name: string }>()
+  const enrollmentMap = new Map<string, { enrolled_at: string; org_name: string; org_id: string }>()
   for (const e of enrollments) {
     const org = e.organizations as unknown as { name: string } | null
-    enrollmentMap.set(e.level, { enrolled_at: e.enrolled_at, org_name: org?.name || "" })
+    enrollmentMap.set(e.level, { enrolled_at: e.enrolled_at, org_name: org?.name || "", org_id: e.org_id })
   }
 
   // Build progress for each level
@@ -123,14 +153,21 @@ export async function GET() {
       enrolled: !!enrollment,
       enrolledAt: enrollment?.enrolled_at || null,
       enrolledGym: enrollment?.org_name || null,
+      enrolledOrgId: enrollment?.org_id || null,
       skillsSignedOff,
       skillsTotal,
       courseCompleted: courseCompletedLevels.has(level.id),
-      skills: level.skills.map((skillName, idx) => ({
-        name: skillName,
-        signedOff: signoffDetails[level.id]?.has(idx) || false,
-        signedOffAt: signoffDates[level.id]?.[idx] || null,
-      })),
+      skills: level.skills.map((skillName, idx) => {
+        const sub = submissionsByKey.get(`${level.id}:${idx}`) ?? null
+        return {
+          name: skillName,
+          signedOff: signoffDetails[level.id]?.has(idx) || false,
+          signedOffAt: signoffDates[level.id]?.[idx] || null,
+          submissionStatus: sub?.status ?? null,
+          submissionVideoUrl: sub?.videoUrl ?? null,
+          submissionReviewerNotes: sub?.reviewerNotes ?? null,
+        }
+      }),
       eligible: eligible && priorLevelsEarned,
       daysUntilEligible,
     }
