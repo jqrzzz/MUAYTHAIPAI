@@ -110,13 +110,15 @@ export default async function VerifyCertificatePage({ params }: Props) {
   const levelName = levelConfig?.name || cert.level
 
   // Pull per-skill signoffs for this cert's user + level. Joined to
-  // users to get the named examiner. Sorted by skill_index so the
-  // syllabus reads in the right order.
+  // users for examiner name + instructor handle. Sorted by skill_index
+  // so the syllabus reads in the right order.
   const { data: signoffsRaw } = await supabase
     .from("skill_signoffs")
     .select(`
       skill_index, notes, signed_off_at,
-      signed_off_by_user:signed_off_by (full_name)
+      signed_off_by_user:signed_off_by (
+        full_name, public_instructor_enabled, public_instructor_handle
+      )
     `)
     .eq("student_id", student.id)
     .eq("level", cert.level)
@@ -127,19 +129,28 @@ export default async function VerifyCertificatePage({ params }: Props) {
     const signer = Array.isArray(s.signed_off_by_user)
       ? s.signed_off_by_user[0]
       : s.signed_off_by_user
+    const instructorHandle =
+      signer?.public_instructor_enabled && signer?.public_instructor_handle
+        ? (signer.public_instructor_handle as string)
+        : null
     return {
       skill_index: s.skill_index as number,
       signed_at: s.signed_off_at as string,
       signer_name: (signer?.full_name as string | null) ?? null,
+      signer_handle: instructorHandle,
       notes: s.notes as string | null,
     }
   })
   const signoffByIndex = new Map(signoffs.map((s) => [s.skill_index, s]))
 
-  // Unique examiners across all skills — for the "Examiners" line
-  const examiners = Array.from(
-    new Set(signoffs.map((s) => s.signer_name).filter(Boolean)),
-  ) as string[]
+  // Unique examiners — preserve handle if any, deduped by name
+  const examinerMap = new Map<string, string | null>()
+  for (const s of signoffs) {
+    if (s.signer_name && !examinerMap.has(s.signer_name)) {
+      examinerMap.set(s.signer_name, s.signer_handle)
+    }
+  }
+  const examiners = Array.from(examinerMap.entries()) as Array<[string, string | null]>
 
   const shareText = `I earned the ${levelName} certification (Level ${cert.level_number}) in Muay Thai at ${org.name}! 🥊`
 
@@ -239,10 +250,28 @@ export default async function VerifyCertificatePage({ params }: Props) {
             )}
             <Detail label="Certificate №" value={cert.certificate_number} mono />
             {examiners.length > 0 && (
-              <Detail
-                label={`${examiners.length === 1 ? "Examiner" : "Examiners"}`}
-                value={examiners.join(", ")}
-              />
+              <div>
+                <p className="font-display text-[9px] uppercase tracking-[0.16em] text-neutral-500 mb-0.5">
+                  {examiners.length === 1 ? "Examiner" : "Examiners"}
+                </p>
+                <p className="text-neutral-200 text-[13px]">
+                  {examiners.map(([name, handle], i) => (
+                    <span key={name}>
+                      {handle ? (
+                        <a
+                          href={`/i/${handle}`}
+                          className="text-neutral-100 underline decoration-orange-400/40 underline-offset-2 hover:decoration-orange-300 transition-colors"
+                        >
+                          {name}
+                        </a>
+                      ) : (
+                        name
+                      )}
+                      {i < examiners.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                </p>
+              </div>
             )}
           </div>
 
@@ -284,9 +313,18 @@ export default async function VerifyCertificatePage({ params }: Props) {
                             {signoff.signer_name ? (
                               <>
                                 Signed by{" "}
-                                <strong className="text-neutral-300">
-                                  {signoff.signer_name}
-                                </strong>
+                                {signoff.signer_handle ? (
+                                  <a
+                                    href={`/i/${signoff.signer_handle}`}
+                                    className="text-neutral-200 underline decoration-orange-400/40 underline-offset-2 hover:decoration-orange-300 transition-colors font-medium"
+                                  >
+                                    {signoff.signer_name}
+                                  </a>
+                                ) : (
+                                  <strong className="text-neutral-300">
+                                    {signoff.signer_name}
+                                  </strong>
+                                )}
                               </>
                             ) : (
                               "Signed by gym staff"
