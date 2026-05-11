@@ -57,6 +57,7 @@ interface Module {
   id: string
   title: string
   description: string | null
+  summary: string | null
   module_order: number
   lessons: Lesson[]
 }
@@ -380,6 +381,15 @@ export default function CourseDetailClient({
                     {/* Lessons */}
                     {expandedModules.has(mod.id) && (
                       <div className="border-t border-white/5">
+                        {/* AI-generated module summary — sets the scene before the
+                            lesson list. Falls back to nothing if not generated. */}
+                        {mod.summary && (
+                          <div className="px-5 py-4 border-b border-white/5 bg-gradient-to-b from-indigo-500/[0.04] to-transparent">
+                            <p className="font-serif italic text-[15px] text-neutral-300 leading-relaxed">
+                              {mod.summary}
+                            </p>
+                          </div>
+                        )}
                         {mod.lessons.map((lesson) => {
                           const status = getLessonStatus(lesson.id)
                           const canAccess = isEnrolled || lesson.is_preview

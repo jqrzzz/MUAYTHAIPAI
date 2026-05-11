@@ -53,6 +53,7 @@ interface Module {
   id: string
   title: string
   description: string | null
+  summary: string | null
   module_order: number
   lessons: Lesson[]
 }
@@ -238,9 +239,9 @@ export default function StudyPackClient({
                 Module {mi + 1}
               </p>
               <h2 className="font-display text-[32px] text-stone-900">{module.title}</h2>
-              {module.description && (
+              {(module.summary || module.description) && (
                 <p className="font-serif italic text-[17px] text-stone-600 leading-relaxed mt-2">
-                  {module.description}
+                  {module.summary ?? module.description}
                 </p>
               )}
             </header>

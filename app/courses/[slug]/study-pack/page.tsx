@@ -95,7 +95,7 @@ export default async function StudyPackPage({ params }: Props) {
   const { data: modulesRaw } = await supabase
     .from("course_modules")
     .select(`
-      id, title, description, module_order,
+      id, title, description, summary, module_order,
       lessons (
         id, title, description, content_type, lesson_order,
         video_url, video_duration_seconds, text_content,
@@ -133,6 +133,7 @@ export default async function StudyPackPage({ params }: Props) {
     id: m.id,
     title: m.title,
     description: m.description,
+    summary: m.summary,
     module_order: m.module_order,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lessons: ((m.lessons ?? []) as any[])
