@@ -95,17 +95,22 @@ export default function CoursesClient() {
     <div className="min-h-screen bg-neutral-950">
       {/* Header */}
       <header className="border-b border-white/10 bg-neutral-950/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-5xl px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
+          <div className="flex items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">Learn Muay Thai</h1>
-              <p className="mt-1 text-sm text-neutral-400">
+              <p className="font-display text-[11px] uppercase tracking-[0.24em] text-neutral-500 mb-2">
+                The Curriculum
+              </p>
+              <h1 className="font-display text-[34px] sm:text-[44px] leading-tight text-white">
+                Learn Muay Thai
+              </h1>
+              <p className="font-serif italic text-[16px] sm:text-[18px] text-neutral-400 mt-2">
                 Structured courses from fundamentals to fight-ready
               </p>
             </div>
             <Link
               href="/certificate-programs"
-              className="hidden sm:flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
+              className="hidden sm:flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-400 hover:text-white hover:border-white/20 transition-colors shrink-0"
             >
               <Award className="h-3.5 w-3.5" />
               Certification Path

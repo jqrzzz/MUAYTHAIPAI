@@ -276,10 +276,7 @@ export default function LessonPlayerClient({
                 <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">
                   {moduleName}
                 </p>
-                <h1
-                  className="text-[36px] leading-tight text-stone-900 mt-2"
-                  style={{ fontFamily: 'Cinzel, "Cormorant Garamond", Georgia, serif' }}
-                >
+                <h1 className="font-display text-[36px] leading-tight text-stone-900 mt-2">
                   {lesson.title}
                 </h1>
               </div>
@@ -330,16 +327,8 @@ export default function LessonPlayerClient({
               <div
                 className={
                   readingMode
-                    ? "max-w-none text-stone-800 leading-[1.7] text-[16px]"
+                    ? "font-serif max-w-none text-stone-800 leading-[1.7] text-[17px]"
                     : "prose prose-invert prose-sm max-w-none rounded-xl border border-white/10 bg-white/[0.02] p-6"
-                }
-                style={
-                  readingMode
-                    ? {
-                        fontFamily:
-                          '"Cormorant Garamond", Georgia, "Times New Roman", serif',
-                      }
-                    : undefined
                 }
               >
                 <div className="whitespace-pre-line">{lesson.text_content}</div>
@@ -382,14 +371,9 @@ export default function LessonPlayerClient({
                   <div
                     className={`whitespace-pre-line leading-relaxed ${
                       readingMode
-                        ? "text-stone-800 text-[16px]"
+                        ? "font-serif text-stone-800 text-[17px]"
                         : "text-sm text-neutral-300"
                     }`}
-                    style={
-                      readingMode
-                        ? { fontFamily: '"Cormorant Garamond", Georgia, serif' }
-                        : undefined
-                    }
                   >
                     {lesson.drill_instructions}
                   </div>
@@ -412,14 +396,9 @@ export default function LessonPlayerClient({
               <div
                 className={`mt-6 leading-relaxed ${
                   readingMode
-                    ? "text-stone-600 text-[15px] italic"
+                    ? "font-serif text-stone-600 text-[16px] italic"
                     : "text-sm text-neutral-400"
                 }`}
-                style={
-                  readingMode
-                    ? { fontFamily: '"Cormorant Garamond", Georgia, serif' }
-                    : undefined
-                }
               >
                 {lesson.description}
               </div>

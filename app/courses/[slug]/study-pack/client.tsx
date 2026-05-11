@@ -3,17 +3,10 @@
 /**
  * Study Pack — printable view of the entire course.
  *
- * Design: light theme (off-white paper feel), serif body, Cinzel for
- * display. Browser print → save as PDF works. @media print rules hide
- * UI chrome + paginate cleanly.
- *
- * Layout sections in order:
- *   1. Print toolbar (hidden when printing)
- *   2. Title page: cover image, course name, certificate level, gym,
- *      student name, generated date
- *   3. Table of contents
- *   4. Each module: header + each lesson in order
- *   5. Footer disclaimer
+ * Design: light theme (off-white paper feel), Cinzel display + Cormorant
+ * Garamond body serif via tailwind font-display / font-serif (variables
+ * defined in app/layout.tsx). Browser print → save as PDF works.
+ * @media print rules hide UI chrome + paginate cleanly.
  */
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -99,7 +92,6 @@ export default function StudyPackClient({
   })
 
   useEffect(() => {
-    // Set print metadata so the saved PDF gets a nice filename
     const orig = document.title
     document.title = `${course.title} — Study Pack`
     return () => {
@@ -117,48 +109,20 @@ export default function StudyPackClient({
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900">
-      {/* Print stylesheet — hides UI, paginates, removes shadows */}
       <style jsx global>{`
         @media print {
-          body {
-            background: white !important;
-            color: #000 !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          .study-pack-page {
-            background: white !important;
-          }
-          .study-pack-lesson {
-            page-break-inside: avoid;
-            page-break-after: always;
-          }
-          .study-pack-module {
-            page-break-before: always;
-          }
-          .study-pack-cover {
-            page-break-after: always;
-          }
-          .study-pack-toc {
-            page-break-after: always;
-          }
-          h1, h2, h3 {
-            page-break-after: avoid;
-          }
-          img {
-            max-height: 360px !important;
-            object-fit: contain !important;
-          }
-          a {
-            color: #000 !important;
-            text-decoration: none !important;
-          }
+          body { background: white !important; color: #000 !important; }
+          .no-print { display: none !important; }
+          .study-pack-page { background: white !important; }
+          .study-pack-lesson { page-break-inside: avoid; page-break-after: always; }
+          .study-pack-module { page-break-before: always; }
+          .study-pack-cover { page-break-after: always; }
+          .study-pack-toc { page-break-after: always; }
+          h1, h2, h3 { page-break-after: avoid; }
+          img { max-height: 360px !important; object-fit: contain !important; }
+          a { color: #000 !important; text-decoration: none !important; }
         }
-        @page {
-          size: A4;
-          margin: 20mm 18mm;
-        }
+        @page { size: A4; margin: 20mm 18mm; }
       `}</style>
 
       {/* Toolbar — hidden on print */}
@@ -180,17 +144,12 @@ export default function StudyPackClient({
             className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 hover:bg-stone-700 text-white text-sm px-3 py-1.5 transition-colors disabled:opacity-50"
             title="Print or save as PDF"
           >
-            {printing ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Printer className="h-3.5 w-3.5" />
-            )}
+            {printing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
             Print / Save PDF
           </button>
         </div>
       </div>
 
-      {/* Hint banner — hidden on print */}
       <div className="no-print mx-auto max-w-4xl px-5 mt-5">
         <div className="rounded-lg ring-1 ring-stone-200 bg-stone-50 px-4 py-3 text-[12px] text-stone-600 leading-relaxed">
           When you tap <strong className="text-stone-900">Print / Save PDF</strong>,
@@ -201,7 +160,6 @@ export default function StudyPackClient({
         </div>
       </div>
 
-      {/* Page content */}
       <article className="study-pack-page mx-auto max-w-4xl px-5 sm:px-12 py-10 print:p-0 bg-white print:bg-transparent shadow-sm print:shadow-none">
         {/* COVER */}
         <section className="study-pack-cover text-center pt-8 pb-16">
@@ -214,44 +172,24 @@ export default function StudyPackClient({
             />
           )}
           {course.certificate_level && (
-            <p
-              className="text-[12px] uppercase tracking-[0.24em] text-stone-500 mb-3"
-              style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-            >
+            <p className="font-display text-[12px] uppercase tracking-[0.24em] text-stone-500 mb-3">
               {course.certificate_level} · Certification Level
             </p>
           )}
-          <h1
-            className="text-[42px] sm:text-[56px] leading-tight text-stone-900 mb-4"
-            style={{ fontFamily: 'Cinzel, "Cormorant Garamond", Georgia, serif' }}
-          >
+          <h1 className="font-display text-[42px] sm:text-[56px] leading-tight text-stone-900 mb-4">
             {course.title}
           </h1>
           {course.short_description && (
-            <p
-              className="text-[18px] text-stone-600 max-w-2xl mx-auto leading-relaxed italic"
-              style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
-            >
+            <p className="font-serif italic text-[20px] text-stone-600 max-w-2xl mx-auto leading-relaxed">
               {course.short_description}
             </p>
           )}
           <div className="mt-12 inline-flex flex-col items-center gap-2">
             {gymLogoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={gymLogoUrl}
-                alt={gymName ?? "Gym"}
-                className="h-12 w-12 object-contain rounded"
-              />
+              <img src={gymLogoUrl} alt={gymName ?? "Gym"} className="h-12 w-12 object-contain rounded" />
             )}
-            {gymName && (
-              <p
-                className="text-[14px] text-stone-700"
-                style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-              >
-                {gymName}
-              </p>
-            )}
+            {gymName && <p className="font-display text-[14px] text-stone-700">{gymName}</p>}
             {studentName && (
               <p className="text-[12px] text-stone-500 mt-2">
                 Prepared for <strong className="text-stone-700">{studentName}</strong>
@@ -263,12 +201,7 @@ export default function StudyPackClient({
 
         {/* TABLE OF CONTENTS */}
         <section className="study-pack-toc">
-          <h2
-            className="text-[28px] mb-6 text-stone-900"
-            style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-          >
-            Contents
-          </h2>
+          <h2 className="font-display text-[28px] mb-6 text-stone-900">Contents</h2>
           <ol className="space-y-3">
             {modules.map((m, i) => (
               <li key={m.id}>
@@ -276,17 +209,13 @@ export default function StudyPackClient({
                   <span className="text-stone-500 mr-2 tabular-nums">
                     {(i + 1).toString().padStart(2, "0")}.
                   </span>
-                  <strong style={{ fontFamily: 'Cinzel, Georgia, serif' }}>
-                    {m.title}
-                  </strong>
+                  <strong className="font-display">{m.title}</strong>
                 </p>
                 {m.lessons.length > 0 && (
                   <ul className="ml-7 mt-1 space-y-0.5 text-[13px] text-stone-600">
                     {m.lessons.map((l, j) => (
                       <li key={l.id} className="flex items-baseline gap-2">
-                        <span className="text-stone-400 tabular-nums">
-                          {i + 1}.{j + 1}
-                        </span>
+                        <span className="text-stone-400 tabular-nums">{i + 1}.{j + 1}</span>
                         <span>{l.title}</span>
                         <span className="ml-auto text-[11px] text-stone-400">
                           {lessonTypeLabel(l.content_type)}
@@ -305,23 +234,12 @@ export default function StudyPackClient({
         {modules.map((module, mi) => (
           <section key={module.id} className="study-pack-module">
             <header className="pt-8 mb-8 border-b border-stone-200 pb-4">
-              <p
-                className="text-[11px] uppercase tracking-[0.24em] text-stone-500 mb-1"
-                style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-              >
+              <p className="font-display text-[11px] uppercase tracking-[0.24em] text-stone-500 mb-1">
                 Module {mi + 1}
               </p>
-              <h2
-                className="text-[32px] text-stone-900"
-                style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-              >
-                {module.title}
-              </h2>
+              <h2 className="font-display text-[32px] text-stone-900">{module.title}</h2>
               {module.description && (
-                <p
-                  className="text-[16px] text-stone-600 leading-relaxed italic mt-2"
-                  style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
-                >
+                <p className="font-serif italic text-[17px] text-stone-600 leading-relaxed mt-2">
                   {module.description}
                 </p>
               )}
@@ -333,25 +251,14 @@ export default function StudyPackClient({
                   <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">
                     Lesson {mi + 1}.{li + 1} · {lessonTypeLabel(lesson.content_type)}
                   </p>
-                  <h3
-                    className="text-[24px] text-stone-900 mt-1"
-                    style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-                  >
-                    {lesson.title}
-                  </h3>
+                  <h3 className="font-display text-[24px] text-stone-900 mt-1">{lesson.title}</h3>
                   {lesson.description && (
-                    <p
-                      className="text-[15px] text-stone-600 italic leading-relaxed mt-2"
-                      style={{
-                        fontFamily: '"Cormorant Garamond", Georgia, serif',
-                      }}
-                    >
+                    <p className="font-serif italic text-[16px] text-stone-600 leading-relaxed mt-2">
                       {lesson.description}
                     </p>
                   )}
                 </header>
 
-                {/* Hero image */}
                 {lesson.hero_image_url && (
                   <figure className="mb-5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -363,35 +270,24 @@ export default function StudyPackClient({
                   </figure>
                 )}
 
-                {/* Video — print can't play it, surface URL as a QR-readable note */}
                 {lesson.content_type === "video" && lesson.video_url && (
                   <div className="mb-5 rounded-md bg-stone-100 border border-stone-200 p-4 text-[13px] text-stone-700">
                     <p className="font-medium">Demonstration video</p>
-                    <p className="text-[11px] text-stone-500 mt-1 break-all">
-                      {lesson.video_url}
-                    </p>
+                    <p className="text-[11px] text-stone-500 mt-1 break-all">{lesson.video_url}</p>
                   </div>
                 )}
 
-                {/* Body text */}
                 {lesson.content_type === "text" && lesson.text_content && (
-                  <div
-                    className="text-[16px] text-stone-800 leading-[1.7] whitespace-pre-wrap mb-5"
-                    style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
-                  >
+                  <div className="font-serif text-[17px] text-stone-800 leading-[1.7] whitespace-pre-wrap mb-5">
                     {lesson.text_content}
                   </div>
                 )}
 
-                {/* Drill instructions */}
                 {lesson.content_type === "drill" && lesson.drill_instructions && (
                   <div className="mb-5 rounded-md border border-orange-200 bg-orange-50 p-5">
                     <div className="flex items-baseline gap-2 mb-3">
                       <Dumbbell className="h-4 w-4 text-orange-700 self-center" />
-                      <p
-                        className="text-[12px] uppercase tracking-[0.14em] text-orange-700"
-                        style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-                      >
+                      <p className="font-display text-[12px] uppercase tracking-[0.14em] text-orange-700">
                         Training Drill
                       </p>
                       {lesson.drill_duration_minutes && (
@@ -400,26 +296,17 @@ export default function StudyPackClient({
                         </span>
                       )}
                     </div>
-                    <div
-                      className="text-[16px] text-stone-800 leading-[1.7] whitespace-pre-wrap"
-                      style={{
-                        fontFamily: '"Cormorant Garamond", Georgia, serif',
-                      }}
-                    >
+                    <div className="font-serif text-[17px] text-stone-800 leading-[1.7] whitespace-pre-wrap">
                       {lesson.drill_instructions}
                     </div>
                   </div>
                 )}
 
-                {/* Quiz questions — print without answers (study tool) */}
                 {lesson.content_type === "quiz" && lesson.quiz_questions.length > 0 && (
                   <div className="mb-5 rounded-md border border-stone-200 bg-stone-50 p-5">
                     <div className="flex items-baseline gap-2 mb-3">
                       <HelpCircle className="h-4 w-4 text-stone-600 self-center" />
-                      <p
-                        className="text-[12px] uppercase tracking-[0.14em] text-stone-600"
-                        style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-                      >
+                      <p className="font-display text-[12px] uppercase tracking-[0.14em] text-stone-600">
                         Self-Quiz
                       </p>
                     </div>
@@ -436,10 +323,7 @@ export default function StudyPackClient({
                             {q.options && q.options.length > 0 && (
                               <ul className="ml-7 mt-2 space-y-1 text-stone-600">
                                 {q.options.map((o, oi) => (
-                                  <li
-                                    key={o.id}
-                                    className="text-[14px] flex items-baseline gap-2"
-                                  >
+                                  <li key={o.id} className="text-[14px] flex items-baseline gap-2">
                                     <span className="text-stone-400 inline-flex items-center justify-center w-5 h-5 border border-stone-300 rounded-full text-[11px]">
                                       {String.fromCharCode(65 + oi)}
                                     </span>
@@ -452,27 +336,19 @@ export default function StudyPackClient({
                         ))}
                     </ol>
                     <p className="mt-4 text-[11px] text-stone-500 italic">
-                      Answer key available in the online course. Test yourself
-                      first.
+                      Answer key available in the online course. Test yourself first.
                     </p>
                   </div>
                 )}
 
-                {/* Gallery */}
                 {lesson.gallery && lesson.gallery.length > 0 && (
                   <section className="mt-5">
-                    <p
-                      className="text-[11px] uppercase tracking-[0.18em] text-stone-500 mb-2"
-                      style={{ fontFamily: 'Cinzel, Georgia, serif' }}
-                    >
+                    <p className="font-display text-[11px] uppercase tracking-[0.18em] text-stone-500 mb-2">
                       Reference Photos
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {lesson.gallery.map((item, gi) => (
-                        <figure
-                          key={gi}
-                          className="rounded-md overflow-hidden border border-stone-200 bg-stone-50"
-                        >
+                        <figure key={gi} className="rounded-md overflow-hidden border border-stone-200 bg-stone-50">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={item.url}
@@ -494,19 +370,17 @@ export default function StudyPackClient({
           </section>
         ))}
 
-        {/* FOOTER */}
         <footer className="mt-16 pt-6 border-t border-stone-200 text-center text-[11px] text-stone-500">
           <p>
             {course.title}
             {gymName && (
               <>
-                {" "}— prepared by{" "}
-                <strong className="text-stone-700">{gymName}</strong>
+                {" "}— prepared by <strong className="text-stone-700">{gymName}</strong>
               </>
             )}
           </p>
           <p className="mt-1">Study Pack generated {generatedDate} · MUAYTHAIPAI</p>
-          <p className="mt-3 text-stone-400 italic">
+          <p className="mt-3 text-stone-400 italic font-serif">
             Practice the techniques, not just the words.
           </p>
         </footer>

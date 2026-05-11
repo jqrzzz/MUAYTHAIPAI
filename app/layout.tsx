@@ -1,6 +1,6 @@
 import type React from "react"
 import "./globals.css"
-import { Cinzel, Inter } from "next/font/google"
+import { Cinzel, Cormorant_Garamond, Inter } from "next/font/google"
 import Script from "next/script"
 import { ThemeProvider } from "@/components/theme-provider"
 import type { Metadata, Viewport } from "next"
@@ -10,6 +10,13 @@ import { SOCIAL_LINKS } from "@/lib/socials"
 import OckOckChatWidget from "@/components/public/ockock-chat-widget"
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  display: "swap",
+})
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -218,7 +225,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${cinzel.variable} ${inter.variable} font-sans antialiased`}>
+      <body className={`${cinzel.variable} ${cormorant.variable} ${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
           <OckOckChatWidget orgSlug="wisarut-family-gym" />
