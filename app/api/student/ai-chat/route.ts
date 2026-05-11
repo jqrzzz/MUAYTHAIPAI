@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { checkLimit } from "@/lib/rate-limit"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -10,6 +11,20 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  // 30 messages/hour per student. Enough for a real conversation, low
+  // enough to cap a compromised account from racking up API costs.
+  const gate = await checkLimit({
+    key: `student-ai:${user.id}`,
+    max: 30,
+    windowSeconds: 3600,
+  })
+  if (!gate.ok) {
+    return NextResponse.json(
+      { error: gate.error },
+      { status: 429, headers: gate.headers },
+    )
   }
 
   const { message } = await request.json()

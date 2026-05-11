@@ -25,6 +25,7 @@ import { generateText } from "ai"
 import { ensureChatGroups } from "@/lib/chat/bootstrap"
 import { loadGymKnowledge } from "@/lib/chat/knowledge"
 import { MODEL_VOICE } from "@/lib/ai-models"
+import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -53,6 +54,22 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params
+
+  // Server-side rate limit — the form has client-side throttling but
+  // that's trivial to bypass. 5 leads per IP per hour per gym caps a
+  // bot while leaving plenty of headroom for legitimate visitors.
+  const ip = ipFromRequest(request)
+  const gate = await checkLimit({
+    key: `lead:${slug}:${ip}`,
+    max: 5,
+    windowSeconds: 3600,
+  })
+  if (!gate.ok) {
+    return NextResponse.json(
+      { error: gate.error },
+      { status: 429, headers: gate.headers },
+    )
+  }
 
   const parsed = BodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
