@@ -327,11 +327,11 @@ export function EnhancedPaymentFlow({
           <div>
             <h2
               className={cn(
-                "text-xl font-bold",
+                "font-display text-[22px] sm:text-[26px]",
                 mounted ? (theme === "dark" ? "text-white" : "text-gray-900") : "text-white",
               )}
             >
-              {step === "success" ? "Booking Confirmed!" : "Complete Your Booking"}
+              {step === "success" ? "Booking Confirmed" : "Complete Your Booking"}
             </h2>
             <p
               className={cn(
@@ -536,7 +536,10 @@ export function EnhancedPaymentFlow({
                 )}
               >
                 <h3
-                  className={cn("font-semibold mb-2", mounted ? (theme === "dark" ? "text-white" : "") : "text-white")}
+                  className={cn(
+                    "font-display text-[11px] uppercase tracking-[0.18em] mb-2",
+                    mounted ? (theme === "dark" ? "text-white" : "") : "text-white",
+                  )}
                 >
                   Booking Summary
                 </h3>
@@ -677,11 +680,11 @@ export function EnhancedPaymentFlow({
               </div>
               <h3
                 className={cn(
-                  "text-xl font-bold mb-2",
+                  "font-display text-[24px] sm:text-[28px] mb-2",
                   mounted ? (theme === "dark" ? "text-white" : "") : "text-white",
                 )}
               >
-                Booking Confirmed!
+                Booking Confirmed
               </h3>
               <p
                 className={cn(
