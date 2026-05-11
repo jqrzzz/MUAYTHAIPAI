@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { generateText } from "ai"
+import { checkLimit } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,11 @@ export async function POST(request: NextRequest) {
     }
     if (!isPlatformAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const gate = await checkLimit({ key: `platform-admin-ockock:${user.id}`, max: 60, windowSeconds: 3600 })
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
     }
 
     const { message } = await request.json()

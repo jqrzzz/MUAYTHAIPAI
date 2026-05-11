@@ -14,6 +14,7 @@ import { z } from "zod"
 import { generateText } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
 import { MODEL_VOICE } from "@/lib/ai-models"
+import { checkLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -61,7 +62,13 @@ export async function POST(request: Request) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
-  const { supabase, orgId } = auth
+  const { supabase, orgId, user } = auth
+
+  // Onboarding step — tight cap; rerolls are fine but no need for 60.
+  const gate = await checkLimit({ key: `onboarding-services:${user.id}`, max: 10, windowSeconds: 3600 })
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
+  }
 
   const parsed = PostSchema.safeParse(await request.json().catch(() => ({})))
   const overrides = parsed.success ? parsed.data : {}

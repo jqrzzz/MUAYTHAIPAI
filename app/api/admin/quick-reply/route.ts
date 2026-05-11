@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { checkLimit } from "@/lib/rate-limit"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -18,6 +19,13 @@ export async function POST(request: Request) {
 
   if (!membership) {
     return NextResponse.json({ error: "No organization found" }, { status: 404 })
+  }
+
+  // Quick-reply is hit per inbox message; bump the cap higher to stay
+  // out of an active admin's way while still capping abuse.
+  const gate = await checkLimit({ key: `admin-quick-reply:${user.id}`, max: 60, windowSeconds: 3600 })
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
   }
 
   const body = await request.json()

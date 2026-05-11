@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { generateText, stepCountIs } from "ai"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
+import { checkLimit } from "@/lib/rate-limit"
 import { buildPlatformTools } from "@/lib/platform-admin/ai-tools"
 
 const MODEL = "openai/gpt-4o-mini"
@@ -33,9 +34,14 @@ General rules:
 - Be short. The operator is on mobile.`
 
 export async function POST(request: Request) {
-  const { supabase, isPlatformAdmin } = await getPlatformAdmin()
-  if (!isPlatformAdmin) {
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
+  if (!isPlatformAdmin || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const gate = await checkLimit({ key: `platform-admin-ai:${user.id}`, max: 60, windowSeconds: 3600 })
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
   }
 
   let body: { query?: string; history?: Array<{ role: "user" | "assistant"; content: string }> }

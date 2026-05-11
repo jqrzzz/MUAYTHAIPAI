@@ -16,6 +16,7 @@ import { z } from "zod"
 import { generateText } from "ai"
 import { createClient } from "@/lib/supabase/server"
 import { MODEL_VOICE } from "@/lib/ai-models"
+import { checkLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -38,6 +39,13 @@ export async function POST(
   } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  // Summary generation is a low-frequency action (authoring), not a
+  // hot loop. 20/hour is plenty for legit work.
+  const gate = await checkLimit({ key: `admin-ai-summary:${user.id}`, max: 20, windowSeconds: 3600 })
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
   }
 
   const { id } = await params

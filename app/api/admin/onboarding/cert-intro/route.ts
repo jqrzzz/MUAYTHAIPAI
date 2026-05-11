@@ -12,6 +12,7 @@ import { NextResponse } from "next/server"
 import { generateText } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
 import { MODEL_VOICE } from "@/lib/ai-models"
+import { checkLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -24,7 +25,13 @@ export async function POST() {
   if (!auth.ok) {
     return NextResponse.json({ intro: FALLBACK })
   }
-  const { supabase, orgId } = auth
+  const { supabase, orgId, user } = auth
+
+  // Cert-intro is hit once during onboarding plus the occasional reroll.
+  const gate = await checkLimit({ key: `onboarding-cert-intro:${user.id}`, max: 10, windowSeconds: 3600 })
+  if (!gate.ok) {
+    return NextResponse.json({ intro: FALLBACK })
+  }
 
   const { data: org } = await supabase
     .from("organizations")

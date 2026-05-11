@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { generateText } from "ai"
+import { checkLimit } from "@/lib/rate-limit"
 
 const serviceClient = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,6 +128,13 @@ export async function POST(request: Request) {
 
   if (!membership || !["owner", "admin"].includes(membership.role)) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 })
+  }
+
+  // 30 AI invocations/hour per admin — generous for real marketing
+  // work, bounded against a compromised account.
+  const gate = await checkLimit({ key: `admin-marketing:${user.id}`, max: 30, windowSeconds: 3600 })
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
   }
 
   const body = await request.json()

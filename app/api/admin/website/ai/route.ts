@@ -24,6 +24,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { generateObject } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
+import { checkLimit } from "@/lib/rate-limit"
 import { MODEL_VOICE } from "@/lib/ai-models"
 import {
   newSectionId,
@@ -118,6 +119,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
   const { supabase, orgId, user } = auth
+
+  const gate = await checkLimit({ key: `admin-website-ai:${user.id}`, max: 30, windowSeconds: 3600 })
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
+  }
 
   const parsed = BodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
