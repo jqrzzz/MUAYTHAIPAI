@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import TodayTab from "@/components/admin/today-tab"
 import TodaySignalPanel from "@/components/admin/today-signal-panel"
+import TrialCountdownCard from "@/components/admin/trial-countdown-card"
 import TrialBanner from "@/components/admin/trial-banner"
 import ImpersonationBanner from "@/components/impersonation-banner"
 import PackagesTab from "@/components/admin/packages-tab"
@@ -620,6 +621,7 @@ export default function AdminDashboardClient({
 
           {activeTab === "today" && (
             <div className="space-y-4">
+              <TrialCountdownCard />
               <TodaySignalPanel
                 onNavigate={(tab) => handleNavClick(tab as typeof activeTab)}
               />
