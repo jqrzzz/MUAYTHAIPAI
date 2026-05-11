@@ -29,6 +29,7 @@ import WebsiteTab from "@/components/admin/website-tab"
 import SocialTab from "@/components/admin/social-tab"
 import PayoutsTab from "@/components/admin/payouts-tab"
 import NotificationBell from "@/components/admin/notification-bell"
+import HelpButton from "@/components/admin/help-button"
 import {
   Award,
   Calendar,
@@ -777,6 +778,7 @@ export default function AdminDashboardClient({
           {activeTab === "payouts" && <PayoutsTab />}
         </div>
       </main>
+      <HelpButton />
     </div>
   )
 }
