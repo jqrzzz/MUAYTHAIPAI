@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -1148,6 +1148,9 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               </div>
             </div>
 
+            {/* Public passport settings — opt-in shareable profile */}
+            <PassportSettingsPanel />
+
             <div className="space-y-2">
               <Button
                 variant="outline"
@@ -1451,5 +1454,176 @@ function BeltJourneyStrip({ levels }: { levels: BeltLevel[] }) {
         </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * Student-facing controls for the public passport. Lives on the
+ * Profile view. Opt-in toggle, handle picker, bio editor, and a quick
+ * link to view the published passport.
+ */
+function PassportSettingsPanel() {
+  const [state, setState] = useState<{
+    enabled: boolean
+    handle: string
+    bio: string
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/student/passport", { cache: "no-store" })
+      const data = await res.json()
+      if (res.ok && data.passport) {
+        setState({
+          enabled: !!data.passport.public_passport_enabled,
+          handle: data.passport.public_passport_handle ?? "",
+          bio: data.passport.public_passport_bio ?? "",
+        })
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const save = async (patch: Record<string, unknown>) => {
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await fetch("/api/student/passport", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Save failed")
+      setState({
+        enabled: !!data.passport.public_passport_enabled,
+        handle: data.passport.public_passport_handle ?? "",
+        bio: data.passport.public_passport_bio ?? "",
+      })
+      setSuccess("Saved")
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading || !state) {
+    return (
+      <div className="rounded-xl bg-neutral-900/30 border border-neutral-800/50 p-4 text-center text-[12px] text-neutral-500">
+        <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1.5" />
+        Loading
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 p-5">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            Public Passport
+          </p>
+          <p className="text-[13px] text-white mt-1">
+            A shareable page with your certs + journey.
+          </p>
+        </div>
+        <button
+          onClick={() => save({ enabled: !state.enabled })}
+          disabled={saving || (state.enabled === false && !state.handle)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 ${
+            state.enabled ? "bg-emerald-500" : "bg-neutral-700"
+          }`}
+          aria-pressed={state.enabled}
+          aria-label="Toggle public passport"
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+              state.enabled ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      </div>
+
+      <div className="space-y-3 mt-4">
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.14em] text-zinc-500 block mb-1">
+            Handle
+          </label>
+          <div className="flex items-center gap-1">
+            <span className="text-[12px] text-zinc-500 font-mono">/p/</span>
+            <input
+              type="text"
+              value={state.handle}
+              onChange={(e) =>
+                setState((s) =>
+                  s ? { ...s, handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") } : s,
+                )
+              }
+              onBlur={() => {
+                if (state.handle.length >= 3) save({ handle: state.handle })
+              }}
+              placeholder="khun-pong"
+              className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md px-2.5 py-1.5 text-[13px] text-white placeholder:text-zinc-600 outline-none focus:border-neutral-700"
+              maxLength={32}
+            />
+          </div>
+          <p className="text-[10px] text-zinc-600 mt-1">
+            Lowercase letters, digits, hyphens. 3-32 chars.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.14em] text-zinc-500 block mb-1">
+            Bio
+          </label>
+          <textarea
+            value={state.bio}
+            onChange={(e) => setState((s) => (s ? { ...s, bio: e.target.value } : s))}
+            onBlur={() => save({ bio: state.bio })}
+            rows={3}
+            placeholder="One line about your journey…"
+            maxLength={400}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md px-2.5 py-1.5 text-[13px] text-white placeholder:text-zinc-600 outline-none focus:border-neutral-700"
+          />
+          <p className="text-[10px] text-zinc-600 mt-1">
+            {state.bio.length}/400
+          </p>
+        </div>
+
+        {error && (
+          <p className="text-[12px] text-red-300 bg-red-500/10 rounded px-2 py-1.5">
+            {error}
+          </p>
+        )}
+        {success && (
+          <p className="text-[12px] text-emerald-300">{success}</p>
+        )}
+
+        {state.enabled && state.handle && (
+          <a
+            href={`/p/${state.handle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] text-indigo-300 hover:text-indigo-200"
+          >
+            View your public passport
+            <ChevronRight className="h-3 w-3" />
+          </a>
+        )}
+      </div>
+    </div>
   )
 }
