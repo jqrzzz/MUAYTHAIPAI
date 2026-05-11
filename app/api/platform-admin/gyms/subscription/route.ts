@@ -1,22 +1,14 @@
-import { createClient } from "@/lib/supabase/server"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
 
 // Manually toggle gym subscription status (for platform admin)
 export async function POST(request: Request) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  // Check if platform admin
-  const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-  if (!userData?.is_platform_admin) {
-    return NextResponse.json({ error: "Not a platform admin" }, { status: 403 })
+  if (!isPlatformAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const { gymId, status } = await request.json()

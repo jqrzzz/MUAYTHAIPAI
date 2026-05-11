@@ -1,22 +1,13 @@
-import { createClient } from "@/lib/supabase/server"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit-log"
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  // Check if platform admin
-  const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-  if (!userData?.is_platform_admin) {
+  if (!isPlatformAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -177,20 +168,11 @@ function getStartOfWeek(year: number, week: number): Date {
 
 // POST - Mark payout as paid
 export async function POST(request: Request) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  // Check if platform admin
-  const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-  if (!userData?.is_platform_admin) {
+  if (!isPlatformAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

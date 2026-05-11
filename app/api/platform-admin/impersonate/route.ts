@@ -6,7 +6,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { cookies } from "next/headers"
-import { createClient } from "@/lib/supabase/server"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { IMPERSONATION_COOKIE } from "@/lib/impersonation"
 import { logAudit } from "@/lib/audit-log"
 
@@ -21,21 +21,9 @@ const BodySchema = z.object({
 })
 
 async function requirePlatformAdmin() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return { ok: false as const, status: 401 }
-  }
-  const { data } = await supabase
-    .from("users")
-    .select("is_platform_admin")
-    .eq("id", user.id)
-    .single()
-  if (!data?.is_platform_admin) {
-    return { ok: false as const, status: 403 }
-  }
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
+  if (!user) return { ok: false as const, status: 401 }
+  if (!isPlatformAdmin) return { ok: false as const, status: 403 }
   return { ok: true as const, supabase, user }
 }
 

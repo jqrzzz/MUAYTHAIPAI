@@ -6,6 +6,20 @@ import { NextResponse } from "next/server"
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 /**
+ * Stripe SDK 18.x types reflect API version 2025-04-30.basil, which
+ * relocated some fields (subscription.current_period_*, invoice.subscription,
+ * invoice.charge) off the root object. Our integration is pinned to
+ * 2024-06-20 in @/lib/stripe so the API still returns them at the root.
+ *
+ * Type aliases below let us access the legacy shape without per-call
+ * `as any` casts littered throughout the file.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LegacySub = any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LegacyInvoice = any
+
+/**
  * Pull the monthly price out of a Stripe subscription, in USD cents.
  * Handles the common case (single line item, monthly billing). Returns
  * null for setups we don't understand so we don't lie about MRR.
@@ -60,7 +74,7 @@ export async function POST(request: Request) {
         const subscriptionId = session.subscription as string
 
         // Get subscription details
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        const subscription = (await stripe.subscriptions.retrieve(subscriptionId)) as LegacySub
         const monthlyUsdCents = extractMonthlyUsdCents(subscription)
 
         // Update gym subscription. activated_at is set ONCE here — the
@@ -85,7 +99,7 @@ export async function POST(request: Request) {
     }
 
     case "invoice.paid": {
-      const invoice = event.data.object
+      const invoice = event.data.object as LegacyInvoice
       if (invoice.subscription) {
         // Find org by subscription ID
         const { data: sub } = await supabase
@@ -115,8 +129,7 @@ export async function POST(request: Request) {
           let chargeId: string | null = null
           let piId: string | null = null
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const invoiceChargeId = (invoice as any).charge as string | null | undefined
+            const invoiceChargeId = invoice.charge as string | null | undefined
             if (invoiceChargeId) {
               chargeId = invoiceChargeId
               const charge = await stripe.charges.retrieve(chargeId)
@@ -174,7 +187,7 @@ export async function POST(request: Request) {
     }
 
     case "invoice.payment_failed": {
-      const invoice = event.data.object
+      const invoice = event.data.object as LegacyInvoice
       if (invoice.subscription) {
         const { data: sub } = await supabase
           .from("gym_subscriptions")
@@ -190,7 +203,7 @@ export async function POST(request: Request) {
     }
 
     case "customer.subscription.deleted": {
-      const subscription = event.data.object
+      const subscription = event.data.object as LegacySub
       const { data: sub } = await supabase
         .from("gym_subscriptions")
         .select("org_id")
@@ -211,7 +224,7 @@ export async function POST(request: Request) {
     }
 
     case "customer.subscription.updated": {
-      const subscription = event.data.object
+      const subscription = event.data.object as LegacySub
       const { data: sub } = await supabase
         .from("gym_subscriptions")
         .select("org_id")
