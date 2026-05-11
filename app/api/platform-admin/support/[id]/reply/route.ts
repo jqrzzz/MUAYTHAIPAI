@@ -16,6 +16,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
+import { EmailService } from "@/lib/email-service"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -48,8 +49,9 @@ export async function POST(
   const { data: ticket } = await supabase
     .from("support_tickets")
     .select(`
-      id, org_id, conversation_id, user_id, status,
-      users:user_id (email)
+      id, org_id, conversation_id, user_id, status, subject,
+      organizations:org_id (name),
+      users:user_id (email, full_name)
     `)
     .eq("id", id)
     .single()
@@ -58,7 +60,12 @@ export async function POST(
     return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recipientEmail = ((ticket as any).users?.email ?? null) as string | null
+  const userJoin = (ticket as any).users
+  const recipientEmail = (userJoin?.email ?? null) as string | null
+  const recipientName = (userJoin?.full_name ?? null) as string | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgJoin = (ticket as any).organizations
+  const gymName = (orgJoin?.name ?? "your gym") as string
 
   // Mark any pending AI draft on this thread as approved — removes the
   // "draft pending" indicator without leaving an orphan record.
@@ -106,5 +113,25 @@ export async function POST(
     })
     .eq("id", ticket.conversation_id)
 
-  return NextResponse.json({ ok: true })
+  // Email the gym admin so they don't have to keep checking. Best-effort
+  // — the reply is already saved in the ticket thread, email is just a
+  // nudge. Don't fail the request if email send fails.
+  if (recipientEmail) {
+    try {
+      await EmailService.getInstance().sendSupportReply({
+        toEmail: recipientEmail,
+        toName: recipientName,
+        gymName,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        subject: (ticket as any).subject ?? "Support reply",
+        body,
+        ticketId: id,
+        isResolution: mark_status === "resolved",
+      })
+    } catch (err) {
+      console.error("[support reply] email send failed:", err)
+    }
+  }
+
+  return NextResponse.json({ ok: true, emailed: !!recipientEmail })
 }

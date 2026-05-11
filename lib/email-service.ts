@@ -843,4 +843,88 @@ Muay Thai Pai
 
     return { subject, html, text }
   }
+
+  /**
+   * Send the operator's reply to a support ticket back to the gym admin
+   * who opened it. The reply itself was already logged to the ticket;
+   * this just notifies the gym admin so they don't have to keep
+   * checking /admin to see if you've responded.
+   */
+  async sendSupportReply(args: {
+    toEmail: string
+    toName?: string | null
+    gymName: string
+    subject: string
+    body: string
+    ticketId: string
+    isResolution: boolean
+  }): Promise<boolean> {
+    const { toEmail, toName, gymName, subject, body, ticketId, isResolution } = args
+    const prefix = isResolution ? "[Resolved]" : "[Reply]"
+    const emailSubject = `${prefix} ${subject}`
+    const greeting = toName ? `Hi ${toName.split(" ")[0]},` : "Hi,"
+
+    const text =
+      `${greeting}\n\n` +
+      `We just replied to your support ticket "${subject}" for ${gymName}:\n\n` +
+      `${body}\n\n` +
+      (isResolution
+        ? `If this resolved your issue you don't need to do anything. If you need further help, hop into your /admin and click Help to open a new ticket.\n\n`
+        : `If you need to add anything, hop into your /admin and click Help to continue the conversation.\n\n`) +
+      `Ticket reference: ${ticketId.slice(0, 8)}\n\n` +
+      `Team MUAYTHAIPAI`
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #18181b;">
+        <p style="margin: 0 0 16px 0;">${greeting}</p>
+        <p style="margin: 0 0 8px 0; color: #52525b; font-size: 13px;">
+          We replied to your support ticket for <strong style="color: #18181b;">${escapeHtml(gymName)}</strong>:
+        </p>
+        <p style="margin: 0 0 24px 0; padding: 4px 0; color: #18181b; font-weight: 600;">
+          ${escapeHtml(subject)}
+        </p>
+        <div style="background: #fafafa; border-left: 3px solid ${isResolution ? "#10b981" : "#6366f1"}; padding: 16px 20px; border-radius: 6px; margin: 0 0 24px 0; white-space: pre-wrap; line-height: 1.6;">${escapeHtml(body)}</div>
+        ${
+          isResolution
+            ? `<p style="margin: 0 0 16px 0; color: #10b981; font-size: 13px;">✓ Marked as resolved. If this didn't fix things, just open a new ticket and we'll dig back in.</p>`
+            : `<p style="margin: 0 0 16px 0; color: #52525b; font-size: 13px;">Need to add something? Open <code>/admin → Help</code> to continue the conversation.</p>`
+        }
+        <p style="margin: 24px 0 0 0; color: #a1a1aa; font-size: 11px; border-top: 1px solid #e4e4e7; padding-top: 16px;">
+          Ticket ${ticketId.slice(0, 8)} · Team MUAYTHAIPAI
+        </p>
+      </div>
+    `
+
+    try {
+      if (!this.resend) {
+        console.warn("[support email] Resend not configured — skipping")
+        return false
+      }
+      const result = await this.resend.emails.send({
+        from: `MUAYTHAIPAI Support <support@paimuaythai.com>`,
+        to: toEmail,
+        subject: emailSubject,
+        html,
+        text,
+        replyTo: "support@paimuaythai.com",
+      })
+      if (result.error) {
+        console.error("[support email] Resend error:", result.error)
+        return false
+      }
+      return true
+    } catch (err) {
+      console.error("[support email] Send failed:", err)
+      return false
+    }
+  }
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
 }
