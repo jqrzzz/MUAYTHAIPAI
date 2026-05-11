@@ -77,9 +77,15 @@ export async function POST(request: Request) {
         const subscription = (await stripe.subscriptions.retrieve(subscriptionId)) as LegacySub
         const monthlyUsdCents = extractMonthlyUsdCents(subscription)
 
-        // Update gym subscription. activated_at is set ONCE here — the
-        // first time we see this customer go active. invoice.paid events
-        // afterwards keep status='active' but don't overwrite activated_at.
+        // Preserve the original activation timestamp on Stripe retries —
+        // without this, every redelivery bumps activated_at forward and
+        // we lose the real moment the gym went live.
+        const { data: existing } = await supabase
+          .from("gym_subscriptions")
+          .select("activated_at")
+          .eq("org_id", orgId)
+          .maybeSingle()
+
         await supabase
           .from("gym_subscriptions")
           .update({
@@ -87,7 +93,7 @@ export async function POST(request: Request) {
             status: "active",
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            activated_at: new Date().toISOString(),
+            activated_at: existing?.activated_at ?? new Date().toISOString(),
             cancelled_at: null,
             monthly_price_usd_cents: monthlyUsdCents,
           })

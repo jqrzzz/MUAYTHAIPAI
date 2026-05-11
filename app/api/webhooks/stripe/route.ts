@@ -127,35 +127,56 @@ async function saveBookingToDatabase(data: {
     // about what really landed in our balance, not just the gross amount.
     const feeSnapshot = await fetchStripeFeeSnapshot(data.stripePaymentIntentId)
 
-    const { data: booking, error } = await supabase
+    // Upsert by stripe_payment_intent_id — Stripe fires both
+    // payment_intent.succeeded AND checkout.session.completed for the
+    // same payment, plus it retries failed webhooks. The partial
+    // unique index on (stripe_payment_intent_id) ensures we never
+    // double-book. `ignoreDuplicates: true` makes the second event a
+    // no-op; the .select() chain returns an empty array, which we
+    // surface as null so the caller can skip emails for replays.
+    const { data: bookings, error } = await supabase
       .from("bookings")
-      .insert({
-        org_id: orgId,
-        service_id: service?.id || null,
-        user_id: finalUserId,
-        guest_name: data.guestName,
-        guest_email: data.guestEmail,
-        booking_date: data.bookingDate,
-        booking_time: data.bookingTime || null,
-        status: "confirmed",
-        payment_status: "paid",
-        payment_method: "stripe",
-        payment_currency: "USD",
-        payment_amount_usd: data.paymentAmountUsd,
-        payment_amount_thb: null,
-        commission_rate: commissionRate,
-        commission_amount_usd: commissionAmount,
-        stripe_payment_intent_id: data.stripePaymentIntentId,
-        stripe_charge_id: feeSnapshot.stripe_charge_id,
-        stripe_balance_transaction_id: feeSnapshot.stripe_balance_transaction_id,
-        stripe_fee_cents: feeSnapshot.stripe_fee_cents,
-        stripe_net_cents: feeSnapshot.stripe_net_cents,
-      })
+      .upsert(
+        {
+          org_id: orgId,
+          service_id: service?.id || null,
+          user_id: finalUserId,
+          guest_name: data.guestName,
+          guest_email: data.guestEmail,
+          booking_date: data.bookingDate,
+          booking_time: data.bookingTime || null,
+          status: "confirmed",
+          payment_status: "paid",
+          payment_method: "stripe",
+          payment_currency: "USD",
+          payment_amount_usd: data.paymentAmountUsd,
+          payment_amount_thb: null,
+          commission_rate: commissionRate,
+          commission_amount_usd: commissionAmount,
+          stripe_payment_intent_id: data.stripePaymentIntentId,
+          stripe_charge_id: feeSnapshot.stripe_charge_id,
+          stripe_balance_transaction_id: feeSnapshot.stripe_balance_transaction_id,
+          stripe_fee_cents: feeSnapshot.stripe_fee_cents,
+          stripe_net_cents: feeSnapshot.stripe_net_cents,
+        },
+        { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
+      )
       .select()
-      .single()
 
     if (error) {
       console.error("Failed to save booking to database:", error)
+      return null
+    }
+
+    const booking = bookings?.[0]
+    if (!booking) {
+      // Duplicate webhook delivery (Stripe retry, or the sibling event
+      // already created this booking). Caller will skip emails.
+      console.log(
+        "Booking already exists for PI",
+        data.stripePaymentIntentId,
+        "— skipping duplicate",
+      )
       return null
     }
 
@@ -206,23 +227,11 @@ export async function POST(request: NextRequest) {
         const service = metadata.service_type || metadata.service_name
 
         if (metadata.customer_email && metadata.customer_name && service) {
-          const bookingData = {
-            customerName: metadata.customer_name,
-            customerEmail: metadata.customer_email,
-            serviceType: service,
-            bookingDate: metadata.booking_date || "TBD",
-            bookingTime: metadata.booking_time,
-            amount: paymentIntent.amount / 100,
-            paymentId: paymentIntent.id,
-          }
-
-          // Send emails
-          const emailService = EmailService.getInstance()
-          const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
-          const staffEmailSent = await emailService.sendStaffNotification(bookingData)
-          console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
-
-          await saveBookingToDatabase({
+          // Persist first, email second — saveBookingToDatabase returns
+          // null when the booking already exists (Stripe retry, or the
+          // sibling checkout.session.completed event fired first), and
+          // we use that signal to skip the duplicate-email send.
+          const booking = await saveBookingToDatabase({
             serviceName: service,
             guestName: metadata.customer_name,
             guestEmail: metadata.customer_email,
@@ -233,6 +242,22 @@ export async function POST(request: NextRequest) {
             userId: metadata.user_id || undefined,
             orgId: metadata.org_id || undefined,
           })
+
+          if (booking) {
+            const bookingData = {
+              customerName: metadata.customer_name,
+              customerEmail: metadata.customer_email,
+              serviceType: service,
+              bookingDate: metadata.booking_date || "TBD",
+              bookingTime: metadata.booking_time,
+              amount: paymentIntent.amount / 100,
+              paymentId: paymentIntent.id,
+            }
+            const emailService = EmailService.getInstance()
+            const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
+            const staffEmailSent = await emailService.sendStaffNotification(bookingData)
+            console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
+          }
         } else {
           console.warn("Missing required booking details in metadata, skipping emails")
         }
@@ -355,22 +380,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const service = metadata.service_type || metadata.service_name
 
     if (customerEmail && metadata.customer_name && service) {
-      const bookingData = {
-        customerName: metadata.customer_name,
-        customerEmail: customerEmail,
-        serviceType: service,
-        bookingDate: metadata.booking_date || "TBD",
-        bookingTime: metadata.booking_time,
-        amount: session.amount_total ? session.amount_total / 100 : 0,
-        paymentId: (session.payment_intent as string) || session.id,
-      }
-
-      const emailService = EmailService.getInstance()
-      const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
-      const staffEmailSent = await emailService.sendStaffNotification(bookingData)
-      console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
-
-      await saveBookingToDatabase({
+      // Same idempotency pattern as payment_intent.succeeded: persist
+      // first, email only if the upsert produced a new row. Without
+      // this gate, every Checkout sends emails twice — once from this
+      // handler and once from payment_intent.succeeded on the same PI.
+      const booking = await saveBookingToDatabase({
         serviceName: service,
         guestName: metadata.customer_name,
         guestEmail: customerEmail,
@@ -381,6 +395,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         userId: metadata.user_id || undefined,
         orgId: metadata.org_id || undefined,
       })
+
+      if (booking) {
+        const bookingData = {
+          customerName: metadata.customer_name,
+          customerEmail: customerEmail,
+          serviceType: service,
+          bookingDate: metadata.booking_date || "TBD",
+          bookingTime: metadata.booking_time,
+          amount: session.amount_total ? session.amount_total / 100 : 0,
+          paymentId: (session.payment_intent as string) || session.id,
+        }
+        const emailService = EmailService.getInstance()
+        const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
+        const staffEmailSent = await emailService.sendStaffNotification(bookingData)
+        console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
+      }
     } else {
       console.warn("Missing booking details in session metadata")
     }
