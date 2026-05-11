@@ -34,9 +34,11 @@ import {
   UserCheck,
   Megaphone,
   TrendingUp,
+  Receipt,
 } from "lucide-react"
 import CurriculumTab from "@/components/platform-admin/curriculum-tab"
 import AdoptionTab from "@/components/platform-admin/adoption-tab"
+import BookingsTab from "@/components/platform-admin/bookings-tab"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
@@ -159,6 +161,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     | "trainers"
     | "campaigns"
     | "adoption"
+    | "bookings"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -513,6 +516,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               { id: "gyms", label: "Gyms", icon: Users },
               { id: "courses", label: "Curriculum", icon: BookOpen },
               { id: "adoption", label: "Adoption", icon: TrendingUp },
+              { id: "bookings", label: "Bookings", icon: Receipt },
               { id: "payouts", label: "Payouts", icon: DollarSign },
               { id: "blacklist", label: "Blacklist", icon: Shield },
               { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -559,6 +563,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         {activeTab === "courses" && <CurriculumTab />}
 
         {activeTab === "adoption" && <AdoptionTab />}
+
+        {activeTab === "bookings" && <BookingsTab />}
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
