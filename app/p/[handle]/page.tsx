@@ -129,17 +129,57 @@ export default async function PassportPage({ params }: Props) {
   // Total skill mastery across all levels
   const totalSignoffs = (signoffsRes.data ?? []).length
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+  const studentName = user.full_name ?? "Practitioner"
+
+  // One EducationalOccupationalCredential per earned cert. Each links
+  // back to the verify URL so search engines can crawl the credential
+  // graph from the practitioner's profile.
+  const credentialEntries = certs.map((c) => ({
+    "@type": "EducationalOccupationalCredential" as const,
+    name: `${c.level} Level ${c.level_number}`,
+    identifier: c.certificate_number,
+    url: c.certificate_number ? `${siteUrl}/verify/${c.certificate_number}` : undefined,
+    dateCreated: c.issued_at,
+    credentialCategory: "certification",
+    ...(c.gym_name
+      ? {
+          recognizedBy: {
+            "@type": "EducationalOrganization" as const,
+            name: c.gym_name,
+            ...(c.gym_slug ? { url: `${siteUrl}/gyms/${c.gym_slug}` } : {}),
+          },
+        }
+      : {}),
+  }))
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: studentName,
+    url: `${siteUrl}/p/${slug}`,
+    ...(user.public_passport_bio ? { description: user.public_passport_bio } : {}),
+    knowsAbout: ["Muay Thai", "Combat Sports"],
+    ...(credentialEntries.length > 0 ? { hasCredential: credentialEntries } : {}),
+  }
+
   return (
-    <PassportClient
-      handle={slug}
-      student={{
-        full_name: user.full_name ?? "Practitioner",
-        bio: user.public_passport_bio ?? null,
-      }}
-      levels={levels}
-      certs={certs}
-      gyms={gyms}
-      totalSignoffs={totalSignoffs}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <PassportClient
+        handle={slug}
+        student={{
+          full_name: user.full_name ?? "Practitioner",
+          bio: user.public_passport_bio ?? null,
+        }}
+        levels={levels}
+        certs={certs}
+        gyms={gyms}
+        totalSignoffs={totalSignoffs}
+      />
+    </>
   )
 }

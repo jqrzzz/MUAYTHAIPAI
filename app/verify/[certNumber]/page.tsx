@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { certNumber } = await params
   const { data: cert } = await supabase
     .from("certificates")
-    .select("level, level_number, users:user_id (full_name), organizations:org_id (name)")
+    .select("level, level_number, status, users:user_id (full_name), organizations:org_id (name)")
     .eq("certificate_number", certNumber)
     .single()
   const levelConfig = cert ? getLevelById(cert.level) : null
@@ -42,10 +42,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = cert
     ? `${studentName} earned the ${levelName} certification (Level ${cert.level_number}) at ${gymName}. Verified through the Naga-to-Garuda Muay Thai Certification System.`
     : "Verify a Muay Thai certification issued through the MUAYTHAIPAI network."
+  // Only index real, active certs. Missing or revoked → noindex so we
+  // don't pollute search with dead pages.
+  const indexable = !!cert && cert.status === "active"
   return {
     title,
     description,
-    robots: "noindex",
+    robots: indexable ? "index, follow" : "noindex",
     openGraph: {
       title,
       description,
@@ -171,8 +174,45 @@ export default async function VerifyCertificatePage({ params }: Props) {
 
   const shareText = `I earned the ${levelName} certification (Level ${cert.level_number}) in Muay Thai at ${org.name}! 🥊`
 
+  // Structured data — Schema.org's closest fit for an awarded credential
+  // is EducationalOccupationalCredential. We pair it with a Person (the
+  // student) and EducationalOrganization (the gym) so Google/Bing can
+  // build the relationship graph.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOccupationalCredential",
+    name: `${levelName} — Muay Thai Level ${cert.level_number}`,
+    description: `${studentName} earned the ${levelName} certification (Level ${cert.level_number}) at ${org.name}. Issued via the Naga-to-Garuda Muay Thai Certification System.`,
+    credentialCategory: "certification",
+    educationalLevel: `Level ${cert.level_number} of 5`,
+    url: verifyUrl,
+    identifier: certNumber,
+    dateCreated: cert.issued_at,
+    validIn: { "@type": "Country", name: "Thailand" },
+    recognizedBy: {
+      "@type": "EducationalOrganization",
+      name: org.name,
+      address: org.city ? { "@type": "PostalAddress", addressLocality: org.city, addressRegion: org.province ?? undefined, addressCountry: "TH" } : undefined,
+      url: `${siteUrl}/gyms/${org.slug}`,
+    },
+    about: {
+      "@type": "Person",
+      name: studentName,
+      ...(student.public_passport_enabled && student.public_passport_handle
+        ? { url: `${siteUrl}/p/${student.public_passport_handle}` }
+        : {}),
+    },
+    competencyRequired: levelConfig?.skills ?? [],
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 py-8 px-4">
+      {isActive && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
       <div className="mx-auto w-full max-w-2xl">
         {/* Status banner */}
         <div

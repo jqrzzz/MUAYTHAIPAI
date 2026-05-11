@@ -147,8 +147,49 @@ export default async function InstructorPage({ params }: Props) {
     (primary?.fight_record_losses ?? 0) +
     (primary?.fight_record_draws ?? 0)
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+  const profileUrl = `${siteUrl}/i/${handle}`
+
+  // Affiliated gyms — one EducationalOrganization per gym this trainer
+  // is associated with. Search engines see the lineage.
+  const affiliations = profiles
+    .filter((p) => p.org_name)
+    .map((p) => ({
+      "@type": "EducationalOrganization" as const,
+      name: p.org_name,
+      ...(p.org_slug ? { url: `${siteUrl}/gyms/${p.org_slug}` } : {}),
+      ...(p.org_city
+        ? {
+            address: {
+              "@type": "PostalAddress" as const,
+              addressLocality: p.org_city,
+              addressRegion: p.org_province ?? undefined,
+              addressCountry: "TH",
+            },
+          }
+        : {}),
+    }))
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: displayName,
+    url: profileUrl,
+    jobTitle: primary?.title ?? "Muay Thai Trainer",
+    ...(primary?.bio ? { description: primary.bio } : {}),
+    ...(primary?.photo_url ? { image: primary.photo_url } : {}),
+    knowsAbout: primary?.specialties?.length
+      ? primary.specialties
+      : ["Muay Thai", "Combat Sports", "Athletic Coaching"],
+    ...(affiliations.length > 0 ? { affiliation: affiliations } : {}),
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Cover band */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900" />
