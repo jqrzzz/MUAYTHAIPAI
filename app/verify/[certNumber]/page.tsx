@@ -54,7 +54,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: "article",
       siteName: "MUAYTHAIPAI Certification Network",
-      images: [{ url: "/images/muay-thai-logo-og.png", width: 1200, height: 630 }],
+      // og:image intentionally omitted — the colocated
+      // opengraph-image.tsx renders a dynamic per-cert card.
     },
     twitter: { card: "summary_large_image", title, description },
   }
