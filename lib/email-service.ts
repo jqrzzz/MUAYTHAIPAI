@@ -918,6 +918,80 @@ Muay Thai Pai
       return false
     }
   }
+
+  /**
+   * Generic AI-warm send for automated sequences. Returns the Resend
+   * message ID so the caller can store it in email_send_log for
+   * audit + replies.
+   *
+   * One method handles all three sequences (welcome, lapsed, cert
+   * congrats) — they share the same shape: subject + body in the
+   * gym's voice, friendly + direct, no marketing fluff.
+   */
+  async sendAutomatedSequence(args: {
+    toEmail: string
+    toName?: string | null
+    fromName: string // typically the gym name
+    fromEmail?: string | null
+    subject: string
+    bodyText: string
+    /** Optional small accent color for the left-border of the body block */
+    accent?: "indigo" | "amber" | "emerald" | "orange"
+    /** Footer line — e.g. "Sent by Wisarut Family Gym via MUAYTHAIPAI" */
+    footer?: string
+  }): Promise<{ ok: boolean; messageId: string | null; error: string | null }> {
+    const { toEmail, toName, fromName, fromEmail, subject, bodyText, accent = "indigo", footer } = args
+    const accentColors: Record<string, string> = {
+      indigo: "#6366f1",
+      amber: "#f59e0b",
+      emerald: "#10b981",
+      orange: "#f97316",
+    }
+    const accentColor = accentColors[accent] ?? accentColors.indigo
+
+    const html = `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #18181b; line-height: 1.6;">
+  ${toName ? `<p style="margin: 0 0 16px 0;">Hi ${escapeHtml(toName.split(" ")[0])},</p>` : ""}
+  <div style="white-space: pre-wrap; border-left: 3px solid ${accentColor}; padding: 4px 0 4px 16px; margin: 16px 0;">${escapeHtml(bodyText)}</div>
+  ${
+    footer
+      ? `<p style="margin: 24px 0 0 0; color: #a1a1aa; font-size: 11px; border-top: 1px solid #e4e4e7; padding-top: 16px;">${escapeHtml(footer)}</p>`
+      : ""
+  }
+</div>`.trim()
+
+    const text = (toName ? `Hi ${toName.split(" ")[0]},\n\n` : "") + bodyText + (footer ? `\n\n---\n${footer}` : "")
+
+    try {
+      if (!this.resend) {
+        console.warn("[email sequence] Resend not configured — skipping")
+        return { ok: false, messageId: null, error: "resend_not_configured" }
+      }
+      const from = `${fromName} <${fromEmail || "noreply@paimuaythai.com"}>`
+      const result = await this.resend.emails.send({
+        from,
+        to: toEmail,
+        subject,
+        html,
+        text,
+        replyTo: fromEmail || undefined,
+      })
+      if (result.error) {
+        return {
+          ok: false,
+          messageId: null,
+          error: result.error.message ?? "resend_error",
+        }
+      }
+      return { ok: true, messageId: result.data?.id ?? null, error: null }
+    } catch (err) {
+      return {
+        ok: false,
+        messageId: null,
+        error: err instanceof Error ? err.message : "unknown_error",
+      }
+    }
+  }
 }
 
 function escapeHtml(str: string): string {
