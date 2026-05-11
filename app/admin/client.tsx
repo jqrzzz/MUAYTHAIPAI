@@ -28,6 +28,7 @@ import CoursesTab from "@/components/admin/courses-tab"
 import WebsiteTab from "@/components/admin/website-tab"
 import SocialTab from "@/components/admin/social-tab"
 import PayoutsTab from "@/components/admin/payouts-tab"
+import RetentionTab from "@/components/admin/retention-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import HelpButton from "@/components/admin/help-button"
 import {
@@ -55,6 +56,7 @@ import {
   Globe,
   Sparkles,
   DollarSign,
+  TrendingDown,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -212,7 +214,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social" | "payouts"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social" | "payouts" | "retention"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -311,6 +313,7 @@ export default function AdminDashboardClient({
         { id: "recent" as const, label: "Recent", labelTh: "ล่าสุด", icon: Clock },
         { id: "inbox" as const, label: "Inbox", labelTh: "กล่องข้อความ", icon: Inbox, badge: inboxCounts.total },
         { id: "students" as const, label: "Students", labelTh: "นักเรียน", icon: GraduationCap },
+        { id: "retention" as const, label: "Retention", labelTh: "การรักษาสมาชิก", icon: TrendingDown },
         { id: "certificates" as const, label: "Certificates", labelTh: "ใบรับรอง", icon: Award },
         { id: "courses" as const, label: "Gym courses", labelTh: "หลักสูตรของยิม", icon: BookOpen },
       ],
@@ -776,6 +779,8 @@ export default function AdminDashboardClient({
           {activeTab === "social" && <SocialTab />}
 
           {activeTab === "payouts" && <PayoutsTab />}
+
+          {activeTab === "retention" && <RetentionTab />}
         </div>
       </main>
       <HelpButton />
