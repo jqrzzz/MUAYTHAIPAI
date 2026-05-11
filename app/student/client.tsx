@@ -30,6 +30,7 @@ import {
   Send,
   Loader2,
   BookOpen,
+  Check,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import StudentCoursesView from "@/components/student/courses-view"
@@ -358,10 +359,10 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               {userName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+              <p className="font-display text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                 {greeting}
               </p>
-              <h1 className="text-[13px] font-semibold text-white leading-tight truncate">
+              <h1 className="font-display text-[15px] text-white leading-tight truncate">
                 {userName}
               </h1>
             </div>
@@ -380,6 +381,13 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {/* Home View */}
         {activeView === "home" && (
           <div className="py-6 space-y-6">
+            {/* Belt journey strip — visible Naga→Garuda progression as a
+                proud personal artifact. Compounds with the course-page
+                belt band so the brand cadence is consistent. */}
+            {certProgress.length > 0 && (
+              <BeltJourneyStrip levels={certProgress} />
+            )}
+
             {/* Quick stats — uniform chrome, eyebrow + number, indigo only on the actionable one */}
             <div className="grid grid-cols-4 gap-2">
               <MiniStat icon={Flame} value={streak} label="Streak" />
@@ -405,7 +413,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               return (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-medium text-neutral-400">
+                    <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                       Cert Journey
                     </h2>
                     <button
@@ -476,7 +484,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             {/* Next Session Card */}
             {upcomingBookings.length > 0 ? (
               <div>
-                <h2 className="text-sm font-medium text-neutral-400 mb-3">Next Session</h2>
+                <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-3">Next Session</h2>
                 <Card className="bg-gradient-to-br from-orange-600/20 to-red-600/10 border-orange-500/30 overflow-hidden">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between">
@@ -521,7 +529,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             {certificates.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-medium text-neutral-400">Latest Achievement</h2>
+                  <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500">Latest Achievement</h2>
                   <button
                     onClick={() => setActiveView("certificates")}
                     className="text-xs text-orange-500 hover:text-orange-400"
@@ -604,7 +612,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "bookings" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">My Bookings</h2>
+              <h2 className="font-display text-[24px] text-white">My Bookings</h2>
               <Badge className="bg-neutral-800 text-neutral-300 border-0">{bookings.length} total</Badge>
             </div>
 
@@ -687,7 +695,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "certificates" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Certificates</h2>
+              <h2 className="font-display text-[24px] text-white">Certificates</h2>
               <Badge className="bg-neutral-800 text-neutral-300 border-0">{certificates.length} earned</Badge>
             </div>
 
@@ -858,7 +866,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "gyms" && (
           <div className="py-6 space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-white">Thailand Gyms</h2>
+              <h2 className="font-display text-[24px] text-white">Thailand Gyms</h2>
               <p className="text-sm text-neutral-500">Book at any gym in the network</p>
             </div>
 
@@ -919,7 +927,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "credits" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">My Credits</h2>
+              <h2 className="font-display text-[24px] text-white">My Credits</h2>
               <Button variant="ghost" size="sm" onClick={fetchCredits} className="text-neutral-400">
                 Refresh
               </Button>
@@ -972,7 +980,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "notes" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Trainer Notes</h2>
+              <h2 className="font-display text-[24px] text-white">Trainer Notes</h2>
               <Button variant="ghost" size="sm" onClick={fetchNotes} className="text-neutral-400">
                 Refresh
               </Button>
@@ -1360,4 +1368,88 @@ function calculateStreak(bookings: Booking[]): number {
   }
 
   return streak
+}
+
+/**
+ * Belt journey strip — visible Naga → Garuda progression at the top
+ * of the student dashboard. Each belt shows state:
+ *   earned    → emerald ring + creature icon + check
+ *   enrolled  → orange ring + scale-up + glow (active focus)
+ *   pending   → dim ring + 40% opacity (locked in spirit, accessible later)
+ *
+ * Levels prop matches the certProgress shape pulled from the API.
+ */
+interface BeltLevel {
+  id: string
+  number: number
+  name: string
+  earned: boolean
+  enrolled: boolean
+  skillsTotal: number
+  skillsSignedOff: number
+}
+
+function BeltJourneyStrip({ levels }: { levels: BeltLevel[] }) {
+  if (levels.length === 0) return null
+  const ICONS: Record<string, string> = {
+    naga: "🐍",
+    "phayra-nak": "🐉",
+    singha: "🦁",
+    hanuman: "🐒",
+    garuda: "🦅",
+  }
+  const sorted = [...levels].sort((a, b) => a.number - b.number)
+  const earnedCount = sorted.filter((l) => l.earned).length
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="font-display text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+          The Path
+        </p>
+        <p className="text-[10px] text-zinc-600 tabular-nums">
+          {earnedCount}/{sorted.length} earned
+        </p>
+      </div>
+      <div className="relative">
+        {/* Connecting line — sits behind the belt nodes */}
+        <div className="absolute left-0 right-0 top-1/2 h-px bg-zinc-800/80" />
+        <div className="relative flex items-center justify-between">
+          {sorted.map((lvl) => {
+            const icon = ICONS[lvl.id] ?? "🥊"
+            const baseRing =
+              "h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-[18px] sm:text-[20px] ring-2 transition-all shrink-0"
+            return (
+              <div key={lvl.id} className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                <div
+                  className={
+                    lvl.earned
+                      ? `${baseRing} bg-emerald-500/15 ring-emerald-400/60`
+                      : lvl.enrolled
+                        ? `${baseRing} bg-gradient-to-br from-orange-500/30 to-orange-600/20 ring-orange-400 scale-110 shadow-lg shadow-orange-500/20`
+                        : `${baseRing} bg-zinc-900 ring-zinc-800 opacity-40`
+                  }
+                >
+                  {lvl.earned && (
+                    <Check className="absolute h-3.5 w-3.5 text-emerald-300 -bottom-1 -right-1 bg-zinc-950 rounded-full" />
+                  )}
+                  <span aria-hidden="true">{icon}</span>
+                </div>
+                <p
+                  className={`font-display text-[9px] sm:text-[10px] uppercase tracking-[0.14em] truncate w-full text-center ${
+                    lvl.earned
+                      ? "text-emerald-300"
+                      : lvl.enrolled
+                        ? "text-orange-300"
+                        : "text-zinc-600"
+                  }`}
+                >
+                  {lvl.name}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
 }

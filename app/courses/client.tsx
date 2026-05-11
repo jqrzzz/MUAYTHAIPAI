@@ -218,86 +218,113 @@ export default function CoursesClient() {
   )
 }
 
+const CERT_ICON: Record<string, string> = {
+  naga: "🐍",
+  "phayra-nak": "🐉",
+  singha: "🦁",
+  hanuman: "🐒",
+  garuda: "🦅",
+}
+
 function CourseCard({ course, featured }: { course: Course; featured?: boolean }) {
+  const certKey = course.certificate_level?.toLowerCase().replace(/\s+/g, "-")
+  const certIcon = certKey ? CERT_ICON[certKey] : null
   return (
-    <Link href={`/courses/${course.slug}`}>
-      <div
-        className={`group rounded-xl border transition-colors ${
+    <Link href={`/courses/${course.slug}`} className="group block">
+      <article
+        className={`relative rounded-2xl overflow-hidden ring-1 transition-all duration-200 hover:-translate-y-0.5 ${
           featured
-            ? "border-orange-500/20 bg-orange-500/5 hover:border-orange-500/40"
-            : "border-white/10 bg-white/[0.03] hover:border-white/20"
+            ? "ring-orange-500/20 bg-orange-500/[0.04] hover:ring-orange-500/40"
+            : "ring-white/10 bg-white/[0.02] hover:ring-white/20 hover:bg-white/[0.04]"
         }`}
       >
-        {/* Cover */}
-        {course.cover_image_url ? (
-          <div className="relative aspect-video overflow-hidden rounded-t-xl">
-            <Image
-              src={course.cover_image_url}
-              alt={course.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover transition-transform group-hover:scale-105"
-            />
-          </div>
-        ) : (
-          <div className="flex aspect-video items-center justify-center rounded-t-xl bg-gradient-to-br from-neutral-800 to-neutral-900">
-            <Dumbbell className="h-10 w-10 text-neutral-700" />
-          </div>
-        )}
+        {/* Cinematic cover with gradient overlay */}
+        <div className="relative aspect-[16/10] overflow-hidden">
+          {course.cover_image_url ? (
+            <>
+              <Image
+                src={course.cover_image_url}
+                alt={course.title}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900">
+              <Dumbbell className="h-10 w-10 text-neutral-700" />
+            </div>
+          )}
 
-        {/* Info */}
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${DIFFICULTY_COLORS[course.difficulty] || DIFFICULTY_COLORS["all-levels"]}`}>
-              {course.difficulty}
-            </span>
+          {/* Top-corner badges over the image */}
+          <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2">
             {course.certificate_level && (
-              <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-medium text-purple-400">
-                {course.certificate_level} cert
+              <span className="font-display text-[10px] uppercase tracking-[0.18em] text-white bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1 ring-1 ring-white/20 inline-flex items-center gap-1.5">
+                {certIcon && <span aria-hidden="true">{certIcon}</span>}
+                {course.certificate_level}
               </span>
             )}
             {course.is_free && (
-              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+              <span className="text-[10px] font-medium text-emerald-100 bg-emerald-500/30 backdrop-blur-sm rounded-full px-2.5 py-1 ring-1 ring-emerald-300/40 uppercase tracking-wider">
                 Free
               </span>
             )}
           </div>
 
-          <h3 className="font-semibold text-white group-hover:text-orange-400 transition-colors">
-            {course.title}
-          </h3>
+          {/* Bottom-corner title over the image */}
+          <div className="absolute bottom-3 left-3 right-3">
+            <h3 className="font-display text-[18px] sm:text-[20px] leading-tight text-white drop-shadow-md line-clamp-2">
+              {course.title}
+            </h3>
+            {course.organizations && (
+              <p className="text-[11px] text-white/70 mt-1">
+                {course.organizations.name}
+              </p>
+            )}
+          </div>
+        </div>
 
+        {/* Info strip below */}
+        <div className="px-4 pt-3 pb-4">
           {course.short_description && (
-            <p className="mt-1 text-sm text-neutral-500 line-clamp-2">
+            <p className="font-serif italic text-[14px] text-neutral-300 leading-relaxed line-clamp-2">
               {course.short_description}
             </p>
           )}
 
-          <div className="mt-3 flex items-center gap-3 text-xs text-neutral-600">
-            <span className="flex items-center gap-1">
+          <div className="mt-3 flex items-center gap-3 text-[11px] text-neutral-500">
+            <span
+              className={`rounded-full px-2 py-0.5 font-medium uppercase tracking-wider ring-1 ${
+                course.difficulty === "beginner"
+                  ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/20"
+                  : course.difficulty === "intermediate"
+                    ? "bg-amber-500/10 text-amber-300 ring-amber-500/20"
+                    : course.difficulty === "advanced"
+                      ? "bg-red-500/10 text-red-300 ring-red-500/20"
+                      : "bg-blue-500/10 text-blue-300 ring-blue-500/20"
+              }`}
+            >
+              {course.difficulty}
+            </span>
+            <span className="inline-flex items-center gap-1">
               <BookOpen className="h-3 w-3" />
-              {course.total_lessons} lessons
+              {course.total_lessons}
             </span>
             {course.estimated_hours > 0 && (
-              <span className="flex items-center gap-1">
+              <span className="inline-flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {course.estimated_hours}h
               </span>
             )}
             {!course.is_free && course.price_thb > 0 && (
-              <span className="ml-auto font-medium text-orange-400">
+              <span className="ml-auto font-display text-[12px] text-orange-300 tabular-nums">
                 ฿{course.price_thb.toLocaleString()}
               </span>
             )}
           </div>
-
-          {course.organizations && (
-            <p className="mt-2 text-[10px] text-neutral-600">
-              by {course.organizations.name}
-            </p>
-          )}
         </div>
-      </div>
+      </article>
     </Link>
   )
 }
