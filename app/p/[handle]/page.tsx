@@ -65,7 +65,7 @@ export default async function PassportPage({ params }: Props) {
     supabase
       .from("skill_signoffs")
       .select("level, skill_index, signed_off_at, org_id")
-      .eq("student_user_id", user.id),
+      .eq("student_id", user.id),
     supabase
       .from("org_members")
       .select(`
