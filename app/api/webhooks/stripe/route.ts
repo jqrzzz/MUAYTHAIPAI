@@ -11,6 +11,63 @@ const stripe = new Stripe(env.stripe.secretKey(), {
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
+/**
+ * Fetch the charge + balance transaction for a PaymentIntent so we can
+ * record what Stripe actually deducted in fees + what really landed.
+ *
+ * Returns nulls if any piece is missing — we always still want to save
+ * the booking, even if the fee snapshot isn't available yet.
+ */
+async function fetchStripeFeeSnapshot(paymentIntentId: string): Promise<{
+  stripe_charge_id: string | null
+  stripe_balance_transaction_id: string | null
+  stripe_fee_cents: number | null
+  stripe_net_cents: number | null
+}> {
+  try {
+    const charges = await stripe.charges.list({
+      payment_intent: paymentIntentId,
+      limit: 1,
+    })
+    const charge = charges.data[0]
+    if (!charge) {
+      return {
+        stripe_charge_id: null,
+        stripe_balance_transaction_id: null,
+        stripe_fee_cents: null,
+        stripe_net_cents: null,
+      }
+    }
+    const balanceTxId =
+      typeof charge.balance_transaction === "string"
+        ? charge.balance_transaction
+        : charge.balance_transaction?.id ?? null
+
+    let fee: number | null = null
+    let net: number | null = null
+    if (balanceTxId) {
+      const tx = await stripe.balanceTransactions.retrieve(balanceTxId)
+      // Stripe's `fee` is summed across fee_details — exactly what we want
+      fee = tx.fee ?? null
+      net = tx.net ?? null
+    }
+    return {
+      stripe_charge_id: charge.id,
+      stripe_balance_transaction_id: balanceTxId,
+      stripe_fee_cents: fee,
+      stripe_net_cents: net,
+    }
+  } catch (err) {
+    console.error("[webhook] Failed to fetch fee snapshot:", err)
+    return {
+      stripe_charge_id: null,
+      stripe_balance_transaction_id: null,
+      stripe_fee_cents: null,
+      stripe_net_cents: null,
+    }
+  }
+}
+
 async function saveBookingToDatabase(data: {
   serviceName: string
   guestName: string
@@ -62,6 +119,10 @@ async function saveBookingToDatabase(data: {
     const commissionRate = 0.15
     const commissionAmount = Math.round(data.paymentAmountUsd * commissionRate * 100) / 100
 
+    // Capture Stripe's actual fee + net so the dashboard tells the truth
+    // about what really landed in our balance, not just the gross amount.
+    const feeSnapshot = await fetchStripeFeeSnapshot(data.stripePaymentIntentId)
+
     const { data: booking, error } = await supabase
       .from("bookings")
       .insert({
@@ -81,6 +142,10 @@ async function saveBookingToDatabase(data: {
         commission_rate: commissionRate,
         commission_amount_usd: commissionAmount,
         stripe_payment_intent_id: data.stripePaymentIntentId,
+        stripe_charge_id: feeSnapshot.stripe_charge_id,
+        stripe_balance_transaction_id: feeSnapshot.stripe_balance_transaction_id,
+        stripe_fee_cents: feeSnapshot.stripe_fee_cents,
+        stripe_net_cents: feeSnapshot.stripe_net_cents,
       })
       .select()
       .single()
@@ -199,6 +264,47 @@ export async function POST(request: NextRequest) {
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session
         console.log("Checkout session expired:", session.id)
+        break
+      }
+
+      case "charge.refunded": {
+        // Fired when a refund happens — from API OR directly in the
+        // Stripe Dashboard. Keeps our books in sync with reality.
+        const charge = event.data.object as Stripe.Charge
+        const piId =
+          typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : charge.payment_intent?.id
+        if (!piId) {
+          console.warn("[webhook] charge.refunded missing payment_intent — skipping")
+          break
+        }
+        const fullyRefunded = charge.amount_refunded >= charge.amount
+        const { error: refundErr } = await supabase
+          .from("bookings")
+          .update({
+            payment_status: fullyRefunded ? "refunded" : "paid",
+            refunded_amount_cents: charge.amount_refunded,
+            refunded_at: new Date().toISOString(),
+          })
+          .eq("stripe_payment_intent_id", piId)
+        if (refundErr) {
+          console.error("[webhook] Failed to mark booking refunded:", refundErr)
+        } else {
+          console.log(
+            `Refund recorded for PI ${piId}: $${(charge.amount_refunded / 100).toFixed(2)}`,
+            fullyRefunded ? "(full)" : "(partial)",
+          )
+        }
+        break
+      }
+
+      case "charge.refund.updated": {
+        // Stripe may update a refund (e.g. status: pending → succeeded).
+        // We don't need to re-process; the original charge.refunded was
+        // already recorded. Just log for traceability.
+        const refund = event.data.object as Stripe.Refund
+        console.log("Refund updated:", refund.id, refund.status)
         break
       }
 

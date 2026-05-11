@@ -42,6 +42,9 @@ interface GymRow {
   gym_slug: string | null
   stripe_onboarded: boolean
   stripe_paid_usd_cents: number
+  stripe_fee_usd_cents: number
+  stripe_net_usd_cents: number
+  stripe_fee_known_count: number
   platform_commission_usd_cents: number
   cash_paid_thb: number
   cash_pending_thb: number
@@ -53,12 +56,16 @@ interface GymRow {
   unspecified_count: number
   total_bookings: number
   refunded_count: number
+  refunded_amount_usd_cents: number
   payouts_paid_usd_cents: number
 }
 
 interface Totals {
   bookings: number
   stripe_paid_usd_cents: number
+  stripe_fee_usd_cents: number
+  stripe_net_usd_cents: number
+  stripe_fee_known_count: number
   platform_commission_usd_cents: number
   cash_paid_thb: number
   cash_pending_thb: number
@@ -69,6 +76,7 @@ interface Totals {
   transfer_paid_count: number
   unspecified_count: number
   refunded_count: number
+  refunded_amount_usd_cents: number
   payouts_paid_usd_cents: number
 }
 
@@ -84,6 +92,9 @@ interface RecentRow {
   payment_amount_thb: number | null
   payment_amount_usd: number | null
   stripe_payment_intent_id: string | null
+  stripe_fee_cents: number | null
+  stripe_net_cents: number | null
+  refunded_amount_cents: number | null
 }
 
 interface Response {
@@ -167,16 +178,20 @@ export default function BookingsTab() {
       [
         "Gym",
         "Total bookings",
-        "Stripe (USD)",
+        "Stripe gross (USD)",
+        "Stripe fees (USD)",
+        "Stripe net (USD)",
         "Stripe bookings",
         "Platform commission (USD)",
+        "Real take (USD)",
         "Cash paid (THB)",
         "Cash paid bookings",
         "Cash pending (THB)",
         "Cash pending bookings",
         "Transfer paid (THB)",
         "Transfer bookings",
-        "Refunded",
+        "Refunded count",
+        "Refunded amount (USD)",
         "Payouts paid (USD)",
       ].join(","),
       ...data.by_gym.map((g) =>
@@ -184,8 +199,11 @@ export default function BookingsTab() {
           escapeCsv(g.gym_name),
           g.total_bookings,
           (g.stripe_paid_usd_cents / 100).toFixed(2),
+          (g.stripe_fee_usd_cents / 100).toFixed(2),
+          (g.stripe_net_usd_cents / 100).toFixed(2),
           g.stripe_paid_count,
           (g.platform_commission_usd_cents / 100).toFixed(2),
+          (Math.max(0, g.platform_commission_usd_cents - g.stripe_fee_usd_cents) / 100).toFixed(2),
           g.cash_paid_thb,
           g.cash_paid_count,
           g.cash_pending_thb,
@@ -193,6 +211,7 @@ export default function BookingsTab() {
           g.transfer_paid_thb,
           g.transfer_paid_count,
           g.refunded_count,
+          (g.refunded_amount_usd_cents / 100).toFixed(2),
           (g.payouts_paid_usd_cents / 100).toFixed(2),
         ].join(","),
       ),
@@ -264,38 +283,73 @@ export default function BookingsTab() {
         </div>
       )}
 
-      {/* Hero stats */}
+      {/* Hero stats — the four numbers that tell the real story */}
       {data && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard
-            icon={CreditCard}
-            label="Landed in your Stripe"
-            value={`$${(data.totals.stripe_paid_usd_cents / 100).toFixed(2)}`}
-            sub={`${data.totals.stripe_paid_count} booking${data.totals.stripe_paid_count === 1 ? "" : "s"}`}
-            tone="emerald"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Your commission"
-            value={`$${(data.totals.platform_commission_usd_cents / 100).toFixed(2)}`}
-            sub="Platform take"
-            tone="indigo"
-          />
-          <StatCard
-            icon={Wallet}
-            label="Cash at gyms (paid)"
-            value={`฿${data.totals.cash_paid_thb.toLocaleString()}`}
-            sub={`${data.totals.cash_paid_count} booking${data.totals.cash_paid_count === 1 ? "" : "s"}`}
-            tone="zinc"
-          />
-          <StatCard
-            icon={AlertCircle}
-            label="Cash pending"
-            value={`฿${data.totals.cash_pending_thb.toLocaleString()}`}
-            sub={`${data.totals.cash_pending_count} unsettled`}
-            tone={data.totals.cash_pending_count > 0 ? "amber" : "zinc"}
-          />
-        </div>
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard
+              icon={CreditCard}
+              label="Stripe gross"
+              value={`$${(data.totals.stripe_paid_usd_cents / 100).toFixed(2)}`}
+              sub={`${data.totals.stripe_paid_count} booking${data.totals.stripe_paid_count === 1 ? "" : "s"}`}
+              tone="zinc"
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Stripe fees"
+              value={`−$${(data.totals.stripe_fee_usd_cents / 100).toFixed(2)}`}
+              sub={
+                data.totals.stripe_fee_known_count < data.totals.stripe_paid_count
+                  ? `${data.totals.stripe_fee_known_count}/${data.totals.stripe_paid_count} tracked`
+                  : "All tracked"
+              }
+              tone="amber"
+            />
+            <StatCard
+              icon={Wallet}
+              label="Actually landed"
+              value={`$${(data.totals.stripe_net_usd_cents / 100).toFixed(2)}`}
+              sub="Net to your Stripe balance"
+              tone="emerald"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Your commission"
+              value={`$${(data.totals.platform_commission_usd_cents / 100).toFixed(2)}`}
+              sub={`Real take: $${Math.max(0, (data.totals.platform_commission_usd_cents - data.totals.stripe_fee_usd_cents) / 100).toFixed(2)}`}
+              tone="indigo"
+            />
+          </div>
+
+          {/* Secondary row: cash + refunds. Less critical numbers, smaller. */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <StatCard
+              icon={Wallet}
+              label="Cash at gyms (paid)"
+              value={`฿${data.totals.cash_paid_thb.toLocaleString()}`}
+              sub={`${data.totals.cash_paid_count} booking${data.totals.cash_paid_count === 1 ? "" : "s"}`}
+              tone="zinc"
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Cash pending"
+              value={`฿${data.totals.cash_pending_thb.toLocaleString()}`}
+              sub={`${data.totals.cash_pending_count} unsettled`}
+              tone={data.totals.cash_pending_count > 0 ? "amber" : "zinc"}
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Refunds"
+              value={
+                data.totals.refunded_amount_usd_cents > 0
+                  ? `$${(data.totals.refunded_amount_usd_cents / 100).toFixed(2)}`
+                  : String(data.totals.refunded_count)
+              }
+              sub={`${data.totals.refunded_count} booking${data.totals.refunded_count === 1 ? "" : "s"}`}
+              tone={data.totals.refunded_count > 0 ? "amber" : "zinc"}
+            />
+          </div>
+        </>
       )}
 
       {/* Per-gym breakdown */}
@@ -574,6 +628,39 @@ function GymDrawer({ row, recent }: { row: GymRow; recent: RecentRow[] }) {
   const items = recent.filter((r) => r.gym_name === row.gym_name).slice(0, 20)
   return (
     <div className="bg-zinc-950/60 px-4 py-3 space-y-3 border-t border-zinc-900/60">
+      {/* Stripe accounting strip — gross / fees / net / your real take */}
+      {row.stripe_paid_count > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+          <Stat
+            label="Stripe gross"
+            value={`$${(row.stripe_paid_usd_cents / 100).toFixed(2)}`}
+            sub={`${row.stripe_paid_count} bk`}
+          />
+          <Stat
+            label="Stripe fees"
+            value={`−$${(row.stripe_fee_usd_cents / 100).toFixed(2)}`}
+            sub={
+              row.stripe_fee_known_count < row.stripe_paid_count
+                ? `${row.stripe_fee_known_count}/${row.stripe_paid_count} tracked`
+                : "all tracked"
+            }
+            tone="amber"
+          />
+          <Stat
+            label="Landed"
+            value={`$${(row.stripe_net_usd_cents / 100).toFixed(2)}`}
+            sub="Net to Stripe"
+            tone="indigo"
+          />
+          <Stat
+            label="Your real take"
+            value={`$${Math.max(0, (row.platform_commission_usd_cents - row.stripe_fee_usd_cents) / 100).toFixed(2)}`}
+            sub={`After fees, before payout to gym`}
+            tone="indigo"
+          />
+        </div>
+      )}
+
       {/* Quick reconciliation */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px]">
         <Stat label="Total revenue (USD est.)" value={
@@ -591,7 +678,16 @@ function GymDrawer({ row, recent }: { row: GymRow; recent: RecentRow[] }) {
             100
           ).toFixed(2)}`
         } sub={row.payouts_paid_usd_cents > 0 ? `After $${(row.payouts_paid_usd_cents / 100).toFixed(2)} paid out` : "Nothing paid out yet"} tone="indigo" />
-        <Stat label="Refunds" value={String(row.refunded_count)} tone={row.refunded_count > 0 ? "amber" : "zinc"} />
+        <Stat
+          label="Refunds"
+          value={
+            row.refunded_amount_usd_cents > 0
+              ? `$${(row.refunded_amount_usd_cents / 100).toFixed(2)}`
+              : String(row.refunded_count)
+          }
+          sub={`${row.refunded_count} bk`}
+          tone={row.refunded_count > 0 ? "amber" : "zinc"}
+        />
       </div>
 
       {/* Most recent bookings for this gym */}

@@ -35,6 +35,10 @@ interface BookingRow {
   payment_amount_usd: number | null
   commission_amount_usd: number | null
   stripe_payment_intent_id: string | null
+  stripe_charge_id: string | null
+  stripe_fee_cents: number | null
+  stripe_net_cents: number | null
+  refunded_amount_cents: number | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   services: any
   guest_name: string | null
@@ -69,6 +73,8 @@ export async function GET(request: Request) {
         id, org_id, booking_date, status, payment_method, payment_status,
         payment_currency, payment_amount_thb, payment_amount_usd,
         commission_amount_usd, stripe_payment_intent_id,
+        stripe_charge_id, stripe_fee_cents, stripe_net_cents,
+        refunded_amount_cents,
         guest_name,
         services:service_id (name),
         users:user_id (full_name, email)
@@ -93,6 +99,9 @@ export async function GET(request: Request) {
     gym_slug: string | null
     stripe_onboarded: boolean
     stripe_paid_usd_cents: number
+    stripe_fee_usd_cents: number
+    stripe_net_usd_cents: number
+    stripe_fee_known_count: number
     platform_commission_usd_cents: number
     cash_paid_thb: number
     cash_pending_thb: number
@@ -104,6 +113,7 @@ export async function GET(request: Request) {
     unspecified_count: number
     total_bookings: number
     refunded_count: number
+    refunded_amount_usd_cents: number
     payouts_paid_usd_cents: number
   }
 
@@ -115,6 +125,9 @@ export async function GET(request: Request) {
       gym_slug: g.slug,
       stripe_onboarded: !!g.stripe_onboarded,
       stripe_paid_usd_cents: 0,
+      stripe_fee_usd_cents: 0,
+      stripe_net_usd_cents: 0,
+      stripe_fee_known_count: 0,
       platform_commission_usd_cents: 0,
       cash_paid_thb: 0,
       cash_pending_thb: 0,
@@ -126,6 +139,7 @@ export async function GET(request: Request) {
       unspecified_count: 0,
       total_bookings: 0,
       refunded_count: 0,
+      refunded_amount_usd_cents: 0,
       payouts_paid_usd_cents: 0,
     })
   }
@@ -137,6 +151,7 @@ export async function GET(request: Request) {
 
     if (b.payment_status === "refunded") {
       slot.refunded_count++
+      slot.refunded_amount_usd_cents += b.refunded_amount_cents ?? 0
       // refunded bookings don't contribute to revenue totals
       continue
     }
@@ -150,6 +165,13 @@ export async function GET(request: Request) {
       slot.stripe_paid_usd_cents += usdCents
       slot.platform_commission_usd_cents += commissionCents
       slot.stripe_paid_count++
+      // Fees may be NULL on pre-migration historical bookings — only
+      // count toward the snapshot when we actually have ground truth.
+      if (b.stripe_fee_cents != null) {
+        slot.stripe_fee_usd_cents += b.stripe_fee_cents
+        slot.stripe_net_usd_cents += b.stripe_net_cents ?? (usdCents - b.stripe_fee_cents)
+        slot.stripe_fee_known_count++
+      }
     } else if (method === "cash" && b.payment_status === "paid") {
       slot.cash_paid_thb += thb
       slot.cash_paid_count++
@@ -184,6 +206,9 @@ export async function GET(request: Request) {
     (acc, g) => ({
       bookings: acc.bookings + g.total_bookings,
       stripe_paid_usd_cents: acc.stripe_paid_usd_cents + g.stripe_paid_usd_cents,
+      stripe_fee_usd_cents: acc.stripe_fee_usd_cents + g.stripe_fee_usd_cents,
+      stripe_net_usd_cents: acc.stripe_net_usd_cents + g.stripe_net_usd_cents,
+      stripe_fee_known_count: acc.stripe_fee_known_count + g.stripe_fee_known_count,
       platform_commission_usd_cents:
         acc.platform_commission_usd_cents + g.platform_commission_usd_cents,
       cash_paid_thb: acc.cash_paid_thb + g.cash_paid_thb,
@@ -195,11 +220,16 @@ export async function GET(request: Request) {
       transfer_paid_count: acc.transfer_paid_count + g.transfer_paid_count,
       unspecified_count: acc.unspecified_count + g.unspecified_count,
       refunded_count: acc.refunded_count + g.refunded_count,
+      refunded_amount_usd_cents:
+        acc.refunded_amount_usd_cents + g.refunded_amount_usd_cents,
       payouts_paid_usd_cents: acc.payouts_paid_usd_cents + g.payouts_paid_usd_cents,
     }),
     {
       bookings: 0,
       stripe_paid_usd_cents: 0,
+      stripe_fee_usd_cents: 0,
+      stripe_net_usd_cents: 0,
+      stripe_fee_known_count: 0,
       platform_commission_usd_cents: 0,
       cash_paid_thb: 0,
       cash_pending_thb: 0,
@@ -210,6 +240,7 @@ export async function GET(request: Request) {
       transfer_paid_count: 0,
       unspecified_count: 0,
       refunded_count: 0,
+      refunded_amount_usd_cents: 0,
       payouts_paid_usd_cents: 0,
     },
   )
@@ -232,6 +263,9 @@ export async function GET(request: Request) {
       payment_amount_thb: b.payment_amount_thb,
       payment_amount_usd: b.payment_amount_usd,
       stripe_payment_intent_id: b.stripe_payment_intent_id,
+      stripe_fee_cents: b.stripe_fee_cents,
+      stripe_net_cents: b.stripe_net_cents,
+      refunded_amount_cents: b.refunded_amount_cents,
     }
   })
 
