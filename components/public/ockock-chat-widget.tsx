@@ -39,8 +39,10 @@ interface OckOckChatWidgetProps {
 // The global widget mounted in app/layout.tsx represents Wisarut Family
 // Gym (the canonical demo OckOck). We hide it on routes where another
 // OckOck instance owns the page — gym admin (no public widget), the
-// embed view (its own OckOck), and individual gym pages (each gym
-// renders its own widget pointing at its own slug, with forceVisible).
+// embed view (its own OckOck), individual gym pages (each gym renders
+// its own widget pointing at its own slug, with forceVisible), and the
+// OckOck product marketing pages (which have their own "Ask OckOck" hero
+// chat — a floating demo-gym bubble there would just be confusing).
 const HIDDEN_PREFIXES = [
   "/admin",
   "/login",
@@ -53,6 +55,8 @@ const HIDDEN_PREFIXES = [
   "/trainer",
   "/student",
   "/platform-admin",
+  "/for-gyms",
+  "/pricing",
 ]
 
 export default function OckOckChatWidget({ orgSlug, forceVisible = false }: OckOckChatWidgetProps) {

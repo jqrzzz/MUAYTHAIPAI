@@ -5,30 +5,14 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, Check, ChevronDown } from "lucide-react"
 import { Surface } from "@/components/saas"
 import { OckOckCta } from "@/components/ockock/ockock-cta"
+import { PLAN, INCLUDED } from "@/lib/ockock/product"
 
 const FADE = { duration: 0.5, ease: "easeOut" as const }
 
-const INCLUDED = [
-  "Unlimited bookings & students",
-  "Unlimited trainers & staff",
-  "Naga–Garuda certification ladder (all 5 levels)",
-  "OckOck answers customer questions in your voice",
-  "OckOck drafts FAQs, lessons, and quizzes from your data",
-  "Bilingual chat — Thai & English",
-  "Trainer skill signoff from any phone",
-  "Online courses authoring",
-  "Stripe payments + cash tracking",
-  "Public gym page on the MUAYTHAIPAI network",
-  "Promoter tools (fight events, tickets, fighters)",
-  "Inbox: WhatsApp, LINE, email in one place",
-  "Reports — students, certs, revenue, top trainers",
-  "Setup help from a real human",
-] as const
-
 const FAQS = [
   {
-    q: "What happens after the 30-day trial?",
-    a: "If you love OckOck, you can subscribe for ฿999/month. If not, your account stays in read-only — no charge, no awkward sales call.",
+    q: `What happens after the ${PLAN.trialDays}-day trial?`,
+    a: `If you love OckOck, you can subscribe for ฿${PLAN.priceTHB}/month. If not, your account stays in read-only — no charge, no awkward sales call.`,
   },
   {
     q: "Do I need a credit card to start?",
@@ -44,7 +28,7 @@ const FAQS = [
   },
   {
     q: "Do you take a cut of bookings?",
-    a: "No. The ฿999/month is all-in. You keep 100% of what your students pay.",
+    a: `No. The ฿${PLAN.priceTHB}/month is all-in. You keep 100% of what your students pay.`,
   },
   {
     q: "What about Stripe fees?",
@@ -92,8 +76,8 @@ export default function PricingClient() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...FADE, delay: 0.16 }}
         >
-          No tiers, no upsells, no &ldquo;contact sales.&rdquo; Free for 30
-          days, then ฿999/month.
+          No tiers, no upsells, no &ldquo;contact sales.&rdquo; Free for{" "}
+          {PLAN.trialDays} days, then ฿{PLAN.priceTHB}/month.
         </motion.p>
       </section>
 
@@ -111,17 +95,17 @@ export default function PricingClient() {
             </p>
             <div className="mb-1 flex items-baseline justify-center gap-1">
               <span className="text-6xl font-semibold tracking-tight text-white">
-                ฿999
+                ฿{PLAN.priceTHB}
               </span>
               <span className="text-xl text-zinc-500">/month</span>
             </div>
             <p className="text-[13px] text-zinc-500">
-              After your free 30-day trial · about $28 USD
+              After your free {PLAN.trialDays}-day trial · about ${PLAN.priceUSDApprox} USD
             </p>
           </div>
 
           <OckOckCta href="/signup" size="lg" className="w-full">
-            Start free 30-day trial
+            Start free {PLAN.trialDays}-day trial
             <ArrowRight className="h-4 w-4" />
           </OckOckCta>
           <p className="mt-3 text-center text-[12px] text-zinc-600">
@@ -208,7 +192,7 @@ export default function PricingClient() {
       <section className="mx-auto max-w-2xl py-16 text-center">
         <div className="mb-4 text-5xl">🐃</div>
         <h2 className="mb-3 text-2xl font-semibold tracking-tight text-white md:text-3xl">
-          Try OckOck free for 30 days
+          Try OckOck free for {PLAN.trialDays} days
         </h2>
         <p className="mx-auto mb-8 max-w-md text-[15px] text-zinc-400">
           See if it fits your gym. If not, no worries — no charge, no
