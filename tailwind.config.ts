@@ -22,6 +22,11 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-cinzel)"],
         inter: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Academic display + body serif pair — used across course pages,
+        // study pack, certificates. Cinzel is the brand display face;
+        // Cormorant Garamond is its book-typography counterpart.
+        display: ["var(--font-cinzel)", "Georgia", "serif"],
+        serif: ["var(--font-cormorant)", "Cormorant Garamond", "Georgia", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",

@@ -18,6 +18,7 @@ import {
   Dumbbell,
   HelpCircle,
 } from "lucide-react"
+import { CERTIFICATION_LEVELS, type CertificationLevelId } from "@/lib/certification-levels"
 
 // ============================================
 // Types
@@ -56,6 +57,7 @@ interface Module {
   id: string
   title: string
   description: string | null
+  summary: string | null
   module_order: number
   lessons: Lesson[]
 }
@@ -191,95 +193,182 @@ export default function CourseDetailClient({
 
   const isEnrolled = enrollment && enrollment.status !== "paused"
 
+  // Resolve cert level metadata for the belt progression band + hero eyebrow
+  const currentLevel = course.certificate_level
+    ? CERTIFICATION_LEVELS.find(
+        (l) =>
+          l.id === course.certificate_level ||
+          l.name.toLowerCase() === course.certificate_level?.toLowerCase(),
+      )
+    : null
+
   return (
     <div className="min-h-screen bg-neutral-950">
-      {/* Header */}
-      <header className="border-b border-white/10">
-        <div className="mx-auto max-w-4xl px-4 py-4">
+      {/* Slim top nav — minimal so the hero can breathe */}
+      <header className="absolute top-0 inset-x-0 z-20">
+        <div className="mx-auto max-w-6xl px-5 py-4">
           <Link
             href="/courses"
-            className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
+            className="inline-flex items-center gap-1.5 text-[12px] text-white/70 hover:text-white transition-colors backdrop-blur-sm bg-black/20 rounded-full px-3 py-1.5"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             All Courses
           </Link>
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+      {/* Cinematic hero */}
+      <section className="relative w-full overflow-hidden">
+        {course.cover_image_url ? (
+          <>
+            <div className="absolute inset-0">
+              <Image
+                src={course.cover_image_url}
+                alt={course.title}
+                fill
+                sizes="100vw"
+                priority
+                className="object-cover scale-105"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/40 via-neutral-950/70 to-neutral-950" />
+            <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/60 via-transparent to-transparent" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900" />
+        )}
+
+        <div className="relative mx-auto max-w-6xl px-5 pt-24 pb-20 sm:pt-32 sm:pb-28 min-h-[60vh] flex flex-col justify-end">
+          {currentLevel && (
+            <p className="font-display text-[12px] uppercase tracking-[0.28em] text-white/80 mb-3 flex items-center gap-2">
+              <span aria-hidden="true">{currentLevel.icon}</span>
+              {currentLevel.name} · Level {currentLevel.number} ·{" "}
+              <span className="text-white/60 italic font-serif normal-case tracking-normal">
+                {currentLevel.creature}
+              </span>
+            </p>
+          )}
+          <h1 className="font-display text-[40px] sm:text-[64px] leading-[1.05] text-white max-w-3xl">
+            {course.title}
+          </h1>
+          {course.short_description && (
+            <p className="font-serif italic text-[18px] sm:text-[22px] text-white/80 max-w-2xl mt-4 leading-relaxed">
+              {course.short_description}
+            </p>
+          )}
+          {course.organizations && (
+            <p className="mt-5 text-[13px] text-white/60">
+              Taught at{" "}
+              <Link
+                href={`/gyms/${course.organizations.slug}`}
+                className="text-orange-300 hover:text-orange-200 transition-colors"
+              >
+                {course.organizations.name}
+              </Link>
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Belt progression band — only renders when course has a cert level */}
+      {currentLevel && (
+        <BeltProgressionBand current={currentLevel.id} />
+      )}
+
+      <div className="mx-auto max-w-6xl px-5 py-12">
+        <div className="lg:grid lg:grid-cols-3 lg:gap-10">
           {/* Main content */}
           <div className="lg:col-span-2">
-            {/* Course Hero */}
-            {course.cover_image_url && (
-              <div className="relative mb-6 w-full aspect-video overflow-hidden rounded-xl">
-                <Image
-                  src={course.cover_image_url}
-                  alt={course.title}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 768px"
-                  priority
-                  className="object-cover"
-                />
-              </div>
-            )}
-
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                course.difficulty === "beginner" ? "bg-emerald-500/15 text-emerald-400" :
-                course.difficulty === "intermediate" ? "bg-amber-500/15 text-amber-400" :
-                course.difficulty === "advanced" ? "bg-red-500/15 text-red-400" :
-                "bg-blue-500/15 text-blue-400"
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider ${
+                course.difficulty === "beginner" ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/20" :
+                course.difficulty === "intermediate" ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20" :
+                course.difficulty === "advanced" ? "bg-red-500/15 text-red-300 ring-1 ring-red-500/20" :
+                "bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/20"
               }`}>
                 {course.difficulty}
               </span>
-              <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-neutral-400">
+              <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-[11px] text-neutral-400 ring-1 ring-white/10">
                 {course.category}
               </span>
               {course.certificate_level && (
-                <span className="rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs text-purple-400 flex items-center gap-1">
+                <span className="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[11px] text-purple-300 ring-1 ring-purple-500/20 flex items-center gap-1">
                   <Award className="h-3 w-3" />
                   Earns {course.certificate_level} certificate
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl font-bold text-white">{course.title}</h1>
-
-            {course.organizations && (
-              <p className="mt-1 text-sm text-neutral-500">
-                by{" "}
-                <Link href={`/gyms/${course.organizations.slug}`} className="text-orange-400 hover:underline">
-                  {course.organizations.name}
-                </Link>
-              </p>
-            )}
-
             {course.description && (
-              <div className="mt-4 text-sm leading-relaxed text-neutral-400 whitespace-pre-line">
+              <div className="font-serif text-[17px] leading-[1.7] text-neutral-300 whitespace-pre-line max-w-2xl">
                 {course.description}
               </div>
             )}
 
             {/* Curriculum */}
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold text-white mb-4">Curriculum</h2>
+            <div className="mt-10">
+              <p className="font-display text-[11px] uppercase tracking-[0.22em] text-neutral-500 mb-2">
+                Course Curriculum
+              </p>
+              <h2 className="font-display text-[28px] text-white mb-6">
+                {modules.length} {modules.length === 1 ? "module" : "modules"} · {course.total_lessons} lessons
+              </h2>
 
-              <div className="space-y-2">
-                {modules.map((mod, mi) => (
-                  <div key={mod.id} className="rounded-xl border border-white/10 overflow-hidden">
+              <div className="space-y-3">
+                {modules.map((mod, mi) => {
+                  const moduleCompleted = mod.lessons.every((l) =>
+                    completedIds.has(l.id),
+                  )
+                  const moduleStarted = mod.lessons.some((l) =>
+                    completedIds.has(l.id),
+                  )
+                  const moduleProgress = mod.lessons.length
+                    ? Math.round(
+                        (mod.lessons.filter((l) => completedIds.has(l.id))
+                          .length /
+                          mod.lessons.length) *
+                          100,
+                      )
+                    : 0
+                  return (
+                  <div
+                    key={mod.id}
+                    className="rounded-xl border border-white/10 overflow-hidden bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+                  >
                     {/* Module header */}
                     <button
                       onClick={() => toggleModule(mod.id)}
-                      className="flex w-full items-center justify-between bg-white/[0.03] px-4 py-3 text-left"
+                      className="flex w-full items-center justify-between px-5 py-4 text-left gap-4"
                     >
-                      <div>
-                        <p className="text-xs text-neutral-500">Module {mi + 1}</p>
-                        <p className="font-medium text-white">{mod.title}</p>
+                      <div className="flex items-center gap-4 min-w-0">
+                        <span
+                          className={`inline-flex h-9 w-9 items-center justify-center rounded-full font-display text-[14px] tabular-nums ring-1 shrink-0 ${
+                            moduleCompleted
+                              ? "bg-emerald-500/20 text-emerald-300 ring-emerald-500/30"
+                              : moduleStarted
+                                ? "bg-orange-500/15 text-orange-300 ring-orange-500/30"
+                                : "bg-white/[0.04] text-neutral-500 ring-white/10"
+                          }`}
+                        >
+                          {moduleCompleted ? <CheckCircle className="h-4 w-4" /> : mi + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-display text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                            Module {mi + 1}
+                          </p>
+                          <p className="font-medium text-white text-[15px] truncate">
+                            {mod.title}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-neutral-600">
-                          {mod.lessons.length} lessons
+                      <div className="flex items-center gap-3 shrink-0">
+                        {moduleStarted && !moduleCompleted && (
+                          <span className="text-[11px] text-orange-300 tabular-nums">
+                            {moduleProgress}%
+                          </span>
+                        )}
+                        <span className="text-[11px] text-neutral-500">
+                          {mod.lessons.length} {mod.lessons.length === 1 ? "lesson" : "lessons"}
                         </span>
                         {expandedModules.has(mod.id) ? (
                           <ChevronUp className="h-4 w-4 text-neutral-500" />
@@ -292,6 +381,15 @@ export default function CourseDetailClient({
                     {/* Lessons */}
                     {expandedModules.has(mod.id) && (
                       <div className="border-t border-white/5">
+                        {/* AI-generated module summary — sets the scene before the
+                            lesson list. Falls back to nothing if not generated. */}
+                        {mod.summary && (
+                          <div className="px-5 py-4 border-b border-white/5 bg-gradient-to-b from-indigo-500/[0.04] to-transparent">
+                            <p className="font-serif italic text-[15px] text-neutral-300 leading-relaxed">
+                              {mod.summary}
+                            </p>
+                          </div>
+                        )}
                         {mod.lessons.map((lesson) => {
                           const status = getLessonStatus(lesson.id)
                           const canAccess = isEnrolled || lesson.is_preview
@@ -335,7 +433,8 @@ export default function CourseDetailClient({
                       </div>
                     )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -401,6 +500,14 @@ export default function CourseDetailClient({
                       <p className="text-sm font-medium text-emerald-400">Course Completed</p>
                     </div>
                   )}
+                  <Link
+                    href={`/courses/${course.slug}/study-pack`}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 py-2 text-sm text-neutral-300 transition-colors"
+                    title="Open a printable study pack of the entire course"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Download study pack
+                  </Link>
                 </>
               ) : (
                 <>
@@ -459,4 +566,71 @@ function LessonIcon({ status, contentType }: { status: string; contentType: stri
     )
   }
   return <span className="text-neutral-500">{CONTENT_TYPE_ICONS[contentType] || CONTENT_TYPE_ICONS.video}</span>
+}
+
+/**
+ * Belt progression band — visual journey through the Naga → Garuda ladder.
+ * Shown at the top of any course tied to a certification level. Each node
+ * is a belt; the current course's belt is highlighted, prior belts are
+ * marked completed, future belts are dimmed.
+ */
+function BeltProgressionBand({ current }: { current: CertificationLevelId }) {
+  const currentIdx = CERTIFICATION_LEVELS.findIndex((l) => l.id === current)
+  return (
+    <section className="border-y border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-950/40 backdrop-blur-sm">
+      <div className="mx-auto max-w-6xl px-5 py-5">
+        <p className="font-display text-[10px] uppercase tracking-[0.24em] text-neutral-500 mb-3 text-center sm:text-left">
+          The Naga–Garuda Path
+        </p>
+        <div className="relative">
+          {/* Connecting line (desktop only — mobile is too narrow) */}
+          <div className="hidden sm:block absolute left-0 right-0 top-1/2 h-px bg-white/10" />
+          <div className="relative flex items-center justify-between gap-2 sm:gap-4">
+            {CERTIFICATION_LEVELS.map((level, idx) => {
+              const isCurrent = idx === currentIdx
+              const isPast = idx < currentIdx
+              const isFuture = idx > currentIdx
+              return (
+                <div
+                  key={level.id}
+                  className={`flex-1 flex flex-col items-center text-center ${
+                    isFuture ? "opacity-40" : ""
+                  }`}
+                >
+                  <div
+                    className={`relative inline-flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full text-[20px] sm:text-[22px] ring-2 transition-transform ${
+                      isCurrent
+                        ? "bg-gradient-to-br from-orange-500/30 to-orange-600/20 ring-orange-400 scale-110 shadow-lg shadow-orange-500/20"
+                        : isPast
+                          ? "bg-emerald-500/15 ring-emerald-500/40"
+                          : "bg-neutral-900 ring-white/10"
+                    }`}
+                  >
+                    <span aria-hidden="true">{level.icon}</span>
+                    {isPast && (
+                      <CheckCircle className="absolute -bottom-1 -right-1 h-3.5 w-3.5 text-emerald-300 bg-neutral-950 rounded-full" />
+                    )}
+                  </div>
+                  <p
+                    className={`font-display text-[10px] sm:text-[12px] uppercase tracking-[0.16em] mt-2 ${
+                      isCurrent
+                        ? "text-orange-300"
+                        : isPast
+                          ? "text-emerald-300"
+                          : "text-neutral-500"
+                    }`}
+                  >
+                    {level.name}
+                  </p>
+                  <p className="hidden sm:block font-serif italic text-[11px] text-neutral-500 mt-0.5">
+                    {level.creature}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
 }

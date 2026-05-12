@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
@@ -12,7 +12,10 @@ import {
   Loader2,
   Sparkles,
   Link2,
+  Award,
+  Wand2,
 } from "lucide-react"
+import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 import OckOckChatWidget from "@/components/public/ockock-chat-widget"
 import ChannelCredentialsCard from "@/components/admin/channel-credentials-card"
 
@@ -81,6 +84,7 @@ type Step =
   | "details"
   | "services"
   | "hours"
+  | "certifications"
   | "meet-ockock"
   | "channels"
   | "done"
@@ -88,6 +92,7 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
   { key: "details", label: "Details", icon: <MapPin className="h-4 w-4" /> },
   { key: "services", label: "Services", icon: <Dumbbell className="h-4 w-4" /> },
   { key: "hours", label: "Hours", icon: <Clock className="h-4 w-4" /> },
+  { key: "certifications", label: "Certifications", icon: <Award className="h-4 w-4" /> },
   { key: "meet-ockock", label: "Meet OckOck", icon: <Sparkles className="h-4 w-4" /> },
   { key: "channels", label: "Channels", icon: <Link2 className="h-4 w-4" /> },
   { key: "done", label: "Done", icon: <Check className="h-4 w-4" /> },
@@ -221,7 +226,7 @@ export default function OnboardingClient({
         }),
       })
       if (!res.ok) throw new Error("Failed to save hours")
-      setStep("meet-ockock")
+      setStep("certifications")
     } catch {
       setError("Failed to save. Please try again.")
     } finally {
@@ -324,8 +329,15 @@ export default function OnboardingClient({
             hours={hours}
             setHours={setHours}
             onNext={saveHours}
-            onSkip={() => setStep("meet-ockock")}
+            onSkip={() => setStep("certifications")}
             saving={saving}
+          />
+        )}
+        {step === "certifications" && (
+          <CertificationsStep
+            gymName={organization.name}
+            city={organization.city}
+            onNext={() => setStep("meet-ockock")}
           />
         )}
         {step === "meet-ockock" && (
@@ -484,6 +496,52 @@ function ServicesStep({
   onNext: () => void
   saving: boolean
 }) {
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiTried, setAiTried] = useState(false)
+
+  const fetchAiSuggestions = useCallback(async () => {
+    setAiLoading(true)
+    try {
+      const res = await fetch("/api/admin/onboarding/suggest-services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      if (res.ok) {
+        const data = (await res.json()) as {
+          services: { name: string; description: string; duration_minutes: number; price_thb: number }[]
+        }
+        if (Array.isArray(data.services) && data.services.length > 0) {
+          setServices(
+            data.services.map((s) => ({
+              name: s.name,
+              description: s.description,
+              duration_minutes: String(s.duration_minutes),
+              price_thb: String(s.price_thb),
+            })),
+          )
+        }
+      }
+    } catch {
+      // Silent fallback — owner still has the empty row + quick-add chips.
+    }
+    setAiLoading(false)
+    setAiTried(true)
+  }, [setServices])
+
+  // Auto-run on first mount, but only if the owner hasn't already typed
+  // something (services starts as one empty row).
+  useEffect(() => {
+    const isPristine =
+      services.length === 1 &&
+      !services[0].name &&
+      !services[0].description
+    if (!aiTried && isPristine) {
+      fetchAiSuggestions()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function updateService(index: number, field: keyof ServiceForm, value: string) {
     const updated = services.map((s, i) =>
       i === index ? { ...s, [field]: value } : s
@@ -507,23 +565,32 @@ function ServicesStep({
     <div>
       <h2 className="text-xl font-bold text-white">Set up your services</h2>
       <p className="mt-1 text-sm text-neutral-400">
-        What can students book? You can always add more later.
+        What can students book? OckOck drafted three to get you started — edit, remove, or add your own.
       </p>
 
-      {/* Quick-add templates */}
-      <div className="mt-4">
-        <p className="mb-2 text-xs font-medium text-neutral-500 uppercase tracking-wide">Quick add</p>
-        <div className="flex flex-wrap gap-2">
-          {templates.map((t) => (
-            <button
-              key={t.name}
-              onClick={() => onAddTemplate(t)}
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
-            >
-              + {t.name}
-            </button>
-          ))}
-        </div>
+      {/* OckOck regenerate */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          onClick={fetchAiSuggestions}
+          disabled={aiLoading}
+          className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300 transition-colors hover:bg-indigo-500/20 disabled:opacity-50"
+        >
+          {aiLoading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Wand2 className="h-3 w-3" />
+          )}
+          {aiLoading ? "OckOck is drafting..." : "Regenerate with OckOck"}
+        </button>
+        {templates.map((t) => (
+          <button
+            key={t.name}
+            onClick={() => onAddTemplate(t)}
+            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
+          >
+            + {t.name}
+          </button>
+        ))}
       </div>
 
       {/* Service list */}
@@ -603,6 +670,120 @@ function ServicesStep({
           className="flex items-center gap-2 rounded-lg bg-orange-500 px-6 py-2.5 font-semibold text-black transition-colors hover:bg-orange-400 disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Continue
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Step: Certifications — preview the Naga–Garuda ladder this gym can
+// issue. Read-only visual + OckOck-written intro. The actual issuance
+// happens once they have real students; this step just makes the wedge
+// visible during onboarding so the new owner knows what they're signing
+// up for.
+function CertificationsStep({
+  gymName,
+  city,
+  onNext,
+}: {
+  gymName: string
+  city: string | null
+  onNext: () => void
+}) {
+  const [intro, setIntro] = useState<string | null>(null)
+  const [introLoading, setIntroLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setIntroLoading(true)
+    fetch("/api/admin/onboarding/cert-intro", { method: "POST" })
+      .then(async (res) => (res.ok ? (await res.json()) : null))
+      .then((data) => {
+        if (cancelled) return
+        if (data?.intro) setIntro(data.intro)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIntroLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-white">Issue real certificates</h2>
+      <p className="mt-1 text-sm text-neutral-400">
+        {gymName}
+        {city ? ` in ${city}` : ""} can issue verifiable certifications across
+        the five Naga–Garuda levels. Every cert is public, shareable, and signed
+        by a named examiner.
+      </p>
+
+      {/* OckOck intro */}
+      <div className="mt-4 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.06] p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="h-3.5 w-3.5 text-indigo-300" />
+          <p className="text-[11px] font-medium text-indigo-200 uppercase tracking-wider">
+            OckOck&apos;s take
+          </p>
+        </div>
+        {introLoading ? (
+          <div className="flex items-center gap-2 text-sm text-indigo-200/70">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Drafting an intro for {gymName}…
+          </div>
+        ) : (
+          <p className="text-sm text-indigo-100/90 leading-relaxed">
+            {intro ??
+              "You can issue verifiable certificates across all five Naga–Garuda levels. Every cert your gym issues becomes a public, shareable proof of training."}
+          </p>
+        )}
+      </div>
+
+      {/* Level ladder */}
+      <div className="mt-6 space-y-2.5">
+        {CERTIFICATION_LEVELS.map((lvl) => (
+          <div
+            key={lvl.id}
+            className={`flex items-center gap-3 rounded-xl border ${lvl.borderColor} bg-white/[0.03] p-3.5`}
+          >
+            <div className="text-3xl shrink-0">{lvl.icon}</div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <p className={`font-display text-[15px] ${lvl.color}`}>
+                  {lvl.name}
+                </p>
+                <p className="text-[11px] text-neutral-500">
+                  Level {lvl.number} · {lvl.creature}
+                </p>
+              </div>
+              <p className="text-[11px] text-neutral-400 mt-0.5">
+                {lvl.duration} ·{" "}
+                <span className="tabular-nums text-neutral-300">
+                  {lvl.priceTHB.toLocaleString()} THB
+                </span>{" "}
+                · {lvl.skills.length} skills attested
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 text-[11px] text-neutral-500 leading-relaxed">
+        Prices and skill lists are platform-set so every gym&apos;s Naga is the same
+        credential. You&apos;ll enroll students, sign off their skills, and issue
+        the cert when they&apos;re ready — all from your dashboard.
+      </p>
+
+      <div className="mt-8">
+        <button
+          onClick={onNext}
+          className="flex items-center gap-2 rounded-lg bg-orange-500 px-6 py-2.5 font-semibold text-black transition-colors hover:bg-orange-400"
+        >
           Continue
           <ChevronRight className="h-4 w-4" />
         </button>

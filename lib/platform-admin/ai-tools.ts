@@ -562,5 +562,395 @@ export function buildPlatformTools(supabase: SupabaseClient) {
         }
       },
     }),
+
+    /* ─── REVENUE: subscriptions ─────────────────────────────────── */
+
+    subscriptions_summary: tool({
+      description:
+        "MRR + ARR + status counts (active/trial/past_due/cancelled). Use for any question about recurring revenue health.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const { data } = await supabase
+          .from("gym_subscriptions")
+          .select("status, monthly_price_usd_cents")
+        const totals = {
+          active: 0,
+          trial: 0,
+          past_due: 0,
+          cancelled: 0,
+          other: 0,
+          mrr_usd: 0,
+        }
+        for (const s of data ?? []) {
+          if (s.status === "active") {
+            totals.active++
+            totals.mrr_usd += (s.monthly_price_usd_cents ?? 2900) / 100
+          } else if (s.status === "trial") totals.trial++
+          else if (s.status === "past_due") totals.past_due++
+          else if (s.status === "cancelled") totals.cancelled++
+          else totals.other++
+        }
+        return {
+          ...totals,
+          mrr_usd: Number(totals.mrr_usd.toFixed(2)),
+          arr_usd: Number((totals.mrr_usd * 12).toFixed(2)),
+        }
+      },
+    }),
+
+    list_subscriptions: tool({
+      description:
+        "List gym subscriptions with status, plan, monthly price, trial-end / period-end dates. Filter by status. Returns up to 50.",
+      inputSchema: z.object({
+        status: z.enum(["active", "trial", "past_due", "cancelled"]).optional(),
+      }),
+      execute: async ({ status }) => {
+        let q = supabase
+          .from("gym_subscriptions")
+          .select(`
+            org_id, status, monthly_price_usd_cents, trial_ends_at,
+            current_period_end, activated_at, cancelled_at,
+            organizations:org_id (name, slug)
+          `)
+          .order("activated_at", { ascending: false, nullsFirst: false })
+          .limit(50)
+        if (status) q = q.eq("status", status)
+        const { data } = await q
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows = (data ?? []).map((s: any) => {
+          const org = Array.isArray(s.organizations) ? s.organizations[0] : s.organizations
+          return {
+            gym_name: org?.name ?? "—",
+            gym_slug: org?.slug ?? null,
+            status: s.status,
+            monthly_usd: (s.monthly_price_usd_cents ?? 0) / 100,
+            trial_ends_at: s.trial_ends_at,
+            renews_at: s.current_period_end,
+            activated_at: s.activated_at,
+            cancelled_at: s.cancelled_at,
+          }
+        })
+        return { count: rows.length, subscriptions: rows }
+      },
+    }),
+
+    /* ─── REVENUE: bookings ───────────────────────────────────────── */
+
+    bookings_summary: tool({
+      description:
+        "Network-wide booking breakdown for a period: Stripe gross + fees + net + commission, cash paid/pending, transfer. Default range last 30 days.",
+      inputSchema: z.object({
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      }),
+      execute: async ({ from, to }) => {
+        const today = new Date()
+        const defaultFrom = new Date(today.getTime() - 30 * 86400_000)
+          .toISOString()
+          .slice(0, 10)
+        const defaultTo = today.toISOString().slice(0, 10)
+        const f = from ?? defaultFrom
+        const t = to ?? defaultTo
+        const { data } = await supabase
+          .from("bookings")
+          .select(
+            "org_id, payment_method, payment_status, payment_amount_thb, payment_amount_usd, commission_amount_usd, stripe_fee_cents, stripe_net_cents, refunded_amount_cents",
+          )
+          .gte("booking_date", f)
+          .lte("booking_date", t)
+          .limit(5000)
+        const totals = {
+          period: { from: f, to: t },
+          bookings: 0,
+          stripe_paid_count: 0,
+          stripe_gross_usd_cents: 0,
+          stripe_fee_usd_cents: 0,
+          stripe_net_usd_cents: 0,
+          commission_usd: 0,
+          cash_paid_thb: 0,
+          cash_paid_count: 0,
+          cash_pending_thb: 0,
+          cash_pending_count: 0,
+          transfer_paid_thb: 0,
+          refunded_count: 0,
+          refunded_usd_cents: 0,
+        }
+        for (const b of data ?? []) {
+          totals.bookings++
+          if (b.payment_status === "refunded") {
+            totals.refunded_count++
+            totals.refunded_usd_cents += b.refunded_amount_cents ?? 0
+            continue
+          }
+          if (b.payment_method === "stripe" && b.payment_status === "paid") {
+            totals.stripe_paid_count++
+            totals.stripe_gross_usd_cents += b.payment_amount_usd ?? 0
+            totals.commission_usd += Number(b.commission_amount_usd ?? 0)
+            if (b.stripe_fee_cents != null) {
+              totals.stripe_fee_usd_cents += b.stripe_fee_cents
+              totals.stripe_net_usd_cents +=
+                b.stripe_net_cents ?? (b.payment_amount_usd ?? 0) - b.stripe_fee_cents
+            }
+          } else if (b.payment_method === "cash" && b.payment_status === "paid") {
+            totals.cash_paid_thb += b.payment_amount_thb ?? 0
+            totals.cash_paid_count++
+          } else if (b.payment_method === "cash" && b.payment_status === "pending") {
+            totals.cash_pending_thb += b.payment_amount_thb ?? 0
+            totals.cash_pending_count++
+          } else if (b.payment_method === "transfer" && b.payment_status === "paid") {
+            totals.transfer_paid_thb += b.payment_amount_thb ?? 0
+          }
+        }
+        return {
+          ...totals,
+          commission_usd: Number(totals.commission_usd.toFixed(2)),
+          stripe_gross_usd: totals.stripe_gross_usd_cents / 100,
+          stripe_fee_usd: totals.stripe_fee_usd_cents / 100,
+          stripe_net_usd: totals.stripe_net_usd_cents / 100,
+          real_take_usd: Number(
+            (totals.commission_usd - totals.stripe_fee_usd_cents / 100).toFixed(2),
+          ),
+        }
+      },
+    }),
+
+    list_bookings: tool({
+      description:
+        "Recent bookings across the network with customer, gym, payment method, amount, status. Filter by gym, status, or method. Returns up to 50.",
+      inputSchema: z.object({
+        org_id: z.string().uuid().optional(),
+        payment_status: z.enum(["paid", "pending", "refunded", "failed"]).optional(),
+        payment_method: z.enum(["stripe", "cash", "transfer"]).optional(),
+      }),
+      execute: async ({ org_id, payment_status, payment_method }) => {
+        let q = supabase
+          .from("bookings")
+          .select(`
+            id, org_id, guest_name, guest_email, booking_date, status,
+            payment_status, payment_method, payment_amount_thb,
+            payment_amount_usd, stripe_payment_intent_id,
+            organizations:org_id (name)
+          `)
+          .order("booking_date", { ascending: false })
+          .limit(50)
+        if (org_id) q = q.eq("org_id", org_id)
+        if (payment_status) q = q.eq("payment_status", payment_status)
+        if (payment_method) q = q.eq("payment_method", payment_method)
+        const { data } = await q
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows = (data ?? []).map((b: any) => {
+          const org = Array.isArray(b.organizations) ? b.organizations[0] : b.organizations
+          return {
+            id: b.id,
+            gym_name: org?.name ?? "—",
+            customer: b.guest_name || b.guest_email || "—",
+            date: b.booking_date,
+            status: b.status,
+            payment_status: b.payment_status,
+            payment_method: b.payment_method,
+            amount_thb: b.payment_amount_thb,
+            amount_usd_cents: b.payment_amount_usd,
+            stripe_pi: b.stripe_payment_intent_id,
+          }
+        })
+        return { count: rows.length, bookings: rows }
+      },
+    }),
+
+    /* ─── OPS: support ────────────────────────────────────────────── */
+
+    support_summary: tool({
+      description:
+        "Open support ticket counts by status + overdue count + priority breakdown. Use for 'how's the support queue' questions.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const { data } = await supabase
+          .from("support_tickets")
+          .select("status, priority, sla_due_at")
+          .in("status", ["open", "in_progress", "waiting_customer"])
+        const now = Date.now()
+        const summary = {
+          open: 0,
+          in_progress: 0,
+          waiting_customer: 0,
+          overdue: 0,
+          urgent: 0,
+          high: 0,
+          normal: 0,
+          low: 0,
+        }
+        for (const t of data ?? []) {
+          if (t.status in summary) summary[t.status as keyof typeof summary]++
+          if (t.priority in summary) summary[t.priority as keyof typeof summary]++
+          if (t.sla_due_at && new Date(t.sla_due_at).getTime() < now) summary.overdue++
+        }
+        return summary
+      },
+    }),
+
+    list_support_tickets: tool({
+      description:
+        "List support tickets with subject, gym, category, priority, status, SLA. Filter by status. Returns up to 30 sorted by SLA risk.",
+      inputSchema: z.object({
+        status: z
+          .enum(["open", "in_progress", "waiting_customer", "resolved", "all"])
+          .optional(),
+      }),
+      execute: async ({ status }) => {
+        let q = supabase
+          .from("support_tickets")
+          .select(`
+            id, subject, ai_summary, category, priority, status,
+            sla_due_at, created_at,
+            organizations:org_id (name)
+          `)
+          .order("created_at", { ascending: false })
+          .limit(30)
+        if (status && status !== "all") {
+          q = q.eq("status", status)
+        } else if (!status) {
+          q = q.in("status", ["open", "in_progress", "waiting_customer"])
+        }
+        const { data } = await q
+        const now = Date.now()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows = (data ?? []).map((t: any) => {
+          const org = Array.isArray(t.organizations) ? t.organizations[0] : t.organizations
+          const slaMs = t.sla_due_at ? new Date(t.sla_due_at).getTime() - now : null
+          return {
+            id: t.id,
+            subject: t.subject,
+            ai_summary: t.ai_summary,
+            gym_name: org?.name ?? "—",
+            category: t.category,
+            priority: t.priority,
+            status: t.status,
+            minutes_remaining: slaMs != null ? Math.round(slaMs / 60_000) : null,
+            overdue: slaMs != null && slaMs < 0,
+          }
+        })
+        return { count: rows.length, tickets: rows }
+      },
+    }),
+
+    /* ─── INTELLIGENCE: signals ───────────────────────────────────── */
+
+    list_signals: tool({
+      description:
+        "AI-generated proactive signals — what needs attention. Returns title, summary, severity, suggested action, gym. Sorted by severity. Use for 'what should I focus on' questions.",
+      inputSchema: z.object({
+        severity: z.enum(["info", "warning", "critical"]).optional(),
+      }),
+      execute: async ({ severity }) => {
+        let q = supabase
+          .from("platform_signals")
+          .select(`
+            id, kind, severity, title, summary, suggested_action,
+            generated_at, evidence,
+            organizations:target_org_id (name)
+          `)
+          .eq("status", "open")
+          .order("generated_at", { ascending: false })
+          .limit(30)
+        if (severity) q = q.eq("severity", severity)
+        const { data } = await q
+        const order = { critical: 0, warning: 1, info: 2 } as const
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows = (data ?? []).map((s: any) => {
+          const org = Array.isArray(s.organizations) ? s.organizations[0] : s.organizations
+          return {
+            kind: s.kind,
+            severity: s.severity,
+            title: s.title,
+            summary: s.summary,
+            gym_name: org?.name ?? null,
+            suggested_action: s.suggested_action,
+            generated_at: s.generated_at,
+            evidence: s.evidence,
+          }
+        })
+        rows.sort(
+          (a, b) =>
+            (order[a.severity as keyof typeof order] ?? 9) -
+            (order[b.severity as keyof typeof order] ?? 9),
+        )
+        return { count: rows.length, signals: rows }
+      },
+    }),
+
+    /* ─── ADOPTION ─────────────────────────────────────────────────── */
+
+    adoption_summary: tool({
+      description:
+        "Network feature adoption: % of gyms using website builder, social composer, trainer payouts, waivers, packages. Use for 'are gyms using X' questions.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const [gymsRes, websitesRes, socialRes, rulesRes, waiversRes, packagesRes] =
+          await Promise.all([
+            supabase
+              .from("organizations")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "active"),
+            supabase
+              .from("gym_websites")
+              .select("org_id", { count: "exact", head: true })
+              .eq("status", "published"),
+            supabase
+              .from("social_posts")
+              .select("org_id", { count: "exact", head: true })
+              .in("source", ["ai_compose", "ai_batch"])
+              .gte(
+                "created_at",
+                new Date(Date.now() - 30 * 86400_000).toISOString(),
+              ),
+            supabase
+              .from("trainer_commission_rules")
+              .select("org_id", { count: "exact", head: true })
+              .eq("is_active", true),
+            supabase
+              .from("org_waivers")
+              .select("org_id", { count: "exact", head: true })
+              .eq("is_active", true),
+            supabase
+              .from("gym_packages")
+              .select("org_id", { count: "exact", head: true })
+              .eq("is_active", true),
+          ])
+        const total = gymsRes.count ?? 0
+        const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0)
+        return {
+          total_gyms: total,
+          websites_published: websitesRes.count ?? 0,
+          websites_pct: pct(websitesRes.count ?? 0),
+          ai_posts_30d: socialRes.count ?? 0,
+          commission_rules_active: rulesRes.count ?? 0,
+          commission_pct: pct(rulesRes.count ?? 0),
+          waivers_active: waiversRes.count ?? 0,
+          waivers_pct: pct(waiversRes.count ?? 0),
+          packages_active: packagesRes.count ?? 0,
+          packages_pct: pct(packagesRes.count ?? 0),
+        }
+      },
+    }),
+
+    /* ─── AUDIT ──────────────────────────────────────────────────── */
+
+    list_audit_log: tool({
+      description:
+        "Recent platform-operator actions (impersonations, payouts settled, support replies, blacklist adds, signals dismissed). Use to answer 'did I do X' or 'who edited Y'. Returns up to 30.",
+      inputSchema: z.object({
+        action: z.string().optional(),
+      }),
+      execute: async ({ action }) => {
+        let q = supabase
+          .from("platform_audit_log")
+          .select("action, actor_email, target_label, created_at, metadata")
+          .order("created_at", { ascending: false })
+          .limit(30)
+        if (action) q = q.eq("action", action)
+        const { data } = await q
+        return { count: data?.length ?? 0, entries: data ?? [] }
+      },
+    }),
   }
 }

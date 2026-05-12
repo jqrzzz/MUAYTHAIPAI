@@ -1,21 +1,14 @@
-import { createClient } from "@/lib/supabase/server"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit-log"
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-
-  // Check if user is platform admin
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-  if (!userData?.is_platform_admin) {
-    return NextResponse.json({ error: "Not a platform admin" }, { status: 403 })
+  if (!isPlatformAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
   const { name, nationality, description } = await request.json()
@@ -34,6 +27,17 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
+
+  await logAudit(supabase, {
+    action: "blacklist.add",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    targetType: "blacklist_entry",
+    targetId: data.id,
+    targetLabel: name,
+    metadata: { nationality, description },
+    request,
+  })
 
   return NextResponse.json({ success: true, entry: data })
 }

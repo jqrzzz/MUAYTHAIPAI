@@ -27,7 +27,15 @@ export async function GET() {
   }
   const orgId = membership.org_id
 
-  const [orgRes, servicesRes, trainersRes, slotsRes] = await Promise.all([
+  const [
+    orgRes,
+    servicesRes,
+    trainersRes,
+    slotsRes,
+    enrollmentsRes,
+    signoffsRes,
+    certsRes,
+  ] = await Promise.all([
     supabase
       .from("organizations")
       .select("description, city, logo_url, cover_image_url, phone, email")
@@ -48,6 +56,19 @@ export async function GET() {
       .from("time_slots")
       .select("id", { count: "exact", head: true })
       .eq("org_id", orgId),
+    supabase
+      .from("certification_enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId),
+    supabase
+      .from("skill_signoffs")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId),
+    supabase
+      .from("certificates")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .eq("status", "active"),
   ])
 
   const org = orgRes.data || {}
@@ -88,6 +109,25 @@ export async function GET() {
       label: "Set up bookable time slots",
       tab: "time-slots",
       done: (slotsRes.count ?? 0) >= 1,
+    },
+    // ─── Cert milestones — the real adoption signals ──────────────
+    {
+      id: "first-enrollment",
+      label: "Enroll your first student in a certification",
+      tab: "certificates",
+      done: (enrollmentsRes.count ?? 0) >= 1,
+    },
+    {
+      id: "first-signoff",
+      label: "Sign off your first skill",
+      tab: "certificates",
+      done: (signoffsRes.count ?? 0) >= 1,
+    },
+    {
+      id: "first-certificate",
+      label: "Issue your first certificate",
+      tab: "certificates",
+      done: (certsRes.count ?? 0) >= 1,
     },
   ]
 

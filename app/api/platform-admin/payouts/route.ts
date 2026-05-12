@@ -1,21 +1,13 @@
-import { createClient } from "@/lib/supabase/server"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit-log"
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  // Check if platform admin
-  const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-  if (!userData?.is_platform_admin) {
+  if (!isPlatformAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -176,20 +168,11 @@ function getStartOfWeek(year: number, week: number): Date {
 
 // POST - Mark payout as paid
 export async function POST(request: Request) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  // Check if platform admin
-  const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-  if (!userData?.is_platform_admin) {
+  if (!isPlatformAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -224,6 +207,31 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // Resolve gym name for the audit label (best effort)
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", orgId)
+    .maybeSingle()
+
+  await logAudit(supabase, {
+    action: "payout.settle",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    targetType: "gym_payout",
+    targetId: payout?.id,
+    targetLabel: org?.name ?? null,
+    metadata: {
+      org_id: orgId,
+      period_start: periodStart,
+      period_end: periodEnd,
+      amount_usd: amountUsd,
+      commission_usd: commissionUsd,
+      amount_thb: amountThb,
+    },
+    request,
+  })
 
   return NextResponse.json({ success: true, payout })
 }

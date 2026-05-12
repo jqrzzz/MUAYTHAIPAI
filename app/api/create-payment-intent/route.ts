@@ -10,8 +10,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Payment system not configured" }, { status: 500 })
     }
 
+    // Pinned to 2024-06-20 — see app/api/webhooks/stripe/route.ts for rationale
     const stripe = new Stripe(env.stripe.secretKey(), {
-      apiVersion: "2024-06-20",
+      apiVersion: "2024-06-20" as Stripe.LatestApiVersion,
     })
 
     const body = await request.json()

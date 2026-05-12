@@ -112,6 +112,7 @@ export async function POST(request: Request) {
     "video_url", "video_duration_seconds", "text_content",
     "drill_instructions", "drill_duration_minutes",
     "lesson_order", "is_preview", "estimated_minutes",
+    "hero_image_url", "gallery",
   ]
   const insert: Record<string, unknown> = {}
   for (const key of allowed) {
@@ -161,6 +162,7 @@ export async function PATCH(request: Request) {
     "video_url", "video_duration_seconds", "text_content",
     "drill_instructions", "drill_duration_minutes",
     "lesson_order", "is_preview", "estimated_minutes",
+    "hero_image_url", "gallery",
   ]
   const filtered: Record<string, unknown> = {}
   for (const key of allowed) {

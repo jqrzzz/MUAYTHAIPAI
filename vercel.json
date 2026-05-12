@@ -20,6 +20,14 @@
     {
       "path": "/api/cron/trial-nudge",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/generate-platform-signals",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/email-sequences",
+      "schedule": "0 14 * * *"
     }
   ]
 }

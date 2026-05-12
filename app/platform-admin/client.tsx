@@ -34,9 +34,17 @@ import {
   UserCheck,
   Megaphone,
   TrendingUp,
+  Receipt,
+  LifeBuoy,
+  Activity,
 } from "lucide-react"
 import CurriculumTab from "@/components/platform-admin/curriculum-tab"
 import AdoptionTab from "@/components/platform-admin/adoption-tab"
+import BookingsTab from "@/components/platform-admin/bookings-tab"
+import SubscriptionsTab from "@/components/platform-admin/subscriptions-tab"
+import SupportTab from "@/components/platform-admin/support-tab"
+import AuditLogTab from "@/components/platform-admin/audit-log-tab"
+import { GlobalSearchButton } from "@/components/platform-admin/global-search"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import NetworkTab from "@/components/platform-admin/network-tab"
 import StudentsTab from "@/components/platform-admin/students-tab"
@@ -159,6 +167,10 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
     | "trainers"
     | "campaigns"
     | "adoption"
+    | "bookings"
+    | "subscriptions"
+    | "support"
+    | "audit"
   >("overview")
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
@@ -480,6 +492,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
+            <GlobalSearchButton />
             <a
               href="/platform-admin/today"
               className="hidden sm:inline-flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 rounded-lg px-2.5 py-1.5 transition-colors"
@@ -513,6 +526,10 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               { id: "gyms", label: "Gyms", icon: Users },
               { id: "courses", label: "Curriculum", icon: BookOpen },
               { id: "adoption", label: "Adoption", icon: TrendingUp },
+              { id: "bookings", label: "Bookings", icon: Receipt },
+              { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
+              { id: "support", label: "Support", icon: LifeBuoy },
+              { id: "audit", label: "Audit", icon: Activity },
               { id: "payouts", label: "Payouts", icon: DollarSign },
               { id: "blacklist", label: "Blacklist", icon: Shield },
               { id: "ockock", label: "OckOck", icon: MessageSquare },
@@ -559,6 +576,14 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         {activeTab === "courses" && <CurriculumTab />}
 
         {activeTab === "adoption" && <AdoptionTab />}
+
+        {activeTab === "bookings" && <BookingsTab />}
+
+        {activeTab === "subscriptions" && <SubscriptionsTab />}
+
+        {activeTab === "support" && <SupportTab />}
+
+        {activeTab === "audit" && <AuditLogTab />}
 
         {/* Overview Tab */}
         {activeTab === "overview" && (

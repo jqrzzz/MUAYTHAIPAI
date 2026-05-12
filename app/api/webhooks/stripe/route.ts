@@ -5,11 +5,72 @@ import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
 
+// Stripe SDK 18.x typed for the 2025-04-30.basil API. We're pinned to
+// 2024-06-20 (some fields stay at the root level there). Cast the
+// apiVersion to bypass the TS literal-type check; runtime behaviour
+// is unaffected.
 const stripe = new Stripe(env.stripe.secretKey(), {
-  apiVersion: "2024-06-20",
+  apiVersion: "2024-06-20" as Stripe.LatestApiVersion,
 })
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+/**
+ * Fetch the charge + balance transaction for a PaymentIntent so we can
+ * record what Stripe actually deducted in fees + what really landed.
+ *
+ * Returns nulls if any piece is missing — we always still want to save
+ * the booking, even if the fee snapshot isn't available yet.
+ */
+async function fetchStripeFeeSnapshot(paymentIntentId: string): Promise<{
+  stripe_charge_id: string | null
+  stripe_balance_transaction_id: string | null
+  stripe_fee_cents: number | null
+  stripe_net_cents: number | null
+}> {
+  try {
+    const charges = await stripe.charges.list({
+      payment_intent: paymentIntentId,
+      limit: 1,
+    })
+    const charge = charges.data[0]
+    if (!charge) {
+      return {
+        stripe_charge_id: null,
+        stripe_balance_transaction_id: null,
+        stripe_fee_cents: null,
+        stripe_net_cents: null,
+      }
+    }
+    const balanceTxId =
+      typeof charge.balance_transaction === "string"
+        ? charge.balance_transaction
+        : charge.balance_transaction?.id ?? null
+
+    let fee: number | null = null
+    let net: number | null = null
+    if (balanceTxId) {
+      const tx = await stripe.balanceTransactions.retrieve(balanceTxId)
+      // Stripe's `fee` is summed across fee_details — exactly what we want
+      fee = tx.fee ?? null
+      net = tx.net ?? null
+    }
+    return {
+      stripe_charge_id: charge.id,
+      stripe_balance_transaction_id: balanceTxId,
+      stripe_fee_cents: fee,
+      stripe_net_cents: net,
+    }
+  } catch (err) {
+    console.error("[webhook] Failed to fetch fee snapshot:", err)
+    return {
+      stripe_charge_id: null,
+      stripe_balance_transaction_id: null,
+      stripe_fee_cents: null,
+      stripe_net_cents: null,
+    }
+  }
+}
 
 async function saveBookingToDatabase(data: {
   serviceName: string
@@ -62,31 +123,60 @@ async function saveBookingToDatabase(data: {
     const commissionRate = 0.15
     const commissionAmount = Math.round(data.paymentAmountUsd * commissionRate * 100) / 100
 
-    const { data: booking, error } = await supabase
+    // Capture Stripe's actual fee + net so the dashboard tells the truth
+    // about what really landed in our balance, not just the gross amount.
+    const feeSnapshot = await fetchStripeFeeSnapshot(data.stripePaymentIntentId)
+
+    // Upsert by stripe_payment_intent_id — Stripe fires both
+    // payment_intent.succeeded AND checkout.session.completed for the
+    // same payment, plus it retries failed webhooks. The partial
+    // unique index on (stripe_payment_intent_id) ensures we never
+    // double-book. `ignoreDuplicates: true` makes the second event a
+    // no-op; the .select() chain returns an empty array, which we
+    // surface as null so the caller can skip emails for replays.
+    const { data: bookings, error } = await supabase
       .from("bookings")
-      .insert({
-        org_id: orgId,
-        service_id: service?.id || null,
-        user_id: finalUserId,
-        guest_name: data.guestName,
-        guest_email: data.guestEmail,
-        booking_date: data.bookingDate,
-        booking_time: data.bookingTime || null,
-        status: "confirmed",
-        payment_status: "paid",
-        payment_method: "stripe",
-        payment_currency: "USD",
-        payment_amount_usd: data.paymentAmountUsd,
-        payment_amount_thb: null,
-        commission_rate: commissionRate,
-        commission_amount_usd: commissionAmount,
-        stripe_payment_intent_id: data.stripePaymentIntentId,
-      })
+      .upsert(
+        {
+          org_id: orgId,
+          service_id: service?.id || null,
+          user_id: finalUserId,
+          guest_name: data.guestName,
+          guest_email: data.guestEmail,
+          booking_date: data.bookingDate,
+          booking_time: data.bookingTime || null,
+          status: "confirmed",
+          payment_status: "paid",
+          payment_method: "stripe",
+          payment_currency: "USD",
+          payment_amount_usd: data.paymentAmountUsd,
+          payment_amount_thb: null,
+          commission_rate: commissionRate,
+          commission_amount_usd: commissionAmount,
+          stripe_payment_intent_id: data.stripePaymentIntentId,
+          stripe_charge_id: feeSnapshot.stripe_charge_id,
+          stripe_balance_transaction_id: feeSnapshot.stripe_balance_transaction_id,
+          stripe_fee_cents: feeSnapshot.stripe_fee_cents,
+          stripe_net_cents: feeSnapshot.stripe_net_cents,
+        },
+        { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
+      )
       .select()
-      .single()
 
     if (error) {
       console.error("Failed to save booking to database:", error)
+      return null
+    }
+
+    const booking = bookings?.[0]
+    if (!booking) {
+      // Duplicate webhook delivery (Stripe retry, or the sibling event
+      // already created this booking). Caller will skip emails.
+      console.log(
+        "Booking already exists for PI",
+        data.stripePaymentIntentId,
+        "— skipping duplicate",
+      )
       return null
     }
 
@@ -137,23 +227,11 @@ export async function POST(request: NextRequest) {
         const service = metadata.service_type || metadata.service_name
 
         if (metadata.customer_email && metadata.customer_name && service) {
-          const bookingData = {
-            customerName: metadata.customer_name,
-            customerEmail: metadata.customer_email,
-            serviceType: service,
-            bookingDate: metadata.booking_date || "TBD",
-            bookingTime: metadata.booking_time,
-            amount: paymentIntent.amount / 100,
-            paymentId: paymentIntent.id,
-          }
-
-          // Send emails
-          const emailService = EmailService.getInstance()
-          const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
-          const staffEmailSent = await emailService.sendStaffNotification(bookingData)
-          console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
-
-          await saveBookingToDatabase({
+          // Persist first, email second — saveBookingToDatabase returns
+          // null when the booking already exists (Stripe retry, or the
+          // sibling checkout.session.completed event fired first), and
+          // we use that signal to skip the duplicate-email send.
+          const booking = await saveBookingToDatabase({
             serviceName: service,
             guestName: metadata.customer_name,
             guestEmail: metadata.customer_email,
@@ -164,6 +242,22 @@ export async function POST(request: NextRequest) {
             userId: metadata.user_id || undefined,
             orgId: metadata.org_id || undefined,
           })
+
+          if (booking) {
+            const bookingData = {
+              customerName: metadata.customer_name,
+              customerEmail: metadata.customer_email,
+              serviceType: service,
+              bookingDate: metadata.booking_date || "TBD",
+              bookingTime: metadata.booking_time,
+              amount: paymentIntent.amount / 100,
+              paymentId: paymentIntent.id,
+            }
+            const emailService = EmailService.getInstance()
+            const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
+            const staffEmailSent = await emailService.sendStaffNotification(bookingData)
+            console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
+          }
         } else {
           console.warn("Missing required booking details in metadata, skipping emails")
         }
@@ -199,6 +293,47 @@ export async function POST(request: NextRequest) {
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session
         console.log("Checkout session expired:", session.id)
+        break
+      }
+
+      case "charge.refunded": {
+        // Fired when a refund happens — from API OR directly in the
+        // Stripe Dashboard. Keeps our books in sync with reality.
+        const charge = event.data.object as Stripe.Charge
+        const piId =
+          typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : charge.payment_intent?.id
+        if (!piId) {
+          console.warn("[webhook] charge.refunded missing payment_intent — skipping")
+          break
+        }
+        const fullyRefunded = charge.amount_refunded >= charge.amount
+        const { error: refundErr } = await supabase
+          .from("bookings")
+          .update({
+            payment_status: fullyRefunded ? "refunded" : "paid",
+            refunded_amount_cents: charge.amount_refunded,
+            refunded_at: new Date().toISOString(),
+          })
+          .eq("stripe_payment_intent_id", piId)
+        if (refundErr) {
+          console.error("[webhook] Failed to mark booking refunded:", refundErr)
+        } else {
+          console.log(
+            `Refund recorded for PI ${piId}: $${(charge.amount_refunded / 100).toFixed(2)}`,
+            fullyRefunded ? "(full)" : "(partial)",
+          )
+        }
+        break
+      }
+
+      case "charge.refund.updated": {
+        // Stripe may update a refund (e.g. status: pending → succeeded).
+        // We don't need to re-process; the original charge.refunded was
+        // already recorded. Just log for traceability.
+        const refund = event.data.object as Stripe.Refund
+        console.log("Refund updated:", refund.id, refund.status)
         break
       }
 
@@ -245,22 +380,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const service = metadata.service_type || metadata.service_name
 
     if (customerEmail && metadata.customer_name && service) {
-      const bookingData = {
-        customerName: metadata.customer_name,
-        customerEmail: customerEmail,
-        serviceType: service,
-        bookingDate: metadata.booking_date || "TBD",
-        bookingTime: metadata.booking_time,
-        amount: session.amount_total ? session.amount_total / 100 : 0,
-        paymentId: (session.payment_intent as string) || session.id,
-      }
-
-      const emailService = EmailService.getInstance()
-      const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
-      const staffEmailSent = await emailService.sendStaffNotification(bookingData)
-      console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
-
-      await saveBookingToDatabase({
+      // Same idempotency pattern as payment_intent.succeeded: persist
+      // first, email only if the upsert produced a new row. Without
+      // this gate, every Checkout sends emails twice — once from this
+      // handler and once from payment_intent.succeeded on the same PI.
+      const booking = await saveBookingToDatabase({
         serviceName: service,
         guestName: metadata.customer_name,
         guestEmail: customerEmail,
@@ -271,6 +395,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         userId: metadata.user_id || undefined,
         orgId: metadata.org_id || undefined,
       })
+
+      if (booking) {
+        const bookingData = {
+          customerName: metadata.customer_name,
+          customerEmail: customerEmail,
+          serviceType: service,
+          bookingDate: metadata.booking_date || "TBD",
+          bookingTime: metadata.booking_time,
+          amount: session.amount_total ? session.amount_total / 100 : 0,
+          paymentId: (session.payment_intent as string) || session.id,
+        }
+        const emailService = EmailService.getInstance()
+        const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
+        const staffEmailSent = await emailService.sendStaffNotification(bookingData)
+        console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
+      }
     } else {
       console.warn("Missing booking details in session metadata")
     }

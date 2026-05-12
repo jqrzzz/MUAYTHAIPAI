@@ -1,23 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { generateText } from "ai"
+import { checkLimit } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
+    const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    if (!isPlatformAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
 
-    // Verify platform admin
-    const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-    if (!userData?.is_platform_admin) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 })
+    const gate = await checkLimit({ key: `platform-admin-ockock:${user.id}`, max: 60, windowSeconds: 3600 })
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
     }
 
     const { message } = await request.json()

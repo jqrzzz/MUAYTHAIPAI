@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import TodayPanel from "@/components/platform-admin/today-panel"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import ViewAsPicker from "@/components/platform-admin/view-as-picker"
+import SignalsPanel from "@/components/platform-admin/signals-panel"
 import { SaasShell, SaasHeader, StatusDot, Surface } from "@/components/saas"
 
 export const metadata: Metadata = {
@@ -83,6 +84,8 @@ export default async function TodayHomePage() {
             What needs your attention across the network today.
           </p>
         </section>
+
+        <SignalsPanel />
 
         <TodayPanel />
 

@@ -48,7 +48,7 @@ export default async function CourseDetailPage({ params }: Props) {
   const { data: modules } = await supabase
     .from("course_modules")
     .select(`
-      id, title, description, module_order,
+      id, title, description, summary, module_order,
       lessons (
         id, title, description, content_type,
         video_duration_seconds, estimated_minutes,

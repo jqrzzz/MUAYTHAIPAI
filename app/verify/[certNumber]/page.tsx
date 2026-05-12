@@ -1,65 +1,63 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Metadata } from "next"
-import { BadgeCheck, XCircle, Award, MapPin, Calendar, Share2, ExternalLink } from "lucide-react"
+import { BadgeCheck, XCircle, MapPin, Calendar, Share2, ExternalLink, ScrollText, ChevronRight, Video } from "lucide-react"
 import { getLevelById } from "@/lib/certification-levels"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
 interface Props {
   params: Promise<{ certNumber: string }>
 }
 
-const LEVEL_STYLES: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  naga: { color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/30", label: "Naga" },
-  "phayra-nak": { color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", label: "Phayra Nak" },
-  singha: { color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", label: "Singha" },
-  hanuman: { color: "text-slate-300", bg: "bg-slate-500/10", border: "border-slate-500/30", label: "Hanuman" },
-  garuda: { color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", label: "Garuda" },
+const LEVEL_STYLES: Record<
+  string,
+  { color: string; bg: string; border: string; ring: string; label: string }
+> = {
+  naga: { color: "text-blue-300", bg: "bg-blue-500/[0.06]", border: "border-blue-500/25", ring: "ring-blue-500/30", label: "Naga" },
+  "phayra-nak": { color: "text-emerald-300", bg: "bg-emerald-500/[0.06]", border: "border-emerald-500/25", ring: "ring-emerald-500/30", label: "Phayra Nak" },
+  singha: { color: "text-amber-300", bg: "bg-amber-500/[0.06]", border: "border-amber-500/25", ring: "ring-amber-500/30", label: "Singha" },
+  hanuman: { color: "text-slate-300", bg: "bg-slate-500/[0.06]", border: "border-slate-500/25", ring: "ring-slate-500/30", label: "Hanuman" },
+  garuda: { color: "text-yellow-300", bg: "bg-yellow-500/[0.06]", border: "border-yellow-500/25", ring: "ring-yellow-500/30", label: "Garuda" },
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { certNumber } = await params
-
   const { data: cert } = await supabase
     .from("certificates")
-    .select("level, level_number, users:user_id (full_name), organizations:org_id (name)")
+    .select("level, level_number, status, users:user_id (full_name), organizations:org_id (name)")
     .eq("certificate_number", certNumber)
     .single()
-
   const levelConfig = cert ? getLevelById(cert.level) : null
   const student = cert?.users as unknown as { full_name: string | null } | null
   const org = cert?.organizations as unknown as { name: string } | null
   const studentName = student?.full_name || "Student"
   const levelName = levelConfig?.name || "Muay Thai"
   const gymName = org?.name || "MUAYTHAIPAI Network"
-
   const title = cert
     ? `${studentName} — ${levelName} (Level ${cert.level_number}) | MUAYTHAIPAI`
     : `Verify Certificate ${certNumber} | MUAYTHAIPAI`
-
   const description = cert
     ? `${studentName} earned the ${levelName} certification (Level ${cert.level_number}) at ${gymName}. Verified through the Naga-to-Garuda Muay Thai Certification System.`
     : "Verify a Muay Thai certification issued through the MUAYTHAIPAI network."
-
+  // Only index real, active certs. Missing or revoked → noindex so we
+  // don't pollute search with dead pages.
+  const indexable = !!cert && cert.status === "active"
   return {
     title,
     description,
-    robots: "noindex",
+    robots: indexable ? "index, follow" : "noindex",
     openGraph: {
       title,
       description,
       type: "article",
       siteName: "MUAYTHAIPAI Certification Network",
-      images: [{ url: "/images/muay-thai-logo-og.png", width: 1200, height: 630 }],
+      // og:image intentionally omitted — the colocated
+      // opengraph-image.tsx renders a dynamic per-cert card.
     },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-    },
+    twitter: { card: "summary_large_image", title, description },
   }
 }
 
@@ -70,7 +68,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
     .from("certificates")
     .select(`
       *,
-      users:user_id (full_name),
+      users:user_id (id, full_name, public_passport_enabled, public_passport_handle),
       issued_by_trainer:issued_by (display_name),
       organizations:org_id (name, city, province, slug, verified)
     `)
@@ -82,9 +80,11 @@ export default async function VerifyCertificatePage({ params }: Props) {
       <div className="flex min-h-screen items-center justify-center bg-neutral-950 p-4">
         <div className="mx-auto max-w-md text-center">
           <XCircle className="mx-auto mb-4 h-16 w-16 text-red-400" />
-          <h1 className="text-2xl font-bold text-white">Certificate Not Found</h1>
+          <h1 className="font-display text-[28px] text-white">Certificate Not Found</h1>
           <p className="mt-2 text-sm text-neutral-400">
-            No certificate with number <code className="rounded bg-white/10 px-1.5 py-0.5">{certNumber}</code> exists in the MUAYTHAIPAI network.
+            No certificate with number{" "}
+            <code className="rounded bg-white/10 px-1.5 py-0.5">{certNumber}</code>{" "}
+            exists in the MUAYTHAIPAI network.
           </p>
         </div>
       </div>
@@ -98,7 +98,12 @@ export default async function VerifyCertificatePage({ params }: Props) {
     slug: string
     verified: boolean
   }
-  const student = cert.users as unknown as { full_name: string | null }
+  const student = cert.users as unknown as {
+    id: string
+    full_name: string | null
+    public_passport_enabled: boolean | null
+    public_passport_handle: string | null
+  }
   const trainer = cert.issued_by_trainer as unknown as { display_name: string } | null
   const style = LEVEL_STYLES[cert.level] || LEVEL_STYLES.naga
   const levelConfig = getLevelById(cert.level)
@@ -108,131 +113,369 @@ export default async function VerifyCertificatePage({ params }: Props) {
   const studentName = student?.full_name || "Student"
   const levelName = levelConfig?.name || cert.level
 
+  // Pull per-skill signoffs for this cert's user + level. Joined to
+  // users for examiner name + instructor handle. Sorted by skill_index
+  // so the syllabus reads in the right order.
+  const { data: signoffsRaw } = await supabase
+    .from("skill_signoffs")
+    .select(`
+      skill_index, notes, signed_off_at,
+      signed_off_by_user:signed_off_by (
+        full_name, public_instructor_enabled, public_instructor_handle,
+        is_verified_examiner
+      )
+    `)
+    .eq("student_id", student.id)
+    .eq("level", cert.level)
+    .order("skill_index", { ascending: true })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const signoffs = ((signoffsRaw ?? []) as any[]).map((s) => {
+    const signer = Array.isArray(s.signed_off_by_user)
+      ? s.signed_off_by_user[0]
+      : s.signed_off_by_user
+    const instructorHandle =
+      signer?.public_instructor_enabled && signer?.public_instructor_handle
+        ? (signer.public_instructor_handle as string)
+        : null
+    return {
+      skill_index: s.skill_index as number,
+      signed_at: s.signed_off_at as string,
+      signer_name: (signer?.full_name as string | null) ?? null,
+      signer_handle: instructorHandle,
+      signer_verified: !!signer?.is_verified_examiner,
+      notes: s.notes as string | null,
+    }
+  })
+  const signoffByIndex = new Map(signoffs.map((s) => [s.skill_index, s]))
+
+  // Approved video demonstrations for this student+level. We map by
+  // skill_index so each row in the syllabus can carry a "video-verified"
+  // pill + a play link without an extra round-trip.
+  const { data: videoSubsRaw } = await supabase
+    .from("skill_submissions")
+    .select("skill_index, video_url")
+    .eq("student_id", student.id)
+    .eq("level", cert.level)
+    .eq("status", "approved")
+  const videoByIndex = new Map<number, string>(
+    (videoSubsRaw ?? []).map((v) => [v.skill_index as number, v.video_url as string]),
+  )
+
+  // Unique examiners — preserve handle + verified flag, deduped by name
+  const examinerMap = new Map<string, { handle: string | null; verified: boolean }>()
+  for (const s of signoffs) {
+    if (s.signer_name && !examinerMap.has(s.signer_name)) {
+      examinerMap.set(s.signer_name, { handle: s.signer_handle, verified: s.signer_verified })
+    }
+  }
+  const examiners = Array.from(examinerMap.entries()) as Array<
+    [string, { handle: string | null; verified: boolean }]
+  >
+
   const shareText = `I earned the ${levelName} certification (Level ${cert.level_number}) in Muay Thai at ${org.name}! 🥊`
 
+  // Structured data — Schema.org's closest fit for an awarded credential
+  // is EducationalOccupationalCredential. We pair it with a Person (the
+  // student) and EducationalOrganization (the gym) so Google/Bing can
+  // build the relationship graph.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOccupationalCredential",
+    name: `${levelName} — Muay Thai Level ${cert.level_number}`,
+    description: `${studentName} earned the ${levelName} certification (Level ${cert.level_number}) at ${org.name}. Issued via the Naga-to-Garuda Muay Thai Certification System.`,
+    credentialCategory: "certification",
+    educationalLevel: `Level ${cert.level_number} of 5`,
+    url: verifyUrl,
+    identifier: certNumber,
+    dateCreated: cert.issued_at,
+    validIn: { "@type": "Country", name: "Thailand" },
+    recognizedBy: {
+      "@type": "EducationalOrganization",
+      name: org.name,
+      address: org.city ? { "@type": "PostalAddress", addressLocality: org.city, addressRegion: org.province ?? undefined, addressCountry: "TH" } : undefined,
+      url: `${siteUrl}/gyms/${org.slug}`,
+    },
+    about: {
+      "@type": "Person",
+      name: studentName,
+      ...(student.public_passport_enabled && student.public_passport_handle
+        ? { url: `${siteUrl}/p/${student.public_passport_handle}` }
+        : {}),
+    },
+    competencyRequired: levelConfig?.skills ?? [],
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-950 p-4">
-      <div className="mx-auto w-full max-w-md">
+    <div className="min-h-screen bg-neutral-950 py-8 px-4">
+      {isActive && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <div className="mx-auto w-full max-w-2xl">
         {/* Status banner */}
         <div
-          className={`mb-6 flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+          className={`mb-6 mx-auto inline-flex w-auto items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
             isActive
-              ? "bg-emerald-500/10 text-emerald-400"
-              : "bg-red-500/10 text-red-400"
+              ? "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/25"
+              : "bg-red-500/10 text-red-300 ring-1 ring-red-500/25"
           }`}
+          style={{ display: "table" }}
         >
           {isActive ? (
-            <>
+            <span className="inline-flex items-center gap-2">
               <BadgeCheck className="h-4 w-4" />
               Verified Certificate
-            </>
+            </span>
           ) : (
-            <>
+            <span className="inline-flex items-center gap-2">
               <XCircle className="h-4 w-4" />
               Certificate Revoked
-            </>
+            </span>
           )}
         </div>
 
         {/* Certificate card */}
-        <div className={`rounded-2xl border ${style.border} ${style.bg} p-6`}>
+        <div className={`rounded-2xl border ${style.border} ${style.bg} backdrop-blur-sm p-8`}>
           {/* Level badge */}
-          <div className="mb-4 text-center">
+          <div className="mb-6 text-center">
             {levelConfig && (
-              <span className="text-5xl mb-2 block">{levelConfig.icon}</span>
+              <span className="text-[64px] block leading-none">{levelConfig.icon}</span>
             )}
-            <Award className={`mx-auto mb-2 h-8 w-8 ${style.color}`} />
-            <p className={`text-xs font-semibold uppercase tracking-widest ${style.color}`}>
-              Level {cert.level_number}
+            <p
+              className={`font-display text-[11px] uppercase tracking-[0.28em] mt-3 ${style.color}`}
+            >
+              {levelConfig?.creature ?? "Muay Thai"} · Level {cert.level_number}
             </p>
-            <h1 className="text-3xl font-bold text-white">{levelName}</h1>
-            <p className="mt-1 text-sm text-neutral-400">Muay Thai Certification</p>
-            {levelConfig && (
-              <p className="mt-0.5 text-xs text-neutral-500">{levelConfig.creature} &middot; {levelConfig.duration} program</p>
-            )}
+            <h1 className="font-display text-[40px] sm:text-[48px] leading-tight text-white mt-2">
+              {levelName}
+            </h1>
+            <p className="font-serif italic text-[15px] text-neutral-400 mt-2">
+              {levelConfig?.duration} program · Naga-to-Garuda Certification System
+            </p>
           </div>
 
-          <hr className="my-4 border-white/10" />
+          <hr className="my-6 border-white/10" />
 
-          {/* Details */}
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-neutral-500">Student</span>
-              <span className="font-medium text-white">{studentName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-500">Issued by</span>
-              <span className="font-medium text-white">{trainer?.display_name || "Gym Staff"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-500">Gym</span>
-              <span className="font-medium text-white flex items-center gap-1">
-                {org.name}
-                {org.verified && <BadgeCheck className="h-3.5 w-3.5 text-blue-400" />}
-              </span>
-            </div>
+          {/* Awardee */}
+          <div className="text-center mb-6">
+            <p className="font-display text-[10px] uppercase tracking-[0.22em] text-neutral-500 mb-1">
+              This certifies that
+            </p>
+            <h2 className="font-display text-[28px] text-white">
+              {student.public_passport_enabled && student.public_passport_handle ? (
+                <a
+                  href={`/p/${student.public_passport_handle}`}
+                  className="hover:text-orange-200 transition-colors inline-flex items-center gap-2"
+                >
+                  {studentName}
+                  <ChevronRight className="h-5 w-5 text-zinc-700" />
+                </a>
+              ) : (
+                studentName
+              )}
+            </h2>
+            <p className="font-serif italic text-[14px] text-neutral-500 mt-1">
+              has demonstrated mastery of the skills enumerated below.
+            </p>
+          </div>
+
+          {/* Issued metadata */}
+          <div className="grid grid-cols-2 gap-3 text-[13px] mb-6">
+            <Detail label="Issued by" value={trainer?.display_name || "Gym Staff"} />
+            <Detail
+              label="Gym"
+              value={org.name}
+              icon={org.verified ? <BadgeCheck className="h-3 w-3 text-blue-400" /> : null}
+            />
+            <Detail
+              label="Issued"
+              value={new Date(cert.issued_at).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+              icon={<Calendar className="h-3 w-3 text-zinc-500" />}
+            />
             {(org.city || org.province) && (
-              <div className="flex items-center justify-between">
-                <span className="text-neutral-500">Location</span>
-                <span className="text-neutral-300 flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {[org.city, org.province].filter(Boolean).join(", ")}
-                </span>
-              </div>
+              <Detail
+                label="Location"
+                value={[org.city, org.province].filter(Boolean).join(", ")}
+                icon={<MapPin className="h-3 w-3 text-zinc-500" />}
+              />
             )}
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-500">Issued</span>
-              <span className="text-neutral-300 flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(cert.issued_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-500">Certificate #</span>
-              <code className="text-xs text-neutral-400">{cert.certificate_number}</code>
-            </div>
-
-            {/* Skills count */}
-            {levelConfig && (
-              <div className="flex justify-between">
-                <span className="text-neutral-500">Skills assessed</span>
-                <span className="text-neutral-300">{levelConfig.skills.length} competencies</span>
+            <Detail label="Certificate №" value={cert.certificate_number} mono />
+            {examiners.length > 0 && (
+              <div>
+                <p className="font-display text-[9px] uppercase tracking-[0.16em] text-neutral-500 mb-0.5">
+                  {examiners.length === 1 ? "Examiner" : "Examiners"}
+                </p>
+                <p className="text-neutral-200 text-[13px]">
+                  {examiners.map(([name, info], i) => (
+                    <span key={name} className="inline-flex items-center gap-1">
+                      {info.handle ? (
+                        <a
+                          href={`/i/${info.handle}`}
+                          className="text-neutral-100 underline decoration-orange-400/40 underline-offset-2 hover:decoration-orange-300 transition-colors"
+                        >
+                          {name}
+                        </a>
+                      ) : (
+                        name
+                      )}
+                      {info.verified && (
+                        <BadgeCheck
+                          className="h-3 w-3 text-blue-400"
+                          aria-label="Federation-verified examiner"
+                        />
+                      )}
+                      {i < examiners.length - 1 ? <span>,&nbsp;</span> : null}
+                    </span>
+                  ))}
+                </p>
               </div>
             )}
           </div>
 
-          {/* Print certificate link */}
+          {/* SKILLS ATTESTED — the credential substance */}
+          {levelConfig && levelConfig.skills.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <div className="flex items-baseline justify-between mb-4">
+                <p className="font-display text-[10px] uppercase tracking-[0.22em] text-neutral-500 inline-flex items-center gap-1.5">
+                  <ScrollText className="h-3 w-3" />
+                  Skills Attested
+                </p>
+                <p className="text-[11px] text-neutral-600 tabular-nums">
+                  {signoffs.length}/{levelConfig.skills.length} signed off
+                </p>
+              </div>
+              <ol className="space-y-2">
+                {levelConfig.skills.map((skill, i) => {
+                  const signoff = signoffByIndex.get(i)
+                  const videoUrl = videoByIndex.get(i)
+                  return (
+                    <li
+                      key={i}
+                      className={`text-[13px] flex items-start gap-3 ${
+                        signoff ? "" : "opacity-60"
+                      }`}
+                    >
+                      <span
+                        className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] tabular-nums font-medium shrink-0 mt-0.5 ${
+                          signoff
+                            ? `${style.ring} ring-1 ${style.color} bg-white/[0.04]`
+                            : "ring-1 ring-white/10 text-neutral-600"
+                        }`}
+                      >
+                        {signoff ? "✓" : i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-neutral-200 leading-snug inline-flex items-center gap-2 flex-wrap">
+                          <span>{skill}</span>
+                          {videoUrl && (
+                            <a
+                              href={videoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+                              aria-label="View video demonstration"
+                            >
+                              <Video className="h-2.5 w-2.5" />
+                              Video-verified
+                            </a>
+                          )}
+                        </p>
+                        {signoff && (
+                          <p className="text-[11px] text-neutral-500 mt-0.5">
+                            {signoff.signer_name ? (
+                              <span className="inline-flex items-center gap-1">
+                                Signed by{" "}
+                                {signoff.signer_handle ? (
+                                  <a
+                                    href={`/i/${signoff.signer_handle}`}
+                                    className="text-neutral-200 underline decoration-orange-400/40 underline-offset-2 hover:decoration-orange-300 transition-colors font-medium"
+                                  >
+                                    {signoff.signer_name}
+                                  </a>
+                                ) : (
+                                  <strong className="text-neutral-300">
+                                    {signoff.signer_name}
+                                  </strong>
+                                )}
+                                {signoff.signer_verified && (
+                                  <BadgeCheck
+                                    className="h-2.5 w-2.5 text-blue-400"
+                                    aria-label="Federation-verified examiner"
+                                  />
+                                )}
+                              </span>
+                            ) : (
+                              "Signed by gym staff"
+                            )}
+                            {" · "}
+                            {new Date(signoff.signed_at).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                            {signoff.notes && (
+                              <span className="block italic mt-0.5 text-neutral-600 font-serif">
+                                &ldquo;{signoff.notes}&rdquo;
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+          )}
+
+          {/* Print link */}
           {isActive && (
-            <div className="mt-4 pt-4 border-t border-white/10 text-center">
+            <div className="mt-6 pt-6 border-t border-white/10 text-center">
               <a
                 href={`/verify/${certNumber}/print`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`text-xs ${style.color} hover:underline`}
               >
-                Print Certificate &rarr;
+                Print certificate &rarr;
               </a>
             </div>
           )}
         </div>
 
-        {/* Share buttons */}
+        {/* Public passport CTA if enabled */}
+        {student.public_passport_enabled && student.public_passport_handle && (
+          <div className="mt-4 text-center">
+            <a
+              href={`/p/${student.public_passport_handle}`}
+              className="inline-flex items-center gap-1.5 text-[13px] text-orange-300 hover:text-orange-200 transition-colors"
+            >
+              View {studentName.split(" ")[0]}&apos;s full passport
+              <ChevronRight className="h-3 w-3" />
+            </a>
+          </div>
+        )}
+
+        {/* Share */}
         {isActive && (
-          <div className="mt-4 space-y-3">
-            <p className="text-center text-xs text-neutral-500 flex items-center justify-center gap-1">
+          <div className="mt-6 space-y-3">
+            <p className="font-display text-[10px] uppercase tracking-[0.18em] text-neutral-500 text-center inline-flex items-center justify-center gap-1 w-full">
               <Share2 className="h-3 w-3" />
-              Share this achievement
+              Share This Achievement
             </p>
             <div className="flex gap-2 justify-center flex-wrap">
               <a
                 href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(verifyUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-full bg-blue-600/20 text-blue-400 text-xs font-medium hover:bg-blue-600/30 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-blue-600/15 text-blue-300 text-xs font-medium hover:bg-blue-600/25 transition-colors ring-1 ring-blue-500/20"
               >
                 Facebook
               </a>
@@ -240,7 +483,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
                 href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(verifyUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-full bg-neutral-700/50 text-neutral-300 text-xs font-medium hover:bg-neutral-700/70 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-neutral-800 text-neutral-300 text-xs font-medium hover:bg-neutral-700 transition-colors ring-1 ring-white/10"
               >
                 X / Twitter
               </a>
@@ -248,7 +491,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-full bg-blue-700/20 text-blue-300 text-xs font-medium hover:bg-blue-700/30 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-blue-700/15 text-blue-200 text-xs font-medium hover:bg-blue-700/25 transition-colors ring-1 ring-blue-500/20"
               >
                 LinkedIn
               </a>
@@ -256,7 +499,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
                 href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${verifyUrl}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-full bg-green-600/20 text-green-400 text-xs font-medium hover:bg-green-600/30 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-green-600/15 text-green-300 text-xs font-medium hover:bg-green-600/25 transition-colors ring-1 ring-green-500/20"
               >
                 WhatsApp
               </a>
@@ -264,9 +507,9 @@ export default async function VerifyCertificatePage({ params }: Props) {
           </div>
         )}
 
-        {/* QR Code section */}
-        <div className="mt-6 text-center">
-          {/* QR code via public API — lightweight SVG generation */}
+        {/* QR Code */}
+        <div className="mt-8 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verifyUrl)}&bgcolor=0a0a0a&color=ffffff&format=svg`}
             alt={`QR code for certificate ${certNumber}`}
@@ -274,15 +517,13 @@ export default async function VerifyCertificatePage({ params }: Props) {
             height={120}
             className="mx-auto rounded-lg"
           />
-          <p className="mt-2 text-[10px] text-neutral-600">
-            Scan to verify
-          </p>
+          <p className="mt-2 text-[10px] text-neutral-600">Scan to verify</p>
         </div>
 
-        {/* Network badge */}
-        <div className="mt-6 text-center space-y-2">
-          <p className="text-xs text-neutral-600">
-            Issued through the MUAYTHAIPAI Network &middot; Naga-to-Garuda Certification System
+        {/* Network footer */}
+        <div className="mt-8 text-center space-y-2">
+          <p className="font-display text-[10px] uppercase tracking-[0.18em] text-neutral-600">
+            MUAYTHAIPAI Network · Naga-to-Garuda Certification System
           </p>
           <a
             href="/certificate-programs"
@@ -293,6 +534,34 @@ export default async function VerifyCertificatePage({ params }: Props) {
           </a>
         </div>
       </div>
+    </div>
+  )
+}
+
+function Detail({
+  label,
+  value,
+  icon,
+  mono,
+}: {
+  label: string
+  value: string
+  icon?: React.ReactNode
+  mono?: boolean
+}) {
+  return (
+    <div>
+      <p className="font-display text-[9px] uppercase tracking-[0.16em] text-neutral-500 mb-0.5">
+        {label}
+      </p>
+      <p
+        className={`text-neutral-200 inline-flex items-center gap-1 ${
+          mono ? "font-mono text-[12px]" : ""
+        }`}
+      >
+        {icon}
+        <span className="truncate">{value}</span>
+      </p>
     </div>
   )
 }

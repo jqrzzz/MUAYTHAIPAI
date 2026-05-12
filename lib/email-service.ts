@@ -48,6 +48,16 @@ export interface CertificateIssuedEmailData {
   issuedAt: string
 }
 
+export interface FirstCertCelebrationEmailData {
+  ownerEmail: string
+  ownerName: string | null
+  orgName: string
+  levelName: string
+  levelNumber: number
+  certificateNumber: string
+  verifyUrl: string
+}
+
 export interface CourseCompletedEmailData {
   studentName: string
   studentEmail: string
@@ -181,6 +191,100 @@ export class EmailService {
       return true
     } catch (error) {
       console.error("[email] Failed to send certificate issued email:", error instanceof Error ? error.message : String(error))
+      return false
+    }
+  }
+
+  // One-time milestone email — sent the moment a gym issues its first
+  // verified cert. Not for the student (they get their own email);
+  // this lands in the gym OWNER's inbox so the trial-to-paid moment
+  // gets the celebratory hand-off it deserves.
+  async sendFirstCertCelebrationEmail(
+    data: FirstCertCelebrationEmailData,
+  ): Promise<boolean> {
+    try {
+      if (!this.resend) {
+        console.log(
+          "[email] First-cert celebration (no Resend):",
+          data.ownerEmail,
+          data.certificateNumber,
+        )
+        return false
+      }
+
+      const greeting = data.ownerName ? `Hey ${data.ownerName.split(" ")[0]},` : "Hey,"
+      const subject = `🎉 ${data.orgName} just issued its first MUAYTHAIPAI certificate`
+
+      const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;font-family:Inter,-apple-system,sans-serif;background:#09090b;color:#fafafa;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#09090b;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;background:#18181b;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:32px 32px 8px 32px;">
+          <p style="margin:0 0 16px 0;font-size:11px;letter-spacing:3px;color:#a1a1aa;text-transform:uppercase;">MUAYTHAIPAI · Milestone</p>
+          <h1 style="margin:0 0 16px 0;font-size:28px;line-height:1.25;color:#fafafa;font-weight:700;">${data.orgName} just issued its first credential.</h1>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">${greeting}</p>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">A few minutes ago, you signed off on a student's <strong style="color:#fff;">${data.levelName}</strong> (Level ${data.levelNumber} of 5). It's now public, verifiable, and shareable forever.</p>
+          <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">This is the moment your gym becomes part of the Naga–Garuda lineage — every cert from here on adds to your gym's public record.</p>
+        </td></tr>
+        <tr><td style="padding:0 32px 8px 32px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#0a0a0a;border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+            <tr><td>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Certificate</p>
+              <p style="margin:0 0 12px 0;font-size:14px;color:#fafafa;font-family:ui-monospace,monospace;">${data.certificateNumber}</p>
+              <a href="${data.verifyUrl}" style="display:inline-block;background:#f97316;color:#000;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">View verify page →</a>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px;">
+          <p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#a1a1aa;"><strong style="color:#fafafa;">What to do next:</strong></p>
+          <ul style="margin:0 0 16px 0;padding-left:20px;font-size:13px;line-height:1.7;color:#a1a1aa;">
+            <li>Share the verify URL on social — every share is distributed credibility for your gym.</li>
+            <li>Enroll your next student. Momentum compounds.</li>
+            <li>Reply to this email if you want help getting the rest of your roster onto the ladder.</li>
+          </ul>
+          <p style="margin:24px 0 0 0;font-size:12px;color:#71717a;">— The MUAYTHAIPAI team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+
+      const text = `${greeting}
+
+${data.orgName} just issued its first MUAYTHAIPAI credential — ${data.levelName} (Level ${data.levelNumber} of 5).
+
+It's public, verifiable, and shareable forever.
+
+Certificate: ${data.certificateNumber}
+Verify: ${data.verifyUrl}
+
+What to do next:
+- Share the verify URL on social.
+- Enroll your next student.
+- Reply if you want help getting your roster onto the ladder.
+
+— The MUAYTHAIPAI team`
+
+      const result = await this.resend.emails.send({
+        from: `Muay Thai Pai <noreply@muaythaipai.com>`,
+        to: data.ownerEmail,
+        subject,
+        html,
+        text,
+      })
+
+      if (result.error) {
+        console.error("[email] First-cert celebration failed:", result.error)
+        return false
+      }
+      console.log("[email] First-cert celebration sent to:", data.ownerEmail)
+      return true
+    } catch (error) {
+      console.error(
+        "[email] First-cert celebration error:",
+        error instanceof Error ? error.message : String(error),
+      )
       return false
     }
   }
@@ -843,4 +947,162 @@ Muay Thai Pai
 
     return { subject, html, text }
   }
+
+  /**
+   * Send the operator's reply to a support ticket back to the gym admin
+   * who opened it. The reply itself was already logged to the ticket;
+   * this just notifies the gym admin so they don't have to keep
+   * checking /admin to see if you've responded.
+   */
+  async sendSupportReply(args: {
+    toEmail: string
+    toName?: string | null
+    gymName: string
+    subject: string
+    body: string
+    ticketId: string
+    isResolution: boolean
+  }): Promise<boolean> {
+    const { toEmail, toName, gymName, subject, body, ticketId, isResolution } = args
+    const prefix = isResolution ? "[Resolved]" : "[Reply]"
+    const emailSubject = `${prefix} ${subject}`
+    const greeting = toName ? `Hi ${toName.split(" ")[0]},` : "Hi,"
+
+    const text =
+      `${greeting}\n\n` +
+      `We just replied to your support ticket "${subject}" for ${gymName}:\n\n` +
+      `${body}\n\n` +
+      (isResolution
+        ? `If this resolved your issue you don't need to do anything. If you need further help, hop into your /admin and click Help to open a new ticket.\n\n`
+        : `If you need to add anything, hop into your /admin and click Help to continue the conversation.\n\n`) +
+      `Ticket reference: ${ticketId.slice(0, 8)}\n\n` +
+      `Team MUAYTHAIPAI`
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #18181b;">
+        <p style="margin: 0 0 16px 0;">${greeting}</p>
+        <p style="margin: 0 0 8px 0; color: #52525b; font-size: 13px;">
+          We replied to your support ticket for <strong style="color: #18181b;">${escapeHtml(gymName)}</strong>:
+        </p>
+        <p style="margin: 0 0 24px 0; padding: 4px 0; color: #18181b; font-weight: 600;">
+          ${escapeHtml(subject)}
+        </p>
+        <div style="background: #fafafa; border-left: 3px solid ${isResolution ? "#10b981" : "#6366f1"}; padding: 16px 20px; border-radius: 6px; margin: 0 0 24px 0; white-space: pre-wrap; line-height: 1.6;">${escapeHtml(body)}</div>
+        ${
+          isResolution
+            ? `<p style="margin: 0 0 16px 0; color: #10b981; font-size: 13px;">✓ Marked as resolved. If this didn't fix things, just open a new ticket and we'll dig back in.</p>`
+            : `<p style="margin: 0 0 16px 0; color: #52525b; font-size: 13px;">Need to add something? Open <code>/admin → Help</code> to continue the conversation.</p>`
+        }
+        <p style="margin: 24px 0 0 0; color: #a1a1aa; font-size: 11px; border-top: 1px solid #e4e4e7; padding-top: 16px;">
+          Ticket ${ticketId.slice(0, 8)} · Team MUAYTHAIPAI
+        </p>
+      </div>
+    `
+
+    try {
+      if (!this.resend) {
+        console.warn("[support email] Resend not configured — skipping")
+        return false
+      }
+      const result = await this.resend.emails.send({
+        from: `MUAYTHAIPAI Support <support@paimuaythai.com>`,
+        to: toEmail,
+        subject: emailSubject,
+        html,
+        text,
+        replyTo: "support@paimuaythai.com",
+      })
+      if (result.error) {
+        console.error("[support email] Resend error:", result.error)
+        return false
+      }
+      return true
+    } catch (err) {
+      console.error("[support email] Send failed:", err)
+      return false
+    }
+  }
+
+  /**
+   * Generic AI-warm send for automated sequences. Returns the Resend
+   * message ID so the caller can store it in email_send_log for
+   * audit + replies.
+   *
+   * One method handles all three sequences (welcome, lapsed, cert
+   * congrats) — they share the same shape: subject + body in the
+   * gym's voice, friendly + direct, no marketing fluff.
+   */
+  async sendAutomatedSequence(args: {
+    toEmail: string
+    toName?: string | null
+    fromName: string // typically the gym name
+    fromEmail?: string | null
+    subject: string
+    bodyText: string
+    /** Optional small accent color for the left-border of the body block */
+    accent?: "indigo" | "amber" | "emerald" | "orange"
+    /** Footer line — e.g. "Sent by Wisarut Family Gym via MUAYTHAIPAI" */
+    footer?: string
+  }): Promise<{ ok: boolean; messageId: string | null; error: string | null }> {
+    const { toEmail, toName, fromName, fromEmail, subject, bodyText, accent = "indigo", footer } = args
+    const accentColors: Record<string, string> = {
+      indigo: "#6366f1",
+      amber: "#f59e0b",
+      emerald: "#10b981",
+      orange: "#f97316",
+    }
+    const accentColor = accentColors[accent] ?? accentColors.indigo
+
+    const html = `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #18181b; line-height: 1.6;">
+  ${toName ? `<p style="margin: 0 0 16px 0;">Hi ${escapeHtml(toName.split(" ")[0])},</p>` : ""}
+  <div style="white-space: pre-wrap; border-left: 3px solid ${accentColor}; padding: 4px 0 4px 16px; margin: 16px 0;">${escapeHtml(bodyText)}</div>
+  ${
+    footer
+      ? `<p style="margin: 24px 0 0 0; color: #a1a1aa; font-size: 11px; border-top: 1px solid #e4e4e7; padding-top: 16px;">${escapeHtml(footer)}</p>`
+      : ""
+  }
+</div>`.trim()
+
+    const text = (toName ? `Hi ${toName.split(" ")[0]},\n\n` : "") + bodyText + (footer ? `\n\n---\n${footer}` : "")
+
+    try {
+      if (!this.resend) {
+        console.warn("[email sequence] Resend not configured — skipping")
+        return { ok: false, messageId: null, error: "resend_not_configured" }
+      }
+      const from = `${fromName} <${fromEmail || "noreply@paimuaythai.com"}>`
+      const result = await this.resend.emails.send({
+        from,
+        to: toEmail,
+        subject,
+        html,
+        text,
+        replyTo: fromEmail || undefined,
+      })
+      if (result.error) {
+        return {
+          ok: false,
+          messageId: null,
+          error: result.error.message ?? "resend_error",
+        }
+      }
+      return { ok: true, messageId: result.data?.id ?? null, error: null }
+    } catch (err) {
+      return {
+        ok: false,
+        messageId: null,
+        error: err instanceof Error ? err.message : "unknown_error",
+      }
+    }
+  }
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
 }

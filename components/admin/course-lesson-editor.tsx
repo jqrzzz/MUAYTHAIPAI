@@ -32,7 +32,16 @@ import {
   Wand2,
   Check,
   Languages,
+  Image as ImageIcon,
+  GalleryHorizontal,
 } from "lucide-react"
+import MediaUploader from "./media-uploader"
+
+interface GalleryItem {
+  url: string
+  caption?: string
+  alt?: string
+}
 
 interface Lesson {
   id: string
@@ -49,6 +58,8 @@ interface Lesson {
   lesson_order: number
   is_preview: boolean
   estimated_minutes: number
+  hero_image_url: string | null
+  gallery: GalleryItem[] | null
 }
 
 interface QuizOption {
@@ -78,12 +89,15 @@ const CONTENT_TYPES = [
 export default function CourseLessonEditor({
   lessonId,
   courseId,
+  courseOrgId,
   moduleId,
   onBack,
   apiBase = "/api/admin/courses",
 }: {
   lessonId: string
   courseId: string
+  /** null = platform-wide course (Naga-Garuda), set = gym-specific. Determines storage path. */
+  courseOrgId: string | null
   moduleId: string
   onBack: () => void
   apiBase?: string
@@ -94,7 +108,20 @@ export default function CourseLessonEditor({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string
+    description: string
+    content_type: string
+    video_url: string
+    video_duration_seconds: number
+    text_content: string
+    drill_instructions: string
+    drill_duration_minutes: number
+    is_preview: boolean
+    estimated_minutes: number
+    hero_image_url: string | null
+    gallery: GalleryItem[]
+  }>({
     title: "",
     description: "",
     content_type: "video",
@@ -105,6 +132,8 @@ export default function CourseLessonEditor({
     drill_duration_minutes: 15,
     is_preview: false,
     estimated_minutes: 10,
+    hero_image_url: null,
+    gallery: [],
   })
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
@@ -248,6 +277,8 @@ export default function CourseLessonEditor({
             drill_duration_minutes: found.drill_duration_minutes || 15,
             is_preview: found.is_preview,
             estimated_minutes: found.estimated_minutes,
+            hero_image_url: found.hero_image_url || null,
+            gallery: Array.isArray(found.gallery) ? found.gallery : [],
           })
         }
       }
@@ -284,6 +315,8 @@ export default function CourseLessonEditor({
         content_type: form.content_type,
         is_preview: form.is_preview,
         estimated_minutes: form.estimated_minutes,
+        hero_image_url: form.hero_image_url,
+        gallery: form.gallery,
       }
 
       if (form.content_type === "video") {
@@ -478,23 +511,70 @@ export default function CourseLessonEditor({
             </CardContent>
           </Card>
 
+          {/* Hero image — shown for every content type. Renders on the
+              student's lesson page above the video / body. */}
+          <Card className="bg-neutral-900/50 border-neutral-800">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="text-sm font-medium text-neutral-300 flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" /> Hero image
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Cover photo for the lesson. Shows at the top of the student
+                view and as the thumbnail in the lesson list.
+              </p>
+              <MediaUploader
+                mode="image"
+                orgId={courseOrgId}
+                courseId={courseId}
+                lessonId={lessonId}
+                value={form.hero_image_url}
+                onChange={(url) => setForm((p) => ({ ...p, hero_image_url: url }))}
+                disabled={saving}
+              />
+            </CardContent>
+          </Card>
+
           {/* Content type specific fields */}
           {form.content_type === "video" && (
             <Card className="bg-neutral-900/50 border-neutral-800">
               <CardContent className="p-4 space-y-4">
                 <h3 className="text-sm font-medium text-neutral-300 flex items-center gap-2">
-                  <Video className="h-4 w-4" /> Video Content
+                  <Video className="h-4 w-4" /> Video
                 </h3>
+
                 <div className="space-y-2">
-                  <Label className="text-neutral-200">Video URL</Label>
+                  <Label className="text-neutral-200">Upload</Label>
+                  <MediaUploader
+                    mode="video"
+                    orgId={courseOrgId}
+                    courseId={courseId}
+                    lessonId={lessonId}
+                    value={
+                      form.video_url && isUploadedVideo(form.video_url)
+                        ? form.video_url
+                        : null
+                    }
+                    onChange={(url) =>
+                      setForm((p) => ({ ...p, video_url: url ?? "" }))
+                    }
+                    disabled={saving}
+                  />
+                  <p className="text-xs text-neutral-500">
+                    MP4, WebM, or MOV up to 500&nbsp;MB. Or paste a URL below
+                    if your video lives on YouTube / Vimeo.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-neutral-200">Or paste a URL</Label>
                   <Input
                     value={form.video_url}
                     onChange={(e) => setForm((p) => ({ ...p, video_url: e.target.value }))}
-                    placeholder="YouTube, Vimeo, or direct video URL"
+                    placeholder="YouTube, Vimeo, Mux, or direct .mp4 URL"
                     className="bg-neutral-800 border-neutral-700 text-white"
                   />
-                  <p className="text-xs text-neutral-500">Supports YouTube, Vimeo, Mux, Cloudflare Stream</p>
                 </div>
+
                 <div className="space-y-2">
                   <Label className="text-neutral-200">Duration (seconds)</Label>
                   <Input
@@ -585,6 +665,35 @@ export default function CourseLessonEditor({
               </CardContent>
             </Card>
           )}
+
+          {/* Photo gallery — appears for every content type. Renders below
+              the body on the student view as a grid. Great for technique
+              steps, footwork diagrams, target zones. */}
+          <Card className="bg-neutral-900/50 border-neutral-800">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="text-sm font-medium text-neutral-300 flex items-center gap-2">
+                <GalleryHorizontal className="h-4 w-4" /> Photo gallery
+                {form.gallery.length > 0 && (
+                  <span className="text-xs font-normal text-neutral-500 ml-1">
+                    {form.gallery.length} photo{form.gallery.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Step-by-step photos, freeze frames, target zones. Add captions
+                to label what each photo shows.
+              </p>
+              <MediaUploader
+                mode="gallery"
+                orgId={courseOrgId}
+                courseId={courseId}
+                lessonId={lessonId}
+                value={form.gallery}
+                onChange={(items) => setForm((p) => ({ ...p, gallery: items }))}
+                disabled={saving}
+              />
+            </CardContent>
+          </Card>
 
           {form.content_type === "quiz" && (
             <Card className="bg-neutral-900/50 border-neutral-800">
@@ -946,4 +1055,15 @@ export default function CourseLessonEditor({
       </Dialog>
     </div>
   )
+}
+
+/**
+ * Does this video URL point at our own storage bucket vs an external
+ * host like YouTube? Decides whether the upload widget should show the
+ * preview or stay empty (so paste-URL workflow still works without the
+ * uploader trying to delete a YouTube link).
+ */
+function isUploadedVideo(url: string | null | undefined): boolean {
+  if (!url) return false
+  return /\/storage\/v1\/object\/public\/course-videos\//.test(url)
 }

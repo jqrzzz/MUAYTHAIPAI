@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -30,9 +30,11 @@ import {
   Send,
   Loader2,
   BookOpen,
+  Check,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import StudentCoursesView from "@/components/student/courses-view"
+import { SkillDemoUploader } from "@/components/student/skill-demo-uploader"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
 
@@ -156,9 +158,15 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
     id: string; number: number; name: string; icon: string; creature: string;
     duration: string; color: string; earned: boolean; earnedAt: string | null;
     certificateNumber: string | null; enrolled: boolean; enrolledAt: string | null;
-    enrolledGym: string | null; skillsSignedOff: number; skillsTotal: number;
+    enrolledGym: string | null; enrolledOrgId: string | null;
+    skillsSignedOff: number; skillsTotal: number;
     courseCompleted: boolean;
-    skills: { name: string; signedOff: boolean; signedOffAt: string | null }[];
+    skills: {
+      name: string; signedOff: boolean; signedOffAt: string | null;
+      submissionStatus: string | null;
+      submissionVideoUrl: string | null;
+      submissionReviewerNotes: string | null;
+    }[];
     eligible: boolean; daysUntilEligible: number;
   }[]>([])
   const [loadingProgress, setLoadingProgress] = useState(false)
@@ -358,10 +366,10 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               {userName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+              <p className="font-display text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                 {greeting}
               </p>
-              <h1 className="text-[13px] font-semibold text-white leading-tight truncate">
+              <h1 className="font-display text-[15px] text-white leading-tight truncate">
                 {userName}
               </h1>
             </div>
@@ -380,6 +388,13 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {/* Home View */}
         {activeView === "home" && (
           <div className="py-6 space-y-6">
+            {/* Belt journey strip — visible Naga→Garuda progression as a
+                proud personal artifact. Compounds with the course-page
+                belt band so the brand cadence is consistent. */}
+            {certProgress.length > 0 && (
+              <BeltJourneyStrip levels={certProgress} />
+            )}
+
             {/* Quick stats — uniform chrome, eyebrow + number, indigo only on the actionable one */}
             <div className="grid grid-cols-4 gap-2">
               <MiniStat icon={Flame} value={streak} label="Streak" />
@@ -405,7 +420,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               return (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-medium text-neutral-400">
+                    <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                       Cert Journey
                     </h2>
                     <button
@@ -476,7 +491,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             {/* Next Session Card */}
             {upcomingBookings.length > 0 ? (
               <div>
-                <h2 className="text-sm font-medium text-neutral-400 mb-3">Next Session</h2>
+                <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-3">Next Session</h2>
                 <Card className="bg-gradient-to-br from-orange-600/20 to-red-600/10 border-orange-500/30 overflow-hidden">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between">
@@ -521,7 +536,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
             {certificates.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-medium text-neutral-400">Latest Achievement</h2>
+                  <h2 className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500">Latest Achievement</h2>
                   <button
                     onClick={() => setActiveView("certificates")}
                     className="text-xs text-orange-500 hover:text-orange-400"
@@ -604,7 +619,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "bookings" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">My Bookings</h2>
+              <h2 className="font-display text-[24px] text-white">My Bookings</h2>
               <Badge className="bg-neutral-800 text-neutral-300 border-0">{bookings.length} total</Badge>
             </div>
 
@@ -687,7 +702,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "certificates" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Certificates</h2>
+              <h2 className="font-display text-[24px] text-white">Certificates</h2>
               <Badge className="bg-neutral-800 text-neutral-300 border-0">{certificates.length} earned</Badge>
             </div>
 
@@ -749,6 +764,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                     id: level, number: i + 1, name: level.replace(/[-_]/g, " "), icon: getLevelInfo(level).icon,
                     creature: "", duration: "", color: "", earned: certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, "")),
                     earnedAt: null, certificateNumber: null, enrolled: false, enrolledAt: null, enrolledGym: null,
+                    enrolledOrgId: null,
                     courseCompleted: false, skills: [], skillsSignedOff: 0, skillsTotal: 0, eligible: false, daysUntilEligible: 0,
                   }))).map((level) => (
                     <div
@@ -804,17 +820,32 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                               style={{ width: `${Math.round((level.skillsSignedOff / level.skillsTotal) * 100)}%` }}
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             {level.skills.map((skill, si) => (
-                              <div key={si} className="flex items-center gap-2">
-                                {skill.signedOff ? (
-                                  <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                                ) : (
-                                  <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 flex-shrink-0" />
+                              <div key={si}>
+                                <div className="flex items-center gap-2">
+                                  {skill.signedOff ? (
+                                    <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 flex-shrink-0" />
+                                  )}
+                                  <span className={`text-[11px] ${skill.signedOff ? "text-green-400/80" : "text-neutral-500"}`}>
+                                    {skill.name}
+                                  </span>
+                                </div>
+                                {!skill.signedOff && level.enrolled && (
+                                  <SkillDemoUploader
+                                    level={level.id}
+                                    skillIndex={si}
+                                    skillName={skill.name}
+                                    studentId={user.id}
+                                    orgId={level.enrolledOrgId}
+                                    submissionStatus={skill.submissionStatus ?? null}
+                                    submissionVideoUrl={skill.submissionVideoUrl ?? null}
+                                    submissionReviewerNotes={skill.submissionReviewerNotes ?? null}
+                                    onSubmitted={fetchCertProgress}
+                                  />
                                 )}
-                                <span className={`text-[11px] ${skill.signedOff ? "text-green-400/80" : "text-neutral-500"}`}>
-                                  {skill.name}
-                                </span>
                               </div>
                             ))}
                           </div>
@@ -858,7 +889,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "gyms" && (
           <div className="py-6 space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-white">Thailand Gyms</h2>
+              <h2 className="font-display text-[24px] text-white">Thailand Gyms</h2>
               <p className="text-sm text-neutral-500">Book at any gym in the network</p>
             </div>
 
@@ -919,7 +950,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "credits" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">My Credits</h2>
+              <h2 className="font-display text-[24px] text-white">My Credits</h2>
               <Button variant="ghost" size="sm" onClick={fetchCredits} className="text-neutral-400">
                 Refresh
               </Button>
@@ -972,7 +1003,7 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {activeView === "notes" && (
           <div className="py-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Trainer Notes</h2>
+              <h2 className="font-display text-[24px] text-white">Trainer Notes</h2>
               <Button variant="ghost" size="sm" onClick={fetchNotes} className="text-neutral-400">
                 Refresh
               </Button>
@@ -1139,6 +1170,9 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
                 <p className="text-xs text-neutral-500">Gyms Visited</p>
               </div>
             </div>
+
+            {/* Public passport settings — opt-in shareable profile */}
+            <PassportSettingsPanel />
 
             <div className="space-y-2">
               <Button
@@ -1360,4 +1394,259 @@ function calculateStreak(bookings: Booking[]): number {
   }
 
   return streak
+}
+
+/**
+ * Belt journey strip — visible Naga → Garuda progression at the top
+ * of the student dashboard. Each belt shows state:
+ *   earned    → emerald ring + creature icon + check
+ *   enrolled  → orange ring + scale-up + glow (active focus)
+ *   pending   → dim ring + 40% opacity (locked in spirit, accessible later)
+ *
+ * Levels prop matches the certProgress shape pulled from the API.
+ */
+interface BeltLevel {
+  id: string
+  number: number
+  name: string
+  earned: boolean
+  enrolled: boolean
+  skillsTotal: number
+  skillsSignedOff: number
+}
+
+function BeltJourneyStrip({ levels }: { levels: BeltLevel[] }) {
+  if (levels.length === 0) return null
+  const ICONS: Record<string, string> = {
+    naga: "🐍",
+    "phayra-nak": "🐉",
+    singha: "🦁",
+    hanuman: "🐒",
+    garuda: "🦅",
+  }
+  const sorted = [...levels].sort((a, b) => a.number - b.number)
+  const earnedCount = sorted.filter((l) => l.earned).length
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="font-display text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+          The Path
+        </p>
+        <p className="text-[10px] text-zinc-600 tabular-nums">
+          {earnedCount}/{sorted.length} earned
+        </p>
+      </div>
+      <div className="relative">
+        {/* Connecting line — sits behind the belt nodes */}
+        <div className="absolute left-0 right-0 top-1/2 h-px bg-zinc-800/80" />
+        <div className="relative flex items-center justify-between">
+          {sorted.map((lvl) => {
+            const icon = ICONS[lvl.id] ?? "🥊"
+            const baseRing =
+              "h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-[18px] sm:text-[20px] ring-2 transition-all shrink-0"
+            return (
+              <div key={lvl.id} className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                <div
+                  className={
+                    lvl.earned
+                      ? `${baseRing} bg-emerald-500/15 ring-emerald-400/60`
+                      : lvl.enrolled
+                        ? `${baseRing} bg-gradient-to-br from-orange-500/30 to-orange-600/20 ring-orange-400 scale-110 shadow-lg shadow-orange-500/20`
+                        : `${baseRing} bg-zinc-900 ring-zinc-800 opacity-40`
+                  }
+                >
+                  {lvl.earned && (
+                    <Check className="absolute h-3.5 w-3.5 text-emerald-300 -bottom-1 -right-1 bg-zinc-950 rounded-full" />
+                  )}
+                  <span aria-hidden="true">{icon}</span>
+                </div>
+                <p
+                  className={`font-display text-[9px] sm:text-[10px] uppercase tracking-[0.14em] truncate w-full text-center ${
+                    lvl.earned
+                      ? "text-emerald-300"
+                      : lvl.enrolled
+                        ? "text-orange-300"
+                        : "text-zinc-600"
+                  }`}
+                >
+                  {lvl.name}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Student-facing controls for the public passport. Lives on the
+ * Profile view. Opt-in toggle, handle picker, bio editor, and a quick
+ * link to view the published passport.
+ */
+function PassportSettingsPanel() {
+  const [state, setState] = useState<{
+    enabled: boolean
+    handle: string
+    bio: string
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/student/passport", { cache: "no-store" })
+      const data = await res.json()
+      if (res.ok && data.passport) {
+        setState({
+          enabled: !!data.passport.public_passport_enabled,
+          handle: data.passport.public_passport_handle ?? "",
+          bio: data.passport.public_passport_bio ?? "",
+        })
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const save = async (patch: Record<string, unknown>) => {
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await fetch("/api/student/passport", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Save failed")
+      setState({
+        enabled: !!data.passport.public_passport_enabled,
+        handle: data.passport.public_passport_handle ?? "",
+        bio: data.passport.public_passport_bio ?? "",
+      })
+      setSuccess("Saved")
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading || !state) {
+    return (
+      <div className="rounded-xl bg-neutral-900/30 border border-neutral-800/50 p-4 text-center text-[12px] text-neutral-500">
+        <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1.5" />
+        Loading
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 p-5">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="font-display text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            Public Passport
+          </p>
+          <p className="text-[13px] text-white mt-1">
+            A shareable page with your certs + journey.
+          </p>
+        </div>
+        <button
+          onClick={() => save({ enabled: !state.enabled })}
+          disabled={saving || (state.enabled === false && !state.handle)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 ${
+            state.enabled ? "bg-emerald-500" : "bg-neutral-700"
+          }`}
+          aria-pressed={state.enabled}
+          aria-label="Toggle public passport"
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+              state.enabled ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      </div>
+
+      <div className="space-y-3 mt-4">
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.14em] text-zinc-500 block mb-1">
+            Handle
+          </label>
+          <div className="flex items-center gap-1">
+            <span className="text-[12px] text-zinc-500 font-mono">/p/</span>
+            <input
+              type="text"
+              value={state.handle}
+              onChange={(e) =>
+                setState((s) =>
+                  s ? { ...s, handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") } : s,
+                )
+              }
+              onBlur={() => {
+                if (state.handle.length >= 3) save({ handle: state.handle })
+              }}
+              placeholder="khun-pong"
+              className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md px-2.5 py-1.5 text-[13px] text-white placeholder:text-zinc-600 outline-none focus:border-neutral-700"
+              maxLength={32}
+            />
+          </div>
+          <p className="text-[10px] text-zinc-600 mt-1">
+            Lowercase letters, digits, hyphens. 3-32 chars.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.14em] text-zinc-500 block mb-1">
+            Bio
+          </label>
+          <textarea
+            value={state.bio}
+            onChange={(e) => setState((s) => (s ? { ...s, bio: e.target.value } : s))}
+            onBlur={() => save({ bio: state.bio })}
+            rows={3}
+            placeholder="One line about your journey…"
+            maxLength={400}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-md px-2.5 py-1.5 text-[13px] text-white placeholder:text-zinc-600 outline-none focus:border-neutral-700"
+          />
+          <p className="text-[10px] text-zinc-600 mt-1">
+            {state.bio.length}/400
+          </p>
+        </div>
+
+        {error && (
+          <p className="text-[12px] text-red-300 bg-red-500/10 rounded px-2 py-1.5">
+            {error}
+          </p>
+        )}
+        {success && (
+          <p className="text-[12px] text-emerald-300">{success}</p>
+        )}
+
+        {state.enabled && state.handle && (
+          <a
+            href={`/p/${state.handle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] text-indigo-300 hover:text-indigo-200"
+          >
+            View your public passport
+            <ChevronRight className="h-3 w-3" />
+          </a>
+        )}
+      </div>
+    </div>
+  )
 }

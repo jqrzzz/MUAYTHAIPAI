@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
@@ -1490,6 +1490,9 @@ export default function TrainerDashboardClient({
               )}
             </Button>
 
+            {/* Public Instructor Profile (/i/[handle]) — opt-in */}
+            <InstructorPublicPanel />
+
             {/* View Public Profile */}
             {organization?.slug && (
               <a
@@ -1935,5 +1938,155 @@ export default function TrainerDashboardClient({
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+/**
+ * Public instructor profile opt-in. Lives at the bottom of the trainer
+ * profile view. Toggle + handle picker + deep link when enabled. Powers
+ * /i/[handle] — the named-examiner lineage page that cert pages link to.
+ */
+function InstructorPublicPanel() {
+  const [state, setState] = useState<{
+    enabled: boolean
+    handle: string
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/trainer/instructor-profile", { cache: "no-store" })
+      const data = await res.json()
+      if (res.ok && data.profile) {
+        setState({
+          enabled: !!data.profile.public_instructor_enabled,
+          handle: data.profile.public_instructor_handle ?? "",
+        })
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const save = async (patch: Record<string, unknown>) => {
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/trainer/instructor-profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Save failed")
+      setState({
+        enabled: !!data.profile.public_instructor_enabled,
+        handle: data.profile.public_instructor_handle ?? "",
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading || !state) {
+    return (
+      <div className="rounded-xl bg-zinc-900/40 ring-1 ring-zinc-900 p-4 text-center text-[12px] text-zinc-500">
+        Loading instructor profile…
+      </div>
+    )
+  }
+
+  return (
+    <Card className="bg-zinc-900/40 ring-1 ring-zinc-900">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              Public Instructor Profile
+            </p>
+            <p className="text-[13px] text-white mt-1">
+              A page showing who you&apos;ve graded, where you teach.
+            </p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">
+              Your name on student certificates becomes clickable.
+            </p>
+          </div>
+          <button
+            onClick={() => save({ enabled: !state.enabled })}
+            disabled={saving || (state.enabled === false && !state.handle)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 ${
+              state.enabled ? "bg-emerald-500" : "bg-zinc-700"
+            }`}
+            aria-pressed={state.enabled}
+            aria-label="Toggle public instructor profile"
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                state.enabled ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.14em] text-zinc-500 block mb-1">
+            Handle
+          </label>
+          <div className="flex items-center gap-1">
+            <span className="text-[12px] text-zinc-500 font-mono">/i/</span>
+            <input
+              type="text"
+              value={state.handle}
+              onChange={(e) =>
+                setState((s) =>
+                  s
+                    ? {
+                        ...s,
+                        handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                      }
+                    : s,
+                )
+              }
+              onBlur={() => {
+                if (state.handle.length >= 3) save({ handle: state.handle })
+              }}
+              placeholder="khun-wisarut"
+              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-[13px] text-white placeholder:text-zinc-600 outline-none focus:border-zinc-700"
+              maxLength={32}
+            />
+          </div>
+          <p className="text-[10px] text-zinc-600 mt-1">
+            Lowercase letters, digits, hyphens. 3–32 chars.
+          </p>
+        </div>
+
+        {error && (
+          <p className="text-[12px] text-red-300 bg-red-500/10 rounded px-2 py-1.5">
+            {error}
+          </p>
+        )}
+
+        {state.enabled && state.handle && (
+          <a
+            href={`/i/${state.handle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] text-orange-300 hover:text-orange-200"
+          >
+            View your public instructor profile
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+      </CardContent>
+    </Card>
   )
 }

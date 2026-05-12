@@ -3,7 +3,7 @@ import ForGymsClient from "./client"
 import { BreadcrumbSchema } from "@/components/marketing"
 
 export const metadata: Metadata = {
-  title: "OckOck for Muay Thai gym owners | MUAYTHAIPAI",
+  title: "OckOck — run your Muay Thai gym",
   description:
     "The friendliest way to run a Muay Thai gym in Thailand. Bookings, students, the Naga–Garuda cert ladder, and OckOck answering your customers in your gym's voice. Free 30-day trial.",
   keywords: [
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     "Muay Thai certifications",
   ],
   openGraph: {
-    title: "OckOck for Muay Thai gym owners | MUAYTHAIPAI",
+    title: "OckOck — run your Muay Thai gym",
     description:
       "The friendliest way to run a Muay Thai gym in Thailand. Bookings, certifications, and OckOck answering your customers.",
     url: "https://muaythaipai.com/for-gyms",

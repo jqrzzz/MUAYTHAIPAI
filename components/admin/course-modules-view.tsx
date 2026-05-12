@@ -43,6 +43,7 @@ interface SuggestedLesson {
 
 interface Course {
   id: string
+  org_id: string | null
   title: string
   slug: string
   description: string | null
@@ -75,6 +76,8 @@ interface Module {
   course_id: string
   title: string
   description: string | null
+  summary: string | null
+  summary_generated_at: string | null
   module_order: number
   lessons: LessonSummary[]
 }
@@ -317,6 +320,7 @@ export default function CourseModulesView({
       <CourseLessonEditor
         lessonId={editingLesson.id}
         courseId={course.id}
+        courseOrgId={course.org_id}
         moduleId={editingLesson.moduleId}
         apiBase={apiBase}
         onBack={() => { setEditingLesson(null); fetchModules() }}
@@ -397,6 +401,14 @@ export default function CourseModulesView({
 
                 {expanded.has(mod.id) && (
                   <div className="border-t border-neutral-800">
+                    {/* AI summary slot — student-facing 2-3 sentence intro
+                        rendered at the top of the module on /courses/[slug] */}
+                    <ModuleSummaryRow
+                      moduleId={mod.id}
+                      summary={mod.summary}
+                      generatedAt={mod.summary_generated_at}
+                      onUpdated={fetchModules}
+                    />
                     {mod.lessons.length === 0 ? (
                       <div className="px-4 py-6 text-center text-neutral-500 text-sm">
                         No lessons yet.{" "}
@@ -624,6 +636,93 @@ export default function CourseModulesView({
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+/**
+ * Inline module summary editor + AI-generate button. Renders at the top
+ * of each expanded module in the lesson editor. The summary surfaces on
+ * the student course page above the lesson list, and on the study pack.
+ */
+function ModuleSummaryRow({
+  moduleId,
+  summary,
+  generatedAt,
+  onUpdated,
+}: {
+  moduleId: string
+  summary: string | null
+  generatedAt: string | null
+  onUpdated: () => Promise<void>
+}) {
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const generate = async () => {
+    if (generating) return
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/admin/courses/modules/${moduleId}/ai-summary`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Failed")
+      await onUpdated()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  return (
+    <div className="px-4 py-3 bg-indigo-500/[0.04] border-b border-neutral-800/50">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-indigo-300/80 mb-1 flex items-center gap-1">
+            <Sparkles className="h-2.5 w-2.5" />
+            Student intro
+          </p>
+          {summary ? (
+            <p className="text-[13px] text-neutral-300 leading-relaxed italic">
+              {summary}
+            </p>
+          ) : (
+            <p className="text-[12px] text-neutral-500">
+              No summary yet. Generate one with AI — students see it at the top
+              of this module on their course page.
+            </p>
+          )}
+          {generatedAt && (
+            <p className="text-[10px] text-neutral-600 mt-1">
+              Generated {new Date(generatedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={generate}
+          disabled={generating}
+          className="text-indigo-300 hover:text-indigo-200 shrink-0"
+          title={summary ? "Regenerate" : "Generate"}
+        >
+          {generating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          <span className="ml-1 text-[11px]">
+            {summary ? "Regenerate" : "Generate"}
+          </span>
+        </Button>
+      </div>
+      {error && (
+        <p className="mt-2 text-[11px] text-red-400">{error}</p>
+      )}
     </div>
   )
 }

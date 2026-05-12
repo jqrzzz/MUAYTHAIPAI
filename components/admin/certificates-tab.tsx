@@ -26,6 +26,8 @@ import {
 } from "lucide-react"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 import BulkSignoffDialog from "./bulk-signoff-dialog"
+import SkillReviewsPanel from "./skill-reviews-panel"
+import FirstCertCelebration from "./first-cert-celebration"
 
 interface Certificate {
   id: string
@@ -67,6 +69,12 @@ const LEVEL_STYLES: Record<string, { bg: string; text: string; border: string }>
 }
 
 export default function CertificatesTab({ role }: { role: string }) {
+  const [firstCertContext, setFirstCertContext] = useState<{
+    certificateNumber: string
+    level: string
+    studentName: string | null
+    gymName: string | null
+  } | null>(null)
   const [certificates, setCertificates] = useState<Certificate[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [loading, setLoading] = useState(true)
@@ -180,8 +188,22 @@ export default function CertificatesTab({ role }: { role: string }) {
       if (res.ok) {
         setFeedback({ type: "success", message: `Certificate issued: ${data.certificate?.certificate_number}` })
         setShowIssueCertDialog(false)
+        const justIssued = data.certificate as Certificate | undefined
+        const issuedTo = issueCertForm.student_email
+        const issuedLevel = issueCertForm.level
         setIssueCertForm({ student_email: "", level: "naga", skip_skills_check: false })
         fetchData()
+        // First-cert milestone — fire the celebration modal. The API
+        // signals this only when the gym's active cert count went from
+        // 0 to 1, so it's a one-time popup per org.
+        if (data.is_first_cert && justIssued?.certificate_number) {
+          setFirstCertContext({
+            certificateNumber: justIssued.certificate_number,
+            level: issuedLevel,
+            studentName: (data.student_name as string | null) ?? issuedTo ?? null,
+            gymName: (data.gym_name as string | null) ?? null,
+          })
+        }
       } else {
         setFeedback({ type: "error", message: data.error || "Failed to issue certificate" })
       }
@@ -270,6 +292,10 @@ export default function CertificatesTab({ role }: { role: string }) {
 
   return (
     <div className="space-y-6">
+      <FirstCertCelebration
+        cert={firstCertContext}
+        onClose={() => setFirstCertContext(null)}
+      />
       {feedback && (
         <div className={`rounded-lg px-4 py-3 text-sm ${
           feedback.type === "success" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
@@ -277,6 +303,8 @@ export default function CertificatesTab({ role }: { role: string }) {
           {feedback.message}
         </div>
       )}
+
+      <SkillReviewsPanel />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

@@ -263,7 +263,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
           >
-            <h2 className="text-2xl font-bold flex items-center gap-2">
+            <h2 className="font-display text-[26px] sm:text-[30px] flex items-center gap-2">
               <Zap className="w-6 h-6" /> Book Now
             </h2>
             {showBookingOptions ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
@@ -281,7 +281,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
             {trainingServices.length > 0 && (
               <div className="mb-4">
                 <h3
-                  className={`text-lg font-semibold mb-2 ${resolvedTheme === "dark" ? "text-primary/90" : "text-primary"}`}
+                  className={`font-display text-[11px] uppercase tracking-[0.18em] mb-2 ${resolvedTheme === "dark" ? "text-primary/90" : "text-primary"}`}
                 >
                   Classes & Training
                 </h3>
@@ -314,7 +314,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
             {certificateServices.length > 0 && (
               <div className="mb-4">
                 <h3
-                  className={`text-lg font-semibold mb-2 ${resolvedTheme === "dark" ? "text-primary/90" : "text-primary"}`}
+                  className={`font-display text-[11px] uppercase tracking-[0.18em] mb-2 ${resolvedTheme === "dark" ? "text-primary/90" : "text-primary"}`}
                 >
                   Certificate Programs
                 </h3>
@@ -352,7 +352,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
           >
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h4 className={`text-lg font-bold ${resolvedTheme === "dark" ? "text-white" : "text-gray-800"}`}>
+                <h4 className={`font-display text-[17px] sm:text-[19px] ${resolvedTheme === "dark" ? "text-white" : "text-gray-800"}`}>
                   {displayName}
                   {displayPrice > 0 && (
                     <span
