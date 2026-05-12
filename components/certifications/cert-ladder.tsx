@@ -59,6 +59,76 @@ function stateAccent(state: RankState, level: CertificationLevel): string {
   return "text-zinc-600"
 }
 
+// ─────────────── gym / network overview (issued + enrolled per rank) ───────────────
+
+/** A gym's (or the whole network's) activity on one rank. */
+export interface RankActivity {
+  id: string
+  issued?: number
+  enrolled?: number
+}
+
+export function CertLadderOverview({
+  activity,
+  activeId,
+  onSelect,
+  className,
+}: {
+  activity: RankActivity[]
+  /** Highlight a rank (e.g. the active filter). */
+  activeId?: string | null
+  /** Make tiles clickable (e.g. to filter a list). Omit for a read-only display. */
+  onSelect?: (id: string) => void
+  className?: string
+}) {
+  const byKey = new Map(activity.map((a) => [norm(a.id), a]))
+  return (
+    <div className={`grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 ${className ?? ""}`}>
+      {CERTIFICATION_LEVELS.map((level) => {
+        const a = byKey.get(norm(level.id))
+        const issued = a?.issued ?? 0
+        const enrolled = a?.enrolled ?? 0
+        const active = !!activeId && norm(activeId) === norm(level.id)
+        const hot = issued > 0 || enrolled > 0
+        return (
+          <button
+            key={level.id}
+            type="button"
+            onClick={() => onSelect?.(level.id)}
+            className={`rounded-2xl p-3.5 text-left transition-colors ${
+              active
+                ? `border ${level.borderColor} bg-zinc-900/60`
+                : hot
+                  ? "ring-1 ring-zinc-800 bg-zinc-900/40 hover:ring-zinc-700"
+                  : "ring-1 ring-zinc-900 bg-zinc-900/30 opacity-70 hover:opacity-100"
+            } ${onSelect ? "cursor-pointer" : "cursor-default"}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl" aria-hidden>{level.icon}</span>
+              <div className="min-w-0">
+                <p className={`font-display text-[13px] leading-tight ${hot ? "text-white" : "text-zinc-400"}`}>
+                  {level.name}
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-600">Rank {level.number}</p>
+              </div>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
+              <span className={`text-[15px] font-semibold tabular-nums ${hot ? level.color : "text-zinc-600"}`}>{issued}</span>
+              <span className="text-[10px] text-zinc-500">issued</span>
+              {enrolled > 0 && (
+                <>
+                  <span className="text-[13px] font-medium tabular-nums text-zinc-300">{enrolled}</span>
+                  <span className="text-[10px] text-zinc-500">enrolled</span>
+                </>
+              )}
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ───────────────────────────── compact strip ─────────────────────────────
 
 export function CertLadderStrip({
