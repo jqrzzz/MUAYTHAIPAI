@@ -30,11 +30,11 @@ import {
   Send,
   Loader2,
   BookOpen,
-  Check,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import StudentCoursesView from "@/components/student/courses-view"
 import { SkillDemoUploader } from "@/components/student/skill-demo-uploader"
+import { CertLadder, CertLadderStrip } from "@/components/certifications/cert-ladder"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
 
@@ -388,12 +388,9 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {/* Home View */}
         {activeView === "home" && (
           <div className="py-6 space-y-6">
-            {/* Belt journey strip — visible Naga→Garuda progression as a
-                proud personal artifact. Compounds with the course-page
-                belt band so the brand cadence is consistent. */}
-            {certProgress.length > 0 && (
-              <BeltJourneyStrip levels={certProgress} />
-            )}
+            {/* The Naga→Garuda ladder at a glance — a student's standing in
+                the lineage, the centrepiece of their journey with the gym. */}
+            {certProgress.length > 0 && <CertLadderStrip progress={certProgress} />}
 
             {/* Quick stats — uniform chrome, eyebrow + number, indigo only on the actionable one */}
             <div className="grid grid-cols-4 gap-2">
@@ -751,9 +748,29 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               </Card>
             )}
 
-            {/* Certification Progress */}
+            {/* Your rank in the lineage — the Naga→Garuda ladder, front and centre */}
             <div>
-              <h3 className="text-sm font-medium text-neutral-500 mb-3">Certification Progress</h3>
+              <h3 className="font-display text-[11px] uppercase tracking-[0.18em] text-neutral-500 mb-3">
+                Your rank in the lineage
+              </h3>
+              {loadingProgress ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-neutral-600" />
+                </div>
+              ) : (
+                <CertLadder
+                  progress={
+                    certProgress.length > 0
+                      ? certProgress
+                      : certificates.map((c) => ({ id: c.level, earned: true }))
+                  }
+                />
+              )}
+            </div>
+
+            {/* Skills & assessments — the per-rank drill-down + video-demo uploads */}
+            <div>
+              <h3 className="text-sm font-medium text-neutral-500 mb-3">Skills &amp; assessments</h3>
               {loadingProgress ? (
                 <div className="flex justify-center py-6">
                   <Loader2 className="w-5 h-5 animate-spin text-neutral-600" />
@@ -1394,90 +1411,6 @@ function calculateStreak(bookings: Booking[]): number {
   }
 
   return streak
-}
-
-/**
- * Belt journey strip — visible Naga → Garuda progression at the top
- * of the student dashboard. Each belt shows state:
- *   earned    → emerald ring + creature icon + check
- *   enrolled  → orange ring + scale-up + glow (active focus)
- *   pending   → dim ring + 40% opacity (locked in spirit, accessible later)
- *
- * Levels prop matches the certProgress shape pulled from the API.
- */
-interface BeltLevel {
-  id: string
-  number: number
-  name: string
-  earned: boolean
-  enrolled: boolean
-  skillsTotal: number
-  skillsSignedOff: number
-}
-
-function BeltJourneyStrip({ levels }: { levels: BeltLevel[] }) {
-  if (levels.length === 0) return null
-  const ICONS: Record<string, string> = {
-    naga: "🐍",
-    "phayra-nak": "🐉",
-    singha: "🦁",
-    hanuman: "🐒",
-    garuda: "🦅",
-  }
-  const sorted = [...levels].sort((a, b) => a.number - b.number)
-  const earnedCount = sorted.filter((l) => l.earned).length
-  return (
-    <section>
-      <div className="flex items-baseline justify-between mb-3">
-        <p className="font-display text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-          The Path
-        </p>
-        <p className="text-[10px] text-zinc-600 tabular-nums">
-          {earnedCount}/{sorted.length} earned
-        </p>
-      </div>
-      <div className="relative">
-        {/* Connecting line — sits behind the belt nodes */}
-        <div className="absolute left-0 right-0 top-1/2 h-px bg-zinc-800/80" />
-        <div className="relative flex items-center justify-between">
-          {sorted.map((lvl) => {
-            const icon = ICONS[lvl.id] ?? "🥊"
-            const baseRing =
-              "h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-[18px] sm:text-[20px] ring-2 transition-all shrink-0"
-            return (
-              <div key={lvl.id} className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                <div
-                  className={
-                    lvl.earned
-                      ? `${baseRing} bg-emerald-500/15 ring-emerald-400/60`
-                      : lvl.enrolled
-                        ? `${baseRing} bg-gradient-to-br from-orange-500/30 to-orange-600/20 ring-orange-400 scale-110 shadow-lg shadow-orange-500/20`
-                        : `${baseRing} bg-zinc-900 ring-zinc-800 opacity-40`
-                  }
-                >
-                  {lvl.earned && (
-                    <Check className="absolute h-3.5 w-3.5 text-emerald-300 -bottom-1 -right-1 bg-zinc-950 rounded-full" />
-                  )}
-                  <span aria-hidden="true">{icon}</span>
-                </div>
-                <p
-                  className={`font-display text-[9px] sm:text-[10px] uppercase tracking-[0.14em] truncate w-full text-center ${
-                    lvl.earned
-                      ? "text-emerald-300"
-                      : lvl.enrolled
-                        ? "text-orange-300"
-                        : "text-zinc-600"
-                  }`}
-                >
-                  {lvl.name}
-                </p>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
 }
 
 /**

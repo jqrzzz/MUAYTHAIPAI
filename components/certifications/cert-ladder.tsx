@@ -1,0 +1,247 @@
+/**
+ * The Naga–Garuda ladder — the five ranks of the network, each named for a
+ * guardian creature of Thai myth (Naga the serpent deity → Garuda the divine
+ * eagle). NOT belts: a lineage you ascend.
+ *
+ *   <CertLadderStrip progress={...} />   compact horizontal band (dashboards)
+ *   <CertLadder       progress={...} />   the full stacked ladder
+ *
+ * Static rank data (creature, icon, colour, skill count) comes from
+ * lib/certification-levels.ts; the caller passes only a student's standing.
+ * Pure presentational — safe in a server component.
+ */
+import { Check } from "lucide-react"
+import { CERTIFICATION_LEVELS, type CertificationLevel } from "@/lib/certification-levels"
+
+/** A student's standing on one rank. Shape matches the certification-progress API. */
+export interface RankProgress {
+  id: string
+  earned?: boolean
+  earnedAt?: string | null
+  certificateNumber?: string | null
+  enrolled?: boolean
+  enrolledGym?: string | null
+  courseCompleted?: boolean
+  eligible?: boolean
+  daysUntilEligible?: number
+  skillsSignedOff?: number
+  skillsTotal?: number
+}
+
+type RankState = "earned" | "in_progress" | "ready" | "eligible" | "locked"
+
+const norm = (s: string) => s.toLowerCase().replace(/[-_\s]/g, "")
+
+function stateOf(p: RankProgress | undefined, isFirst: boolean): RankState {
+  if (p?.earned) return "earned"
+  if (p?.enrolled) {
+    if (p.skillsTotal && (p.skillsSignedOff ?? 0) >= p.skillsTotal) return "ready"
+    return "in_progress"
+  }
+  if (p?.courseCompleted) return "ready"
+  if (p?.eligible || (p?.daysUntilEligible ?? -1) === 0) return "eligible"
+  // Naga is open to anyone even without progress data; later ranks aren't.
+  if (!p && isFirst) return "eligible"
+  return "locked"
+}
+
+function mergeRanks(progress: RankProgress[]) {
+  const byKey = new Map(progress.map((p) => [norm(p.id), p]))
+  return CERTIFICATION_LEVELS.map((level, i) => {
+    const p = byKey.get(norm(level.id))
+    return { level, p, state: stateOf(p, i === 0), index: i }
+  })
+}
+
+function stateAccent(state: RankState, level: CertificationLevel): string {
+  if (state === "earned") return "text-emerald-300"
+  if (state === "in_progress" || state === "ready") return level.color
+  return "text-zinc-600"
+}
+
+// ───────────────────────────── compact strip ─────────────────────────────
+
+export function CertLadderStrip({
+  progress,
+  className,
+}: {
+  progress: RankProgress[]
+  className?: string
+}) {
+  const ranks = mergeRanks(progress)
+  const earned = ranks.filter((r) => r.state === "earned").length
+  return (
+    <section className={className}>
+      <div className="mb-3 flex items-baseline justify-between">
+        <p className="font-display text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+          The Lineage · Naga → Garuda
+        </p>
+        <p className="text-[10px] tabular-nums text-zinc-600">
+          {earned}/{ranks.length} ranks
+        </p>
+      </div>
+      <div className="relative">
+        <div className="absolute inset-x-5 top-[22px] h-px bg-zinc-800/80 sm:top-[24px]" />
+        <div className="relative flex items-start justify-between">
+          {ranks.map(({ level, state }) => {
+            const active = state === "in_progress" || state === "ready"
+            const ringCls =
+              state === "earned"
+                ? "bg-emerald-500/15 ring-emerald-400/60"
+                : active
+                  ? "bg-zinc-900 ring-zinc-600 scale-110 shadow-lg shadow-black/40"
+                  : state === "eligible"
+                    ? "bg-zinc-900 ring-zinc-700"
+                    : "bg-zinc-900 ring-zinc-800 opacity-40"
+            return (
+              <div key={level.id} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                <div
+                  className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[18px] ring-2 transition-all sm:h-12 sm:w-12 sm:text-[20px] ${ringCls}`}
+                >
+                  <span aria-hidden>{level.icon}</span>
+                  {state === "earned" && (
+                    <Check className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-zinc-950 text-emerald-300" />
+                  )}
+                </div>
+                <p
+                  className={`w-full truncate text-center font-display text-[9px] uppercase tracking-[0.14em] sm:text-[10px] ${stateAccent(
+                    state,
+                    level,
+                  )}`}
+                >
+                  {level.name}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ───────────────────────────── full ladder ──────────────────────────────
+
+export function CertLadder({
+  progress,
+  className,
+}: {
+  progress: RankProgress[]
+  className?: string
+}) {
+  const ranks = mergeRanks(progress)
+  return (
+    <div className={`space-y-2.5 ${className ?? ""}`}>
+      {ranks.map(({ level, p, state, index }) => (
+        <RankRow key={level.id} level={level} p={p} state={state} index={index} />
+      ))}
+    </div>
+  )
+}
+
+function RankRow({
+  level,
+  p,
+  state,
+  index,
+}: {
+  level: CertificationLevel
+  p?: RankProgress
+  state: RankState
+  index: number
+}) {
+  const active = state === "in_progress" || state === "ready"
+  const skillsTotal = p?.skillsTotal ?? level.skills.length
+  const skillsDone = Math.min(skillsTotal, p?.skillsSignedOff ?? 0)
+  const pct = skillsTotal > 0 ? Math.round((skillsDone / skillsTotal) * 100) : 0
+  const prevName = index > 0 ? CERTIFICATION_LEVELS[index - 1].name : null
+
+  const rowCls =
+    state === "earned"
+      ? "ring-1 ring-emerald-500/25 bg-emerald-500/[0.05]"
+      : active
+        ? `border ${level.borderColor} bg-zinc-900/50`
+        : `ring-1 ring-zinc-900 bg-zinc-900/30${state === "locked" ? " opacity-55" : ""}`
+
+  return (
+    <div className={`relative overflow-hidden rounded-2xl ${rowCls}`}>
+      <div className="flex items-start gap-4 p-4">
+        <div
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl ${
+            state === "earned" ? "bg-emerald-500/15" : active ? "bg-zinc-800" : "bg-zinc-800/60"
+          }`}
+        >
+          <span aria-hidden>{level.icon}</span>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Rank {level.number}</span>
+            <h3 className={`font-display text-[17px] leading-tight ${state === "locked" ? "text-zinc-400" : "text-white"}`}>
+              {level.name}
+            </h3>
+            <span className="text-[12px] text-zinc-500">· {level.creature}</span>
+          </div>
+
+          <p className="mt-0.5 text-[12px] leading-relaxed">
+            {state === "earned" && (
+              <span className="text-emerald-300">
+                Earned{p?.earnedAt ? ` ${new Date(p.earnedAt).toLocaleDateString()}` : ""}
+                {p?.certificateNumber && (
+                  <>
+                    {" · "}
+                    <a
+                      href={`/verify/${p.certificateNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-emerald-400/80 transition-colors hover:text-emerald-300"
+                    >
+                      {p.certificateNumber} →
+                    </a>
+                  </>
+                )}
+              </span>
+            )}
+            {state === "in_progress" && (
+              <span className={level.color}>In progress{p?.enrolledGym ? ` at ${p.enrolledGym}` : ""}</span>
+            )}
+            {state === "ready" && <span className={level.color}>Ready — book the in-person assessment to certify</span>}
+            {state === "eligible" && <span className="text-zinc-400">Open — enroll at a gym to begin this rank</span>}
+            {state === "locked" && (
+              <span className="text-zinc-600">
+                {p?.daysUntilEligible && p.daysUntilEligible > 0
+                  ? `${p.daysUntilEligible} day${p.daysUntilEligible === 1 ? "" : "s"} until eligible`
+                  : prevName
+                    ? `Earn ${prevName} first`
+                    : "Not yet started"}
+              </span>
+            )}
+          </p>
+
+          {active && skillsTotal > 0 && (
+            <div className="mt-2">
+              <div className="h-1.5 overflow-hidden rounded-full bg-black/30">
+                <div
+                  className={`h-full rounded-full bg-gradient-to-r ${level.bgGradient}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-zinc-500">
+                {skillsDone} of {skillsTotal} skills mastered
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="shrink-0 pt-0.5">
+          {state === "earned" && <Check className="h-5 w-5 text-emerald-400" />}
+          {active && skillsTotal > 0 && (
+            <span className={`text-[12px] font-medium tabular-nums ${level.color}`}>
+              {skillsDone}/{skillsTotal}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
