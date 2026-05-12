@@ -3,11 +3,11 @@ import { NextResponse } from "next/server"
 
 // Manually toggle gym subscription status (for platform admin)
 export async function POST(request: Request) {
-  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
+  const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  if (!isPlatformAdmin) {
+  if (!isPlatformAdmin || role === "partner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

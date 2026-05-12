@@ -3,11 +3,11 @@ import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit-log"
 
 export async function GET(request: Request) {
-  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
+  const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  if (!isPlatformAdmin) {
+  if (!isPlatformAdmin || role === "partner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -168,11 +168,11 @@ function getStartOfWeek(year: number, week: number): Date {
 
 // POST - Mark payout as paid
 export async function POST(request: Request) {
-  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
+  const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  if (!isPlatformAdmin) {
+  if (!isPlatformAdmin || role === "partner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

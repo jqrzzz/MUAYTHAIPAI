@@ -150,9 +150,12 @@ interface Props {
     totalBookings: number
     activeSubscriptions: number
   }
+  /** "partner" hides the money/billing surfaces (payouts, subscriptions, bookings revenue, the OckOck assistant, the gym subscription toggle). */
+  role?: "full" | "partner"
 }
 
-export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
+export default function PlatformAdminClient({ gyms, blacklist, stats, role = "full" }: Props) {
+  const isPartner = role === "partner"
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<
     | "overview"
@@ -517,23 +520,25 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         <div className="mx-auto max-w-6xl px-5 overflow-x-auto">
           <div className="flex gap-0.5 min-w-max">
             {[
-              { id: "overview", label: "Overview", icon: Building2 },
-              { id: "command", label: "Command", icon: Sparkles },
-              { id: "network", label: "Network", icon: Map },
-              { id: "campaigns", label: "Campaigns", icon: Megaphone },
-              { id: "students", label: "Students", icon: GraduationCap },
-              { id: "trainers", label: "Trainers", icon: UserCheck },
-              { id: "gyms", label: "Gyms", icon: Users },
-              { id: "courses", label: "Curriculum", icon: BookOpen },
-              { id: "adoption", label: "Adoption", icon: TrendingUp },
-              { id: "bookings", label: "Bookings", icon: Receipt },
-              { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
-              { id: "support", label: "Support", icon: LifeBuoy },
-              { id: "audit", label: "Audit", icon: Activity },
-              { id: "payouts", label: "Payouts", icon: DollarSign },
-              { id: "blacklist", label: "Blacklist", icon: Shield },
-              { id: "ockock", label: "OckOck", icon: MessageSquare },
-            ].map((tab) => (
+              { id: "overview", label: "Overview", icon: Building2, billing: false },
+              { id: "command", label: "Command", icon: Sparkles, billing: false },
+              { id: "network", label: "Network", icon: Map, billing: false },
+              { id: "campaigns", label: "Campaigns", icon: Megaphone, billing: false },
+              { id: "students", label: "Students", icon: GraduationCap, billing: false },
+              { id: "trainers", label: "Trainers", icon: UserCheck, billing: false },
+              { id: "gyms", label: "Gyms", icon: Users, billing: false },
+              { id: "courses", label: "Curriculum", icon: BookOpen, billing: false },
+              { id: "adoption", label: "Adoption", icon: TrendingUp, billing: false },
+              { id: "bookings", label: "Bookings", icon: Receipt, billing: true },
+              { id: "subscriptions", label: "Subscriptions", icon: CreditCard, billing: true },
+              { id: "support", label: "Support", icon: LifeBuoy, billing: false },
+              { id: "audit", label: "Audit", icon: Activity, billing: false },
+              { id: "payouts", label: "Payouts", icon: DollarSign, billing: true },
+              { id: "blacklist", label: "Blacklist", icon: Shield, billing: false },
+              { id: "ockock", label: "OckOck", icon: MessageSquare, billing: true },
+            ]
+              .filter((tab) => !(isPartner && tab.billing))
+              .map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
@@ -577,9 +582,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
 
         {activeTab === "adoption" && <AdoptionTab />}
 
-        {activeTab === "bookings" && <BookingsTab />}
+        {activeTab === "bookings" && !isPartner && <BookingsTab />}
 
-        {activeTab === "subscriptions" && <SubscriptionsTab />}
+        {activeTab === "subscriptions" && !isPartner && <SubscriptionsTab />}
 
         {activeTab === "support" && <SupportTab />}
 
@@ -599,21 +604,25 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
               <NetworkStat icon={Building2} value={stats.totalGyms} label="Total gyms" />
               <NetworkStat icon={Users} value={stats.totalStudents} label="Total users" />
               <NetworkStat icon={Calendar} value={stats.totalBookings} label="Total bookings" />
-              <NetworkStat icon={CreditCard} value={stats.activeSubscriptions} label="Paying gyms" />
+              {!isPartner && (
+                <NetworkStat icon={CreditCard} value={stats.activeSubscriptions} label="Paying gyms" />
+              )}
             </div>
 
-            {/* Monthly recurring revenue — promoted, indigo gradient */}
-            <div className="rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.06] to-zinc-900/40 backdrop-blur-sm p-5">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1">
-                Monthly recurring revenue
-              </p>
-              <p className="text-[32px] font-semibold tracking-tight text-white tabular-nums">
-                ฿{(stats.activeSubscriptions * 999).toLocaleString()}
-              </p>
-              <p className="text-[12px] text-zinc-500 mt-0.5">
-                {stats.activeSubscriptions} gyms × ฿999/month
-              </p>
-            </div>
+            {/* Monthly recurring revenue — promoted, indigo gradient. Billing surface — hidden for partners. */}
+            {!isPartner && (
+              <div className="rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.06] to-zinc-900/40 backdrop-blur-sm p-5">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1">
+                  Monthly recurring revenue
+                </p>
+                <p className="text-[32px] font-semibold tracking-tight text-white tabular-nums">
+                  ฿{(stats.activeSubscriptions * 999).toLocaleString()}
+                </p>
+                <p className="text-[12px] text-zinc-500 mt-0.5">
+                  {stats.activeSubscriptions} gyms × ฿999/month
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -652,8 +661,9 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                       </div>
                       <div className="flex items-center gap-2 text-right text-xs text-zinc-500">
                         <p>Added {new Date(gym.created_at).toLocaleDateString()}</p>
-                        {/* Add Subscribe/Unsubscribe button */}
-                        {gym.gym_subscriptions ? (
+                        {/* Subscribe/Unsubscribe — a billing action, hidden for partner platform admins */}
+                        {!isPartner &&
+                          (gym.gym_subscriptions ? (
                           <Button
                             variant="outline"
                             size="sm"
@@ -692,7 +702,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
                               "Subscribe"
                             )}
                           </Button>
-                        )}
+                          ))}
                       </div>
                     </div>
                   </CardContent>
@@ -712,7 +722,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
           </div>
         )}
 
-        {activeTab === "payouts" && (
+        {activeTab === "payouts" && !isPartner && (
           <div className="space-y-4">
             {/* Period Controls */}
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -993,7 +1003,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats }: Props) {
         )}
 
         {/* OckOck tab content */}
-        {activeTab === "ockock" && (
+        {activeTab === "ockock" && !isPartner && (
           <div className="flex h-[calc(100vh-200px)] flex-col">
             {/* Chat Header */}
             <div className="mb-4 flex items-center gap-3">

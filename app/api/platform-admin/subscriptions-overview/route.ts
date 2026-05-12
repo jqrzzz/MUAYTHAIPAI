@@ -54,8 +54,8 @@ interface InvoiceRow {
 }
 
 export async function GET() {
-  const { supabase, isPlatformAdmin } = await getPlatformAdmin()
-  if (!isPlatformAdmin) {
+  const { supabase, isPlatformAdmin, role } = await getPlatformAdmin()
+  if (!isPlatformAdmin || role === "partner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
