@@ -55,8 +55,13 @@ const HIDDEN_PREFIXES = [
   "/trainer",
   "/student",
   "/platform-admin",
+  // OckOck product site (the (ockock) route group) — has its own
+  // "Ask OckOck" hero chat / floating guide bubble.
   "/for-gyms",
   "/pricing",
+  "/about",
+  "/terms",
+  "/privacy",
 ]
 
 export default function OckOckChatWidget({ orgSlug, forceVisible = false }: OckOckChatWidgetProps) {

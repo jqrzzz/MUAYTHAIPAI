@@ -61,6 +61,8 @@ type Extracted = z.infer<typeof Schema>
 const EMPTY: Extracted = { description: "", services: [], hours: [], notes: "" }
 
 const TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d$/
+// Pad "7:00" → "07:00" so <input type="time"> accepts it.
+const padTime = (t: string) => (/^\d:/.test(t) ? `0${t}` : t)
 
 function clean(raw: Extracted): Extracted {
   return {
@@ -78,7 +80,7 @@ function clean(raw: Extracted): Extracted {
       .filter((h) => DAYS.includes(h.day) && TIME_RE.test(h.open) && TIME_RE.test(h.close))
       // de-dupe by day, keep the first
       .filter((h, i, arr) => arr.findIndex((x) => x.day === h.day) === i)
-      .map((h) => ({ day: h.day, open: h.open, close: h.close })),
+      .map((h) => ({ day: h.day, open: padTime(h.open), close: padTime(h.close) })),
     notes: (raw.notes ?? "").trim().slice(0, 600),
   }
 }

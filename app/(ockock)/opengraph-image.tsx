@@ -25,7 +25,6 @@ export default function OgImage() {
           backgroundImage:
             "radial-gradient(circle at 50% 0%, rgba(99,102,241,0.28), transparent 55%)",
           color: "#fafafa",
-          fontFamily: "sans-serif",
         }}
       >
         <div
