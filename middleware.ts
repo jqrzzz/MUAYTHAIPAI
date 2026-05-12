@@ -132,12 +132,12 @@ const redirects: Record<string, string> = {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname.toLowerCase()
 
-  // muaythai.app is the front door for the gym SaaS, so its homepage shows the
-  // "for gyms" pitch instead of the Pai gym homepage. Everything else (admin,
-  // signup, /verify, /gyms/[slug], ...) is shared and works under either host.
-  // This is a rewrite, not a redirect: the URL stays muaythai.app/.
+  // ockock.app is the front door for the OckOck gym product, so its homepage
+  // shows the "for gyms" pitch instead of the Pai gym homepage. Everything else
+  // (admin, signup, pricing, ...) is shared and works under either host. This is
+  // a rewrite, not a redirect: the URL stays ockock.app/.
   const host = request.headers.get("host") ?? ""
-  if (host.endsWith("muaythai.app") && pathname === "/") {
+  if (host.endsWith("ockock.app") && pathname === "/") {
     const url = request.nextUrl.clone()
     url.pathname = "/for-gyms"
     return NextResponse.rewrite(url)
