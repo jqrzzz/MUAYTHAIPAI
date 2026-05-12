@@ -19,8 +19,7 @@ export const metadata: Metadata = {
     title: "OckOck — run your Muay Thai gym",
     description:
       "The friendliest way to run a Muay Thai gym in Thailand. Bookings, certifications, and OckOck answering your customers.",
-    url: "https://muaythaipai.com/for-gyms",
-    images: [{ url: "/images/pai-hero-main.jpeg", width: 1200, height: 630 }],
+    // OG image comes from app/(ockock)/opengraph-image.tsx.
   },
 }
 

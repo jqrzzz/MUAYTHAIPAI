@@ -10,8 +10,7 @@ export const metadata: Metadata = {
     title: "Pricing | OckOck for Muay Thai gyms",
     description:
       "One plan. Everything included. Free 30-day trial. ฿999/month after trial.",
-    url: "https://muaythaipai.com/pricing",
-    images: [{ url: "/images/pai-hero-main.jpeg", width: 1200, height: 630 }],
+    // OG image comes from app/(ockock)/opengraph-image.tsx.
   },
 }
 
