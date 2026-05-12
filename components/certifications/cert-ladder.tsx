@@ -1,16 +1,22 @@
+"use client"
+
 /**
  * The Naga–Garuda ladder — the five ranks of the network, each named for a
  * guardian creature of Thai myth (Naga the serpent deity → Garuda the divine
  * eagle). NOT belts: a lineage you ascend.
  *
- *   <CertLadderStrip progress={...} />   compact horizontal band (dashboards)
- *   <CertLadder       progress={...} />   the full stacked ladder
+ *   <CertLadderStrip    progress={...} />              compact horizontal band
+ *   <CertLadder         progress={...} renderDetail/> the full stacked ladder;
+ *                                                     pass renderDetail to make
+ *                                                     a rank expandable (e.g. its
+ *                                                     skills + demo uploads)
+ *   <CertLadderOverview activity={...} onSelect/>     a gym's per-rank tallies
  *
  * Static rank data (creature, icon, colour, skill count) comes from
- * lib/certification-levels.ts; the caller passes only a student's standing.
- * Pure presentational — safe in a server component.
+ * lib/certification-levels.ts; the caller passes only the standing/activity.
  */
-import { Check } from "lucide-react"
+import { useState } from "react"
+import { Check, ChevronDown } from "lucide-react"
 import { CERTIFICATION_LEVELS, type CertificationLevel } from "@/lib/certification-levels"
 
 /** A student's standing on one rank. Shape matches the certification-progress API. */
@@ -194,17 +200,25 @@ export function CertLadderStrip({
 
 export function CertLadder({
   progress,
+  /** Return content (or null) to make a rank expandable — e.g. its skill
+   *  checklist + demo uploads. The active rank opens by default. */
+  renderDetail,
   className,
 }: {
   progress: RankProgress[]
+  renderDetail?: (rankId: string) => React.ReactNode | null
   className?: string
 }) {
   const ranks = mergeRanks(progress)
   return (
     <div className={`space-y-2.5 ${className ?? ""}`}>
-      {ranks.map(({ level, p, state, index }) => (
-        <RankRow key={level.id} level={level} p={p} state={state} index={index} />
-      ))}
+      {ranks.map(({ level, p, state, index }) => {
+        const detail = renderDetail ? renderDetail(level.id) : null
+        const open = (state === "in_progress" || state === "ready") && detail != null
+        return (
+          <RankRow key={level.id} level={level} p={p} state={state} index={index} detail={detail} defaultOpen={open} />
+        )
+      })}
     </div>
   )
 }
@@ -214,13 +228,19 @@ function RankRow({
   p,
   state,
   index,
+  detail,
+  defaultOpen = false,
 }: {
   level: CertificationLevel
   p?: RankProgress
   state: RankState
   index: number
+  detail?: React.ReactNode | null
+  defaultOpen?: boolean
 }) {
+  const [open, setOpen] = useState(defaultOpen)
   const active = state === "in_progress" || state === "ready"
+  const hasDetail = detail != null
   const skillsTotal = p?.skillsTotal ?? level.skills.length
   const skillsDone = Math.min(skillsTotal, p?.skillsSignedOff ?? 0)
   const pct = skillsTotal > 0 ? Math.round((skillsDone / skillsTotal) * 100) : 0
@@ -268,6 +288,15 @@ function RankRow({
                     >
                       {p.certificateNumber} →
                     </a>
+                    {" · "}
+                    <a
+                      href={`/verify/${p.certificateNumber}/print`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-400/70 transition-colors hover:text-emerald-300"
+                    >
+                      print
+                    </a>
                   </>
                 )}
               </span>
@@ -303,15 +332,28 @@ function RankRow({
           )}
         </div>
 
-        <div className="shrink-0 pt-0.5">
+        <div className="flex shrink-0 items-center gap-2 pt-0.5">
           {state === "earned" && <Check className="h-5 w-5 text-emerald-400" />}
           {active && skillsTotal > 0 && (
             <span className={`text-[12px] font-medium tabular-nums ${level.color}`}>
               {skillsDone}/{skillsTotal}
             </span>
           )}
+          {hasDetail && (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              aria-label={open ? "Hide skills" : "Show skills"}
+              className="rounded-lg p-1 text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300"
+            >
+              <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+          )}
         </div>
       </div>
+
+      {hasDetail && open && <div className="border-t border-white/5 px-4 pb-4 pt-3">{detail}</div>}
     </div>
   )
 }
