@@ -96,7 +96,7 @@ export default function ForGymsClient() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...CONTENT_FADE_IN, delay: 0.1 }}
           >
-            Run your gym with OckOck
+            Run your Muay Thai gym with OckOck
           </motion.h1>
 
           <motion.p
