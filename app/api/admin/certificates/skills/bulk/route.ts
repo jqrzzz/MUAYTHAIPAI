@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { getLevelById } from "@/lib/certification-levels"
 import { notifyCourseCompleted } from "@/lib/notifications"
 import { getOrgMember } from "@/lib/auth-helpers"
+import { logAudit } from "@/lib/audit-log"
 
 const serviceClient = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
   if (!user || !membership) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  const actorEmail = user.email ?? null
   if (!["owner", "admin", "trainer"].includes(String(membership.role))) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 })
   }
@@ -130,6 +132,32 @@ export async function POST(request: Request) {
       )
     )
   }
+
+  // Audit log: bulk signoffs are how skills get on the ladder, so each
+  // batch is part of the moat's evidence trail. We log the requested
+  // student count + the succeeded count; the actual student IDs go in
+  // metadata so a security review can replay who got signed off on what.
+  logAudit(supabase, {
+    action: "skill.signoff.bulk",
+    actorUserId: user.id,
+    actorEmail,
+    targetType: "skill_signoff",
+    targetId: null,
+    targetLabel: `${level} #${skill_index} (${levelConfig.skills[skill_index]})`,
+    metadata: {
+      org_id: membership.org_id,
+      level,
+      skill_index,
+      skill_label: levelConfig.skills[skill_index],
+      actor_role: membership.role,
+      requested: ids.length,
+      succeeded: succeededIds.size,
+      succeeded_student_ids: [...succeededIds],
+      completed_now: completedNow,
+      notes: notes || null,
+    },
+    request,
+  }).catch(() => {})
 
   return NextResponse.json({
     level,

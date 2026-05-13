@@ -361,13 +361,17 @@ export default function TrainerDashboardClient({
     setIsIssuingCert(true)
     setCertSuccess(null)
     try {
+      // Trainers can't override the skill requirement (only owner/admin
+      // can — that's enforced server-side). We never send skip:true from
+      // the trainer dashboard so the API can return a clean "complete
+      // the skills first" error instead of a 403 about role.
       const res = await fetch("/api/admin/certificates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           student_email: selectedStudent.email,
           level: certLevel,
-          skip_skills_check: !skillSignoffs?.allComplete,
+          skip_skills_check: false,
         }),
       })
       const data = await res.json()
