@@ -293,6 +293,40 @@ export default function EventEditorClient({
     }
   }
 
+  // Assign or clear a fighter from a corner. Passing a null fighter
+  // unassigns (back to "TBD"). On success we optimistically update the
+  // local bout so the card shows the new fighter without a refetch.
+  async function assignFighter(
+    boutId: string,
+    corner: "red" | "blue",
+    fighter: FighterInfo | null,
+  ) {
+    if (!eventId) return
+    const field = corner === "red" ? "fighter_red_id" : "fighter_blue_id"
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/bouts?boutId=${boutId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [field]: fighter?.id ?? null }),
+        },
+      )
+      if (!res.ok) throw new Error("Failed to assign fighter")
+      setBouts(
+        bouts.map((b) =>
+          b.id === boutId
+            ? corner === "red"
+              ? { ...b, fighter_red_id: fighter?.id ?? null, fighter_red: fighter }
+              : { ...b, fighter_blue_id: fighter?.id ?? null, fighter_blue: fighter }
+            : b,
+        ),
+      )
+    } catch {
+      setError(`Failed to ${fighter ? "assign" : "clear"} ${corner} corner`)
+    }
+  }
+
   // Add ticket tier
   async function addTicketTier() {
     if (!eventId) return
@@ -459,6 +493,7 @@ export default function EventEditorClient({
           onAdd={addBout}
           onDelete={deleteBout}
           onToggleMain={toggleMainEvent}
+          onAssignFighter={assignFighter}
         />
       )}
       {tab === "tickets" && (
@@ -615,11 +650,13 @@ function BoutsTab({
   onAdd,
   onDelete,
   onToggleMain,
+  onAssignFighter,
 }: {
   bouts: Bout[]
   onAdd: () => void
   onDelete: (id: string) => void
   onToggleMain: (id: string, current: boolean) => void
+  onAssignFighter: (boutId: string, corner: "red" | "blue", fighter: FighterInfo | null) => void | Promise<void>
 }) {
   return (
     <div className="space-y-4">
@@ -652,6 +689,7 @@ function BoutsTab({
               index={index}
               onDelete={() => onDelete(bout.id)}
               onToggleMain={() => onToggleMain(bout.id, bout.is_main_event)}
+              onAssignFighter={(corner, fighter) => onAssignFighter(bout.id, corner, fighter)}
             />
           ))}
         </div>
@@ -665,21 +703,15 @@ function BoutCard({
   index,
   onDelete,
   onToggleMain,
+  onAssignFighter,
 }: {
   bout: Bout
   index: number
   onDelete: () => void
   onToggleMain: () => void
+  onAssignFighter: (corner: "red" | "blue", fighter: FighterInfo | null) => void | Promise<void>
 }) {
-  const redName = bout.fighter_red?.display_name || "TBD"
-  const blueName = bout.fighter_blue?.display_name || "TBD"
-
-  const redRecord = bout.fighter_red
-    ? `${bout.fighter_red.fight_record_wins}-${bout.fighter_red.fight_record_losses}-${bout.fighter_red.fight_record_draws}`
-    : ""
-  const blueRecord = bout.fighter_blue
-    ? `${bout.fighter_blue.fight_record_wins}-${bout.fighter_blue.fight_record_losses}-${bout.fighter_blue.fight_record_draws}`
-    : ""
+  const [pickerOpen, setPickerOpen] = useState<"red" | "blue" | null>(null)
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -710,44 +742,301 @@ function BoutCard({
           <button
             onClick={onDelete}
             className="rounded p-1 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
+            aria-label="Delete bout"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Fighters */}
+      {/* Fighters — corners are interactive: click to open picker,
+          existing assignments show a Change/Clear control. */}
       <div className="flex items-center gap-3">
-        {/* Red Corner */}
-        <div className="flex-1 rounded-lg bg-red-500/5 p-3 text-center">
-          <p className="text-[10px] font-semibold uppercase text-red-400">Red Corner</p>
-          <p className="mt-1 font-semibold text-white">{redName}</p>
-          {redRecord && <p className="text-xs text-neutral-500">{redRecord}</p>}
-          {bout.fighter_red?.organizations && (
-            <p className="text-[10px] text-neutral-600">
-              {(bout.fighter_red.organizations as { name: string }).name}
-            </p>
-          )}
-        </div>
-
+        <CornerSlot
+          corner="red"
+          fighter={bout.fighter_red}
+          onPick={() => setPickerOpen("red")}
+          onClear={() => onAssignFighter("red", null)}
+        />
         <span className="text-sm font-bold text-neutral-600">VS</span>
-
-        {/* Blue Corner */}
-        <div className="flex-1 rounded-lg bg-blue-500/5 p-3 text-center">
-          <p className="text-[10px] font-semibold uppercase text-blue-400">Blue Corner</p>
-          <p className="mt-1 font-semibold text-white">{blueName}</p>
-          {blueRecord && <p className="text-xs text-neutral-500">{blueRecord}</p>}
-          {bout.fighter_blue?.organizations && (
-            <p className="text-[10px] text-neutral-600">
-              {(bout.fighter_blue.organizations as { name: string }).name}
-            </p>
-          )}
-        </div>
+        <CornerSlot
+          corner="blue"
+          fighter={bout.fighter_blue}
+          onPick={() => setPickerOpen("blue")}
+          onClear={() => onAssignFighter("blue", null)}
+        />
       </div>
 
       <p className="mt-2 text-center text-[10px] text-neutral-600">
         {bout.scheduled_rounds} rounds
       </p>
+
+      {pickerOpen && (
+        <FighterPickerDialog
+          corner={pickerOpen}
+          weightClass={bout.weight_class}
+          excludeIds={[
+            bout.fighter_red?.id,
+            bout.fighter_blue?.id,
+          ].filter((x): x is string => !!x)}
+          onClose={() => setPickerOpen(null)}
+          onPick={async (f) => {
+            await onAssignFighter(pickerOpen, f)
+            setPickerOpen(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// Single corner — either shows an empty "Assign fighter" slot or the
+// assigned fighter with Change / Clear affordances.
+function CornerSlot({
+  corner,
+  fighter,
+  onPick,
+  onClear,
+}: {
+  corner: "red" | "blue"
+  fighter: FighterInfo | null
+  onPick: () => void
+  onClear: () => void
+}) {
+  const tone =
+    corner === "red"
+      ? { bg: "bg-red-500/5", label: "text-red-400", ring: "ring-red-500/20" }
+      : { bg: "bg-blue-500/5", label: "text-blue-400", ring: "ring-blue-500/20" }
+
+  if (!fighter) {
+    return (
+      <button
+        onClick={onPick}
+        className={`flex-1 rounded-lg border border-dashed border-white/15 ${tone.bg} p-3 text-center transition-colors hover:border-white/30 hover:bg-white/5`}
+      >
+        <p className={`text-[10px] font-semibold uppercase ${tone.label}`}>
+          {corner === "red" ? "Red Corner" : "Blue Corner"}
+        </p>
+        <p className="mt-1 text-sm font-medium text-neutral-400">
+          + Assign fighter
+        </p>
+        <p className="text-[10px] text-neutral-600 mt-0.5">Browse Open-to-Fight roster</p>
+      </button>
+    )
+  }
+
+  const record = `${fighter.fight_record_wins}-${fighter.fight_record_losses}-${fighter.fight_record_draws}`
+  return (
+    <div className={`flex-1 rounded-lg ${tone.bg} ring-1 ${tone.ring} p-3 text-center`}>
+      <p className={`text-[10px] font-semibold uppercase ${tone.label}`}>
+        {corner === "red" ? "Red Corner" : "Blue Corner"}
+      </p>
+      <p className="mt-1 font-semibold text-white truncate">{fighter.display_name}</p>
+      <p className="text-xs text-neutral-500">{record}</p>
+      {fighter.organizations && (
+        <p className="text-[10px] text-neutral-600 truncate">
+          {(fighter.organizations as { name: string }).name}
+        </p>
+      )}
+      <div className="mt-2 flex items-center justify-center gap-1.5">
+        <button
+          onClick={onPick}
+          className="rounded px-2 py-0.5 text-[10px] text-neutral-400 hover:bg-white/5 hover:text-white"
+        >
+          Change
+        </button>
+        <span className="text-neutral-700">·</span>
+        <button
+          onClick={onClear}
+          className="rounded px-2 py-0.5 text-[10px] text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Search-and-select dialog for assigning a fighter to a corner. Queries
+// the public fighters API which already filters to open_to_fights=true
+// and is_available=true (the right pool for promoters).
+function FighterPickerDialog({
+  corner,
+  weightClass,
+  excludeIds,
+  onClose,
+  onPick,
+}: {
+  corner: "red" | "blue"
+  weightClass: string | null
+  excludeIds: string[]
+  onClose: () => void
+  onPick: (fighter: FighterInfo) => void | Promise<void>
+}) {
+  const [query, setQuery] = useState("")
+  const [matchWeight, setMatchWeight] = useState(!!weightClass)
+  const [results, setResults] = useState<FighterInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [picking, setPicking] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const params = new URLSearchParams({
+        open_to_fights: "true",
+        limit: "50",
+      })
+      if (matchWeight && weightClass) params.set("weight_class", weightClass)
+      try {
+        const res = await fetch(`/api/public/fighters?${params}`)
+        if (!res.ok) throw new Error("Failed")
+        const data = await res.json()
+        if (cancelled) return
+        // The public API formats fields differently (name vs display_name,
+        // country vs fighter_country, gym vs organizations) — normalize
+        // back to the FighterInfo shape the editor uses internally.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fighters: FighterInfo[] = (data.fighters ?? []).map((f: any) => ({
+          id: f.id,
+          display_name: f.name ?? f.display_name ?? "",
+          photo_url: f.image ?? f.photo_url ?? null,
+          fight_record_wins: f.wins ?? f.fight_record_wins ?? 0,
+          fight_record_losses: f.losses ?? f.fight_record_losses ?? 0,
+          fight_record_draws: f.draws ?? f.fight_record_draws ?? 0,
+          weight_class: f.weight_class ?? null,
+          fighter_country: f.country ?? f.fighter_country ?? null,
+          organizations: f.gym ?? f.organizations ?? null,
+        }))
+        setResults(fighters.filter((f) => !excludeIds.includes(f.id)))
+      } catch {
+        if (!cancelled) setResults([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+    // Re-run when weight filter toggles. excludeIds is stable per-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchWeight, weightClass])
+
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? results.filter((f) => f.display_name?.toLowerCase().includes(q))
+    : results
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Assign ${corner} corner fighter`}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="w-full max-w-lg rounded-xl border border-white/10 bg-neutral-950 p-5 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className={`text-[10px] font-semibold uppercase ${corner === "red" ? "text-red-400" : "text-blue-400"}`}>
+              {corner === "red" ? "Red Corner" : "Blue Corner"}
+            </p>
+            <h3 className="text-base font-semibold text-white">Pick a fighter</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-neutral-500 hover:bg-white/5 hover:text-white"
+            aria-label="Close picker"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by fighter name…"
+          className="mb-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none focus:border-white/30"
+        />
+
+        {weightClass && (
+          <label className="mb-3 flex cursor-pointer items-center gap-2 text-xs text-neutral-400">
+            <input
+              type="checkbox"
+              checked={matchWeight}
+              onChange={(e) => setMatchWeight(e.target.checked)}
+              className="rounded border-neutral-600 bg-neutral-800"
+            />
+            Only show fighters in {weightClass}
+          </label>
+        )}
+
+        <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-white/5">
+          {loading ? (
+            <div className="py-8 text-center">
+              <Loader2 className="mx-auto h-4 w-4 animate-spin text-neutral-600" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-neutral-500">
+                {q ? `No fighters match "${query}"` : "No fighters available"}
+              </p>
+              <p className="mt-1 text-[11px] text-neutral-600">
+                Fighters need to opt in (Open to Fights) to appear here.
+              </p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-white/5">
+              {filtered.map((f) => {
+                const record = `${f.fight_record_wins}-${f.fight_record_losses}-${f.fight_record_draws}`
+                const isPicking = picking === f.id
+                return (
+                  <li key={f.id}>
+                    <button
+                      type="button"
+                      disabled={isPicking}
+                      onClick={async () => {
+                        setPicking(f.id)
+                        try {
+                          await onPick(f)
+                        } finally {
+                          setPicking(null)
+                        }
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.03] disabled:opacity-50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">{f.display_name}</p>
+                        <p className="text-[11px] text-neutral-500">
+                          {record}
+                          {f.weight_class && ` · ${f.weight_class}`}
+                          {f.fighter_country && ` · ${f.fighter_country}`}
+                        </p>
+                        {f.organizations && (
+                          <p className="text-[10px] text-neutral-600 truncate">
+                            {(f.organizations as { name: string }).name}
+                          </p>
+                        )}
+                      </div>
+                      {isPicking ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-500" />
+                      ) : (
+                        <span className="text-[10px] font-medium uppercase text-amber-400">
+                          Assign
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
