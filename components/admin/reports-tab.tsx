@@ -266,7 +266,7 @@ export default function ReportsTab({ analyticsBookings, todayDate }: ReportsTabP
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 {report.cert_pipeline.map((lvl) => {
                   const active =
                     lvl.enrolled > 0 ||

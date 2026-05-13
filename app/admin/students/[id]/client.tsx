@@ -490,7 +490,7 @@ export default function StudentProfileClient({
               </div>
             )}
 
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               {ladder.map((lvl) => {
                 const pctHere = Math.round(
                   (lvl.signed_off_here / lvl.total_skills) * 100,
