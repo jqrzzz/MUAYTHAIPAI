@@ -69,7 +69,11 @@ interface Response {
 
 type Filter = "at_risk" | "dormant" | "lapsed" | "cooling" | "never_booked" | "all"
 
-export default function RetentionTab() {
+interface RetentionTabProps {
+  onNavigateToTab?: (tab: "students" | "settings") => void
+}
+
+export default function RetentionTab({ onNavigateToTab }: RetentionTabProps = {}) {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -180,12 +184,39 @@ export default function RetentionTab() {
 
       {filtered.length === 0 ? (
         <Surface>
-          <EmptyState
-            icon={CheckCircle2}
-            tone="emerald"
-            title="All clear in this view"
-            description="Nobody needs outreach right now. Nice work."
-          />
+          {data.counts.total === 0 ? (
+            <EmptyState
+              icon={Users}
+              tone="indigo"
+              title="No students yet"
+              description="Retention shows who's drifting off so you can reach out before they churn. Once students start booking, this view fills in automatically."
+              action={
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToTab?.("students")}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-400 transition"
+                  >
+                    <Users className="h-3 w-3" /> Add students
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToTab?.("settings")}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800 transition"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Set up booking widget
+                  </button>
+                </div>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={CheckCircle2}
+              tone="emerald"
+              title="All clear in this view"
+              description="Nobody needs outreach right now. Nice work."
+            />
+          )}
         </Surface>
       ) : (
         <Surface>

@@ -33,6 +33,7 @@ export default function ProfileTab() {
   const [myProfileLoading, setMyProfileLoading] = useState(false)
   const [myProfileSaving, setMyProfileSaving] = useState(false)
   const [newPhotoUrl, setNewPhotoUrl] = useState("")
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const [myProfileForm, setMyProfileForm] = useState({
     display_name: "",
     title: "",
@@ -122,13 +123,36 @@ export default function ProfileTab() {
   }
 
   const addPhoto = () => {
-    if (newPhotoUrl && myProfileForm.photos.length < 5) {
-      setMyProfileForm({
-        ...myProfileForm,
-        photos: [...myProfileForm.photos, newPhotoUrl],
-      })
-      setNewPhotoUrl("")
+    setPhotoError(null)
+    const raw = newPhotoUrl.trim()
+    if (!raw) return
+    if (myProfileForm.photos.length >= 5) {
+      setPhotoError("Max 5 photos")
+      return
     }
+    let parsed: URL
+    try {
+      parsed = new URL(raw)
+    } catch {
+      setPhotoError("That doesn't look like a valid URL — make sure it starts with https://")
+      return
+    }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      setPhotoError("URL must start with https://")
+      return
+    }
+    if (myProfileForm.photos.includes(raw)) {
+      setPhotoError("That photo's already added")
+      return
+    }
+    // Heuristic: warn (don't block) on URLs that don't look like image files.
+    // We don't network-fetch them — saves a roundtrip and lets users use CDN URLs
+    // without extensions (Cloudinary, Imgix, etc.).
+    setMyProfileForm({
+      ...myProfileForm,
+      photos: [...myProfileForm.photos, raw],
+    })
+    setNewPhotoUrl("")
   }
 
   const removePhoto = (index: number) => {
@@ -183,17 +207,31 @@ export default function ProfileTab() {
                 )}
               </div>
               {myProfileForm.photos.length < 5 && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Paste image URL"
-                    value={newPhotoUrl}
-                    onChange={(e) => setNewPhotoUrl(e.target.value)}
-                    className="bg-neutral-800 border-neutral-700 text-white"
-                  />
-                  <Button onClick={addPhoto} variant="outline" className="border-neutral-700 bg-transparent">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
+                <>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Paste image URL (https://...)"
+                      value={newPhotoUrl}
+                      onChange={(e) => {
+                        setNewPhotoUrl(e.target.value)
+                        if (photoError) setPhotoError(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          addPhoto()
+                        }
+                      }}
+                      className="bg-neutral-800 border-neutral-700 text-white"
+                    />
+                    <Button onClick={addPhoto} variant="outline" className="border-neutral-700 bg-transparent">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {photoError && (
+                    <p className="mt-1.5 text-xs text-red-400">{photoError}</p>
+                  )}
+                </>
               )}
             </div>
 

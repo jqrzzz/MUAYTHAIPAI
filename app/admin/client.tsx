@@ -782,7 +782,7 @@ export default function AdminDashboardClient({
 
           {activeTab === "payouts" && <PayoutsTab />}
 
-          {activeTab === "retention" && <RetentionTab />}
+          {activeTab === "retention" && <RetentionTab onNavigateToTab={setActiveTab} />}
         </div>
       </main>
       <HelpButton />
