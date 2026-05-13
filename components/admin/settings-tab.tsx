@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -108,6 +108,25 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
   })
 
   const [newRecipientEmail, setNewRecipientEmail] = useState("")
+
+  // Snapshot the form + hours on mount so we can derive a dirty flag.
+  // Reset after a successful save so the indicator returns to "All saved".
+  const initialSnapshotRef = useRef<string>(
+    JSON.stringify({ form: settingsForm, hours: operatingHours })
+  )
+  const currentSnapshot = JSON.stringify({ form: settingsForm, hours: operatingHours })
+  const isDirty = currentSnapshot !== initialSnapshotRef.current
+
+  // Warn before navigating away with unsaved changes
+  useEffect(() => {
+    if (!isDirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ""
+    }
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [isDirty])
 
   const addRecipient = () => {
     const email = newRecipientEmail.trim().toLowerCase()
@@ -229,6 +248,8 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
 
       if (response.ok) {
         setSettingsSuccess(true)
+        // Reset the dirty-snapshot so the indicator flips back to "All saved"
+        initialSnapshotRef.current = JSON.stringify({ form: settingsForm, hours: operatingHours })
         setTimeout(() => setSettingsSuccess(false), 5000)
         router.refresh()
       } else {
@@ -792,17 +813,29 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
       {/* Embed widget snippet — only renders if we have a slug */}
       {organization.slug && <EmbedSnippetCard slug={organization.slug} />}
 
-      {/* Save Button */}
-      <div className="flex items-center gap-4">
+      {/* Save Button — sticky on small screens so the dirty state is always reachable */}
+      <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-900/80 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-neutral-900/60">
         <Button
           onClick={handleSaveSettings}
-          disabled={isSavingSettings}
-          className="bg-indigo-500 hover:bg-indigo-400"
+          disabled={isSavingSettings || !isDirty}
+          className="bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50"
         >
           <Save className="h-4 w-4 mr-2" />
           {isSavingSettings ? "Saving..." : "Save Settings"}
         </Button>
-        {settingsSuccess && <span className="text-green-400 text-sm">Settings saved successfully!</span>}
+        {settingsSuccess ? (
+          <span className="text-green-400 text-sm">Settings saved successfully!</span>
+        ) : isDirty ? (
+          <span className="inline-flex items-center gap-1.5 text-amber-400 text-sm">
+            <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            Unsaved changes
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-neutral-500 text-sm">
+            <span className="h-2 w-2 rounded-full bg-neutral-600" />
+            All changes saved
+          </span>
+        )}
         {settingsError && <span className="text-red-400 text-sm">{settingsError}</span>}
       </div>
     </div>

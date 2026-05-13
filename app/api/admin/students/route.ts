@@ -32,7 +32,9 @@ export async function GET(request: Request) {
       full_name,
       display_name,
       phone,
-      created_at
+      created_at,
+      public_passport_enabled,
+      public_passport_handle
     `)
     .in("id", supabase.from("bookings").select("user_id").eq("org_id", membership.org_id).not("user_id", "is", null))
     .order("full_name")
@@ -48,7 +50,9 @@ export async function GET(request: Request) {
         full_name,
         display_name,
         phone,
-        created_at
+        created_at,
+        public_passport_enabled,
+        public_passport_handle
       )
     `)
     .eq("org_id", membership.org_id)
