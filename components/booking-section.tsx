@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Zap, ChevronUp, ChevronDown, ArrowLeft, Loader2 } from "lucide-react"
+import { Zap, ChevronUp, ChevronDown, ArrowLeft, Loader2, AlertCircle, CalendarOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
@@ -69,6 +69,9 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
   const [selectedPrivateLessonType, setSelectedPrivateLessonType] = useState<"beginner" | "advanced" | "">("")
   const [selectedDuration, setSelectedDuration] = useState<"1hr" | "2hr">("1hr")
   const [selectedDate, setSelectedDate] = useState<string>("")
+  // Inline validation error — used instead of alert() so the message
+  // is screen-reader friendly and doesn't break flow on mobile.
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -148,10 +151,11 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
   }
 
   const handleBookNow = () => {
+    setValidationError(null)
     if (!selectedBookingItem) return
 
     if (selectedBookingItem.name.toLowerCase().includes("private") && !selectedPrivateLessonType) {
-      alert("Please select a private lesson type first.")
+      setValidationError("Pick a private lesson type before continuing.")
       return
     }
 
@@ -278,6 +282,17 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="mt-6 pt-6 border-t border-primary/20"
           >
+            {trainingServices.length === 0 && certificateServices.length === 0 && (
+              <div className="text-center py-8 px-4">
+                <CalendarOff className={`h-8 w-8 mx-auto mb-3 ${resolvedTheme === "dark" ? "text-gray-500" : "text-gray-400"}`} />
+                <p className={`text-sm font-medium ${resolvedTheme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                  No services available right now
+                </p>
+                <p className={`text-xs mt-1 ${resolvedTheme === "dark" ? "text-gray-500" : "text-gray-500"}`}>
+                  {gymInfo?.name ? `${gymInfo.name} hasn't set up bookings yet.` : "This gym hasn't set up bookings yet."} Reach out directly to book a session.
+                </p>
+              </div>
+            )}
             {trainingServices.length > 0 && (
               <div className="mb-4">
                 <h3
@@ -398,6 +413,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedPrivateLessonType(type.id)
+                          setValidationError(null)
                         }}
                         className={cn(
                           "w-full justify-start h-auto py-2.5 px-2.5 text-left overflow-hidden",
@@ -461,6 +477,16 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
                 </div>
               )}
 
+              {validationError && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+                >
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{validationError}</span>
+                </div>
+              )}
               <Button
                 onClick={handleBookNow}
                 disabled={isGroupSessionDisabled()}
