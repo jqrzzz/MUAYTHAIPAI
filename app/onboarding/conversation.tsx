@@ -10,7 +10,7 @@
  * The step-by-step form is still available at /onboarding/form for owners
  * who'd rather click through fields.
  */
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Loader2, Plus, Trash2 } from "lucide-react"
@@ -88,6 +88,51 @@ export default function OnboardingConversation({
   const [services, setServices] = useState<ServiceRow[]>([{ ...BLANK_SERVICE }])
   const [hours, setHours] = useState<Record<Day, DayHours>>(defaultHours())
   const [notes, setNotes] = useState("")
+
+  // Draft persistence — survive a tab close or accidental refresh. Scoped
+  // per gym so a different gym in the same browser doesn't bleed in.
+  const draftKey = `ockock-onboarding-draft-${orgId}`
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (raw) {
+        const draft = JSON.parse(raw) as Partial<{
+          phase: Phase
+          blurb: string
+          description: string
+          services: ServiceRow[]
+          hours: Record<Day, DayHours>
+          notes: string
+        }>
+        if (typeof draft.blurb === "string") setBlurb(draft.blurb)
+        if (typeof draft.description === "string") setDescription(draft.description)
+        if (Array.isArray(draft.services) && draft.services.length > 0) setServices(draft.services)
+        if (draft.hours) setHours(draft.hours)
+        if (typeof draft.notes === "string") setNotes(draft.notes)
+        // Only restore the review phase — never resume mid-extract / mid-apply.
+        if (draft.phase === "review") setPhase("review")
+      }
+    } catch {
+      // Corrupt or unreadable draft — ignore.
+    }
+    setHydrated(true)
+  }, [draftKey])
+
+  useEffect(() => {
+    if (!hydrated) return
+    // Persist only the editable user state, never transient phases.
+    if (phase === "thinking" || phase === "applying" || phase === "done") return
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ phase, blurb, description, services, hours, notes }),
+      )
+    } catch {
+      // Quota / serialize errors — fail silently.
+    }
+  }, [draftKey, hydrated, phase, blurb, description, services, hours, notes])
 
   const runExtract = useCallback(async () => {
     const text = blurb.trim()
@@ -182,12 +227,19 @@ export default function OnboardingConversation({
         if (res.ok) saved++
         else if (saved === 0) throw new Error(`OckOck couldn't save "${s.name}". Try again?`)
       }
+      // Onboarding complete — clear the saved draft so a refresh doesn't
+      // dredge it back.
+      try {
+        localStorage.removeItem(draftKey)
+      } catch {
+        /* ignore */
+      }
       setPhase("done")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong saving your gym. Try again?")
       setPhase("review")
     }
-  }, [services, hours, description, orgId, organization])
+  }, [services, hours, description, orgId, organization, draftKey])
 
   // ---- shared chrome ----
   const shell = (children: React.ReactNode) => (
