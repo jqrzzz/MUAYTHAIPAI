@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { AuthCard, SaasInput, SaasButton } from "@/components/saas"
+import { SocialSignupButtons } from "@/components/ockock/social-signup-buttons"
 
 interface SignupForm {
   gymName: string
@@ -239,6 +240,15 @@ function SignupInner() {
           Start free trial
           {!submitting && <ArrowRight className="h-3.5 w-3.5" />}
         </SaasButton>
+
+        <div className="relative my-1">
+          <div className="absolute inset-x-0 top-1/2 h-px bg-zinc-800" />
+          <p className="relative mx-auto w-fit bg-zinc-950 px-2 text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+            or
+          </p>
+        </div>
+
+        <SocialSignupButtons next="/admin" />
 
         <p className="text-center text-[11px] text-zinc-600">
           30-day free trial · no credit card required
