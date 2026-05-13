@@ -521,13 +521,22 @@ export default async function VerifyCertificatePage({ params }: Props) {
         </div>
 
         {/* Network footer */}
-        <div className="mt-8 text-center space-y-2">
+        <div className="mt-8 space-y-2 text-center">
           <p className="font-display text-[10px] uppercase tracking-[0.18em] text-neutral-600">
             MUAYTHAIPAI Network · Naga-to-Garuda Certification System
           </p>
+          {org.slug && (
+            <a
+              href={`/gyms/${org.slug}`}
+              className="inline-flex items-center gap-1 text-xs text-neutral-400 transition-colors hover:text-white"
+            >
+              Visit {org.name}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
           <a
             href="/certificate-programs"
-            className="inline-flex items-center gap-1 text-xs text-orange-500/70 hover:text-orange-400 transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-orange-500/70 transition-colors hover:text-orange-400"
           >
             Learn about our certification programs
             <ExternalLink className="h-3 w-3" />
