@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Save, Clock, Bell, Plus, X } from "lucide-react"
+import { Save, Clock, Bell, Plus, X, Upload, Trash2, Loader2 } from "lucide-react"
 import EmbedSnippetCard from "@/components/admin/embed-snippet-card"
 import WaiverEditorCard from "@/components/admin/waiver-editor-card"
 
@@ -37,7 +38,7 @@ export interface SettingsOrgSettings {
 }
 
 interface SettingsTabProps {
-  organization: { name: string; slug?: string }
+  organization: { name: string; slug?: string; logo_url?: string | null; timezone?: string | null }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   orgSettings: any
   orgId: string
@@ -81,6 +82,8 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
 
   const [settingsForm, setSettingsForm] = useState({
     name: organization.name || "",
+    logo_url: organization.logo_url || "",
+    timezone: organization.timezone || "Asia/Bangkok",
     description: orgSettings?.description || "",
     email: orgSettings?.email || "",
     phone: orgSettings?.phone || "",
@@ -124,6 +127,57 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
     }))
   }
 
+  // Logo upload — POSTs to /api/admin/gym-logo (service-role upload to the
+  // public gym-logos bucket; the endpoint updates organizations.logo_url too).
+  const logoFileInputRef = useRef<HTMLInputElement>(null)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoUploading(true)
+    setLogoError(null)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/admin/gym-logo", { method: "POST", body: fd })
+      const data = (await res.json().catch(() => ({}))) as { logo_url?: string; error?: string }
+      if (!res.ok) {
+        setLogoError(data.error || "Upload failed")
+        return
+      }
+      setSettingsForm((prev) => ({ ...prev, logo_url: data.logo_url || "" }))
+      router.refresh()
+    } catch {
+      setLogoError("Network error — try again")
+    } finally {
+      setLogoUploading(false)
+      if (logoFileInputRef.current) logoFileInputRef.current.value = ""
+    }
+  }
+
+  const handleLogoRemove = async () => {
+    if (!settingsForm.logo_url) return
+    if (!confirm("Remove your gym logo?")) return
+    setLogoUploading(true)
+    setLogoError(null)
+    try {
+      const res = await fetch("/api/admin/gym-logo", { method: "DELETE" })
+      if (res.ok) {
+        setSettingsForm((prev) => ({ ...prev, logo_url: "" }))
+        router.refresh()
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        setLogoError(data.error || "Remove failed")
+      }
+    } catch {
+      setLogoError("Network error — try again")
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
   const handleSaveSettings = async () => {
     setIsSavingSettings(true)
     setSettingsSuccess(false)
@@ -146,6 +200,10 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
             instagram: settingsForm.instagram,
             facebook: settingsForm.facebook,
             website: settingsForm.website,
+            // logo_url is normally set by /api/admin/gym-logo on upload,
+            // but include it here too so the form is the source of truth.
+            logo_url: settingsForm.logo_url || null,
+            timezone: settingsForm.timezone || "Asia/Bangkok",
           },
           settings: {
             booking_advance_days: settingsForm.booking_advance_days,
@@ -228,6 +286,62 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
           <CardDescription>Basic details about your gym</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Logo */}
+          <div className="flex items-start gap-4 rounded-lg bg-neutral-900/40 p-4 ring-1 ring-neutral-800">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-neutral-800 ring-1 ring-neutral-700">
+              {settingsForm.logo_url ? (
+                // Use plain <img> to skip Next/Image domain config for the Supabase Storage public URL.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={settingsForm.logo_url} alt="Gym logo" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-neutral-600">
+                  <Upload className="h-6 w-6" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <Label className="text-neutral-200">Gym logo</Label>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                Shows on your public gym page, embed widget, and student dashboards. JPEG / PNG / WebP / GIF, up to 5MB.
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <input
+                  ref={logoFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleLogoUpload}
+                  disabled={logoUploading}
+                  className="sr-only"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => logoFileInputRef.current?.click()}
+                  disabled={logoUploading}
+                  className="border-neutral-700 bg-neutral-800 text-white hover:bg-neutral-700"
+                >
+                  {logoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  <span className="ml-1.5">{settingsForm.logo_url ? "Replace" : "Upload"} logo</span>
+                </Button>
+                {settingsForm.logo_url && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogoRemove}
+                    disabled={logoUploading}
+                    className="text-red-400 hover:bg-neutral-800 hover:text-red-300"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+              {logoError && <p className="mt-2 text-xs text-red-400">{logoError}</p>}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-neutral-200">Gym Name</Label>
@@ -303,6 +417,41 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
                 placeholder="Mae Hong Son"
                 className="bg-neutral-800 border-neutral-700 text-white"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-neutral-200">Timezone</Label>
+              <select
+                value={settingsForm.timezone}
+                onChange={(e) => setSettingsForm((prev) => ({ ...prev, timezone: e.target.value }))}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-neutral-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/40"
+              >
+                <option value="Asia/Bangkok">Asia/Bangkok (Thailand)</option>
+                <option value="Asia/Singapore">Asia/Singapore</option>
+                <option value="Asia/Kuala_Lumpur">Asia/Kuala Lumpur</option>
+                <option value="Asia/Jakarta">Asia/Jakarta</option>
+                <option value="Asia/Manila">Asia/Manila</option>
+                <option value="Asia/Ho_Chi_Minh">Asia/Ho Chi Minh (Vietnam)</option>
+                <option value="Asia/Tokyo">Asia/Tokyo</option>
+                <option value="Asia/Seoul">Asia/Seoul</option>
+                <option value="UTC">UTC</option>
+              </select>
+              <p className="text-xs text-neutral-500">Used for booking times, daily digests, and analytics.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-neutral-200">Public URL</Label>
+              <div className="rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-sm font-mono text-neutral-300 truncate">
+                muaythaipai.com/gyms/{organization.slug ?? "—"}
+              </div>
+              <p className="text-xs text-neutral-500">
+                To change your slug, email{" "}
+                <a href="mailto:hello@muaythaipai.com" className="text-indigo-400 hover:text-indigo-300">
+                  hello@muaythaipai.com
+                </a>{" "}
+                — we&apos;ll redirect your old links so nothing breaks.
+              </p>
             </div>
           </div>
         </CardContent>
