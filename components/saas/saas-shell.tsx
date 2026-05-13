@@ -47,7 +47,7 @@ export function SaasHeader({
   maxWidth = "max-w-3xl",
 }: SaasHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-900/80 bg-zinc-950/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-zinc-900/80 bg-zinc-950/70 backdrop-blur-xl print:hidden">
       <div className={cn("mx-auto px-5 h-14 flex items-center gap-4", maxWidth)}>
         <div className="flex items-center gap-2 min-w-0 flex-1">{left}</div>
         {right && <div className="shrink-0">{right}</div>}

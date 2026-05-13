@@ -75,7 +75,7 @@ export function OckOckGuideBubble() {
   if (HIDE_ON_PREFIXES.some((p) => pathname.startsWith(p))) return null
 
   return (
-    <>
+    <div className="print:hidden">
       {!open && (
         <button
           onClick={() => setOpen(true)}
@@ -162,6 +162,6 @@ export function OckOckGuideBubble() {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

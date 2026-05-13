@@ -21,6 +21,7 @@ import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 import { PLAN } from "@/lib/ockock/product"
 import { SaasShell, SaasHeader } from "@/components/saas"
+import { PrintButton } from "@/components/deck/print-button"
 
 export const metadata = {
   title: "OckOck — Partner deck",
@@ -41,7 +42,7 @@ function Section({
   tight?: boolean
 }) {
   return (
-    <section className={`relative ${tight ? "py-16" : "py-24 md:py-28"} px-4 sm:px-6 ${className}`}>
+    <section className={`relative ${tight ? "py-16" : "py-24 md:py-28"} px-4 sm:px-6 print:break-inside-avoid print:py-12 ${className}`}>
       <div className="mx-auto max-w-4xl">{children}</div>
     </section>
   )
@@ -91,6 +92,7 @@ export default async function PartnerDeckPage() {
         }
       />
 
+      <PrintButton />
       <article>
         {/* ═════════════════ 1. COVER ═════════════════ */}
         <section className="relative overflow-hidden px-4 sm:px-6">

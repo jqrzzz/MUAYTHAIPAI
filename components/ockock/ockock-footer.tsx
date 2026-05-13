@@ -37,7 +37,7 @@ function FooterLink({ href, label, external }: { href: string; label: string; ex
 export function OckOckFooter() {
   const year = new Date().getFullYear()
   return (
-    <footer className="border-t border-zinc-900/80 bg-zinc-950">
+    <footer className="border-t border-zinc-900/80 bg-zinc-950 print:hidden">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr]">
           <div className="max-w-sm">

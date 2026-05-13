@@ -16,6 +16,7 @@ import {
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 import { PLAN } from "@/lib/ockock/product"
 import { OckOckCta } from "@/components/ockock/ockock-cta"
+import { PrintButton } from "@/components/deck/print-button"
 
 export const metadata: Metadata = {
   title: "Our story — OckOck for Muay Thai gyms",
@@ -39,7 +40,7 @@ function Section({
   tight?: boolean
 }) {
   return (
-    <section className={`relative ${tight ? "py-16" : "py-24 md:py-28"} px-4 sm:px-6 ${className}`}>
+    <section className={`relative ${tight ? "py-16" : "py-24 md:py-28"} px-4 sm:px-6 print:break-inside-avoid print:py-12 ${className}`}>
       <div className="mx-auto max-w-4xl">{children}</div>
     </section>
   )
@@ -67,7 +68,9 @@ function Lead({ children }: { children: React.ReactNode }) {
 
 export default function VisionPage() {
   return (
-    <article>
+    <>
+      <PrintButton />
+      <article>
       {/* ═════════════════ 1. COVER ═════════════════ */}
       <section className="relative overflow-hidden px-4 sm:px-6">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[700px] bg-[radial-gradient(circle_at_50%_-10%,rgba(99,102,241,0.22),transparent_60%)]" />
@@ -380,5 +383,6 @@ export default function VisionPage() {
         </Link>
       </footer>
     </article>
+    </>
   )
 }

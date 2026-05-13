@@ -14,7 +14,7 @@ const NAV_LINKS = [
 
 export function OckOckNav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-zinc-950/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-zinc-950/70 backdrop-blur-xl print:hidden">
       <nav className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Link href="/for-gyms" className="group flex shrink-0 items-center gap-2">
           <span className="text-lg leading-none transition-transform group-hover:scale-110">🐃</span>
