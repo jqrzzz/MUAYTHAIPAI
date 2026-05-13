@@ -14,6 +14,7 @@ const PRODUCT_LINKS = [
 ] as const
 
 const COMPANY_LINKS = [
+  { href: "/vision", label: "Our story" },
   { href: "/about", label: "About" },
   { href: "mailto:hello@muaythaipai.com", label: "Contact", external: true },
   { href: "/terms", label: "Terms" },

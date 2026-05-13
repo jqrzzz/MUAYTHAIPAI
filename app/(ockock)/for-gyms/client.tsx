@@ -258,6 +258,13 @@ export default function ForGymsClient() {
                 OckOck (อ๊อกอ๊อก) speaks your customers&apos; language — Thai and English — and answers like
                 a Thai trainer would, not like a chatbot.
               </p>
+              <Link
+                href="/vision"
+                className="mt-4 inline-flex items-center gap-1.5 text-[13px] text-indigo-300 transition-colors hover:text-indigo-200"
+              >
+                Read the full story
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
             <ul className="space-y-3">
               {BUILT_FOR.map((item) => (

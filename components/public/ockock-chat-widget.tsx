@@ -62,6 +62,7 @@ const HIDDEN_PREFIXES = [
   "/about",
   "/terms",
   "/privacy",
+  "/vision",
 ]
 
 export default function OckOckChatWidget({ orgSlug, forceVisible = false }: OckOckChatWidgetProps) {
