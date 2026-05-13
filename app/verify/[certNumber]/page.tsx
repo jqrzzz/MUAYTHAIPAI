@@ -342,15 +342,34 @@ export default async function VerifyCertificatePage({ params }: Props) {
           {/* SKILLS ATTESTED — the credential substance */}
           {levelConfig && levelConfig.skills.length > 0 && (
             <div className="mt-6 pt-6 border-t border-white/10">
-              <div className="flex items-baseline justify-between mb-4">
+              <div className="flex items-baseline justify-between mb-2">
                 <p className="font-display text-[10px] uppercase tracking-[0.22em] text-neutral-500 inline-flex items-center gap-1.5">
                   <ScrollText className="h-3 w-3" />
                   Skills Attested
                 </p>
                 <p className="text-[11px] text-neutral-600 tabular-nums">
                   {signoffs.length}/{levelConfig.skills.length} signed off
+                  {videoByIndex.size > 0 && (
+                    <>
+                      {" · "}
+                      <span className="text-emerald-400/80">{videoByIndex.size} video-verified</span>
+                    </>
+                  )}
                 </p>
               </div>
+              {/* Two kinds of attestation surface on this page — making
+                  the difference explicit so a viewer knows what each
+                  signal means. */}
+              <p className="text-[11px] text-neutral-500 mb-4 leading-relaxed">
+                Each skill is attested by a named trainer (their signature is on file).{" "}
+                {videoByIndex.size > 0 ? (
+                  <>
+                    Skills with a <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px]"><Video className="h-2 w-2" />Video-verified</span> badge also have a recorded demonstration that the trainer reviewed.
+                  </>
+                ) : (
+                  <>Video demonstrations are optional — when present they appear with a <span className="text-emerald-300">Video-verified</span> badge.</>
+                )}
+              </p>
               <ol className="space-y-2">
                 {levelConfig.skills.map((skill, i) => {
                   const signoff = signoffByIndex.get(i)
