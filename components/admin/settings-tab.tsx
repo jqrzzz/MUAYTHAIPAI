@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Save, Clock, Bell, Plus, X, Upload, Trash2, Loader2 } from "lucide-react"
 import EmbedSnippetCard from "@/components/admin/embed-snippet-card"
 import WaiverEditorCard from "@/components/admin/waiver-editor-card"
+import BillingCard from "@/components/admin/billing-card"
 
 export interface SettingsOrgSettings {
   description?: string | null
@@ -806,6 +807,9 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
           </div>
         </CardContent>
       </Card>
+
+      {/* Billing — subscription status + Stripe Customer Portal link */}
+      <BillingCard />
 
       {/* Liability waiver — versioned text students sign before first class */}
       <WaiverEditorCard gymSlug={organization.slug ?? null} />

@@ -23,7 +23,7 @@ export async function GET() {
 
   const { data: sub } = await supabase
     .from("gym_subscriptions")
-    .select("status, trial_ends_at, current_period_end, activated_at, cancelled_at, monthly_price_usd_cents")
+    .select("status, trial_ends_at, current_period_end, activated_at, cancelled_at, monthly_price_usd_cents, stripe_customer_id")
     .eq("org_id", orgId)
     .maybeSingle()
 
@@ -56,5 +56,8 @@ export async function GET() {
     cancelled_at: sub.cancelled_at,
     monthly_price_usd_cents: sub.monthly_price_usd_cents,
     days_remaining: daysRemaining,
+    // We never leak the Stripe customer ID to the client; just whether
+    // the gym has one (drives the "Manage subscription" CTA gate).
+    has_stripe_customer: Boolean(sub.stripe_customer_id),
   })
 }
