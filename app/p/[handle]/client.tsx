@@ -7,14 +7,16 @@
  *
  * Layout:
  *   Cover band — name in Cinzel, bio in italic Cormorant, gym affiliation
- *   Belt journey strip — 5 belts with state (earned/in-progress/pending)
+ *   The Naga–Garuda ladder — the five ranks with state (earned / in-progress
+ *     / not yet reached) — these are rankings named for Thai guardian
+ *     creatures, not belts
  *   Certifications grid — each cert links to /verify/[number]
  *   Skills tally + gym affiliations + footer with platform credit
  */
 import Link from "next/link"
 import { ArrowUpRight, BadgeCheck, MapPin, Calendar, Share2 } from "lucide-react"
 
-interface BeltLevel {
+interface RankLevel {
   id: string
   number: number
   name: string
@@ -54,7 +56,7 @@ export default function PassportClient({
 }: {
   handle: string
   student: { full_name: string; bio: string | null }
-  levels: BeltLevel[]
+  levels: RankLevel[]
   certs: Cert[]
   gyms: Gym[]
   totalSignoffs: number
@@ -101,7 +103,7 @@ export default function PassportClient({
         </div>
       </section>
 
-      {/* Belt journey strip */}
+      {/* The Naga–Garuda ladder */}
       <section className="border-y border-white/10 bg-gradient-to-b from-neutral-950 to-neutral-950/40 backdrop-blur-sm">
         <div className="mx-auto max-w-4xl px-5 py-6">
           <div className="flex items-baseline justify-between mb-4">

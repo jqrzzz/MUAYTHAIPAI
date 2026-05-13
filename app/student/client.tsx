@@ -30,11 +30,11 @@ import {
   Send,
   Loader2,
   BookOpen,
-  Check,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import StudentCoursesView from "@/components/student/courses-view"
 import { SkillDemoUploader } from "@/components/student/skill-demo-uploader"
+import { CertLadder, CertLadderStrip } from "@/components/certifications/cert-ladder"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
 
@@ -388,12 +388,9 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
         {/* Home View */}
         {activeView === "home" && (
           <div className="py-6 space-y-6">
-            {/* Belt journey strip — visible Naga→Garuda progression as a
-                proud personal artifact. Compounds with the course-page
-                belt band so the brand cadence is consistent. */}
-            {certProgress.length > 0 && (
-              <BeltJourneyStrip levels={certProgress} />
-            )}
+            {/* The Naga→Garuda ladder at a glance — a student's standing in
+                the lineage, the centrepiece of their journey with the gym. */}
+            {certProgress.length > 0 && <CertLadderStrip progress={certProgress} />}
 
             {/* Quick stats — uniform chrome, eyebrow + number, indigo only on the actionable one */}
             <div className="grid grid-cols-4 gap-2">
@@ -751,135 +748,76 @@ export default function StudentDashboardClient({ user, profile, bookings, certif
               </Card>
             )}
 
-            {/* Certification Progress */}
+            {/* Your rank in the lineage — the Naga→Garuda ladder, front and centre */}
             <div>
-              <h3 className="text-sm font-medium text-neutral-500 mb-3">Certification Progress</h3>
+              <h3 className="font-display text-[11px] uppercase tracking-[0.18em] text-neutral-500 mb-3">
+                Your rank in the lineage
+              </h3>
               {loadingProgress ? (
                 <div className="flex justify-center py-6">
                   <Loader2 className="w-5 h-5 animate-spin text-neutral-600" />
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {(certProgress.length > 0 ? certProgress : ["naga", "phayra-nak", "singha", "hanuman", "garuda"].map((level, i) => ({
-                    id: level, number: i + 1, name: level.replace(/[-_]/g, " "), icon: getLevelInfo(level).icon,
-                    creature: "", duration: "", color: "", earned: certificates.some((c) => c.level.replace(/[-_]/g, "") === level.replace(/[-_]/g, "")),
-                    earnedAt: null, certificateNumber: null, enrolled: false, enrolledAt: null, enrolledGym: null,
-                    enrolledOrgId: null,
-                    courseCompleted: false, skills: [], skillsSignedOff: 0, skillsTotal: 0, eligible: false, daysUntilEligible: 0,
-                  }))).map((level) => (
-                    <div
-                      key={level.id}
-                      className={`p-3 rounded-xl ${level.earned ? "bg-neutral-800/50" : level.enrolled ? "bg-neutral-800/30 border border-neutral-700/50" : "bg-neutral-900/30"}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="text-2xl">{level.icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className={`capitalize font-medium ${level.earned ? "text-white" : level.enrolled ? "text-neutral-300" : "text-neutral-500"}`}>
-                              {level.name}
-                            </p>
-                            <span className="text-[10px] text-neutral-600">Level {level.number}</span>
+                <CertLadder
+                  progress={
+                    certProgress.length > 0
+                      ? certProgress
+                      : certificates.map((c) => ({ id: c.level, earned: true }))
+                  }
+                  renderDetail={(rankId) => {
+                    const k = rankId.toLowerCase().replace(/[-_\s]/g, "")
+                    const lvl = certProgress.find(
+                      (p) => p.id.toLowerCase().replace(/[-_\s]/g, "") === k,
+                    )
+                    if (
+                      !lvl ||
+                      lvl.earned ||
+                      lvl.skills.length === 0 ||
+                      !(lvl.enrolled || lvl.courseCompleted)
+                    ) {
+                      return null
+                    }
+                    const remaining = lvl.skillsTotal - lvl.skillsSignedOff
+                    return (
+                      <div className="space-y-1.5">
+                        {lvl.skills.map((skill, si) => (
+                          <div key={si}>
+                            <div className="flex items-center gap-2">
+                              {skill.signedOff ? (
+                                <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                              ) : (
+                                <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 flex-shrink-0" />
+                              )}
+                              <span
+                                className={`text-[12px] ${skill.signedOff ? "text-green-400/80" : "text-neutral-400"}`}
+                              >
+                                {skill.name}
+                              </span>
+                            </div>
+                            {!skill.signedOff && lvl.enrolled && (
+                              <SkillDemoUploader
+                                level={lvl.id}
+                                skillIndex={si}
+                                skillName={skill.name}
+                                studentId={user.id}
+                                orgId={lvl.enrolledOrgId}
+                                submissionStatus={skill.submissionStatus ?? null}
+                                submissionVideoUrl={skill.submissionVideoUrl ?? null}
+                                submissionReviewerNotes={skill.submissionReviewerNotes ?? null}
+                                onSubmitted={fetchCertProgress}
+                              />
+                            )}
                           </div>
-                          {level.earned && level.earnedAt && (
-                            <p className="text-[11px] text-green-500/70 mt-0.5">
-                              Earned {new Date(level.earnedAt).toLocaleDateString()}
-                            </p>
-                          )}
-                          {level.enrolled && !level.earned && (
-                            <p className="text-[11px] text-orange-400/70 mt-0.5">
-                              Enrolled{level.enrolledGym ? ` at ${level.enrolledGym}` : ""}
-                            </p>
-                          )}
-                          {!level.earned && level.courseCompleted && !level.enrolled && (
-                            <p className="text-[11px] text-blue-400/70 mt-0.5">
-                              Course completed — book in-person assessment to certify
-                            </p>
-                          )}
-                          {!level.earned && !level.enrolled && level.daysUntilEligible > 0 && (
-                            <p className="text-[11px] text-neutral-600 mt-0.5">
-                              {level.daysUntilEligible} day{level.daysUntilEligible === 1 ? "" : "s"} until eligible
-                            </p>
-                          )}
-                        </div>
-                        <div className="shrink-0">
-                          {level.earned ? (
-                            <CheckCircle className="w-5 h-5 text-green-500" />
-                          ) : level.enrolled && level.skillsTotal > 0 ? (
-                            <span className="text-[11px] font-medium text-orange-400">
-                              {level.skillsSignedOff}/{level.skillsTotal}
-                            </span>
-                          ) : null}
-                        </div>
+                        ))}
+                        <p className="text-[11px] text-neutral-600 pt-1">
+                          {remaining <= 0
+                            ? "All skills verified — ready for certification"
+                            : `${remaining} skill${remaining === 1 ? "" : "s"} remaining`}
+                        </p>
                       </div>
-                      {/* Skills checklist for enrolled or course-completed levels */}
-                      {!level.earned && level.skills.length > 0 && (level.enrolled || level.courseCompleted) && (
-                        <div className="mt-2 ml-11">
-                          <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden mb-2">
-                            <div
-                              className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all"
-                              style={{ width: `${Math.round((level.skillsSignedOff / level.skillsTotal) * 100)}%` }}
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            {level.skills.map((skill, si) => (
-                              <div key={si}>
-                                <div className="flex items-center gap-2">
-                                  {skill.signedOff ? (
-                                    <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                                  ) : (
-                                    <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 flex-shrink-0" />
-                                  )}
-                                  <span className={`text-[11px] ${skill.signedOff ? "text-green-400/80" : "text-neutral-500"}`}>
-                                    {skill.name}
-                                  </span>
-                                </div>
-                                {!skill.signedOff && level.enrolled && (
-                                  <SkillDemoUploader
-                                    level={level.id}
-                                    skillIndex={si}
-                                    skillName={skill.name}
-                                    studentId={user.id}
-                                    orgId={level.enrolledOrgId}
-                                    submissionStatus={skill.submissionStatus ?? null}
-                                    submissionVideoUrl={skill.submissionVideoUrl ?? null}
-                                    submissionReviewerNotes={skill.submissionReviewerNotes ?? null}
-                                    onSubmitted={fetchCertProgress}
-                                  />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-[10px] text-neutral-600 mt-2">
-                            {level.skillsSignedOff === level.skillsTotal
-                              ? "All skills verified — ready for certification"
-                              : `${level.skillsTotal - level.skillsSignedOff} skill${level.skillsTotal - level.skillsSignedOff === 1 ? "" : "s"} remaining`}
-                          </p>
-                        </div>
-                      )}
-                      {/* Certificate link + print */}
-                      {level.earned && level.certificateNumber && (
-                        <div className="flex items-center gap-3 mt-1 ml-11">
-                          <a
-                            href={`/verify/${level.certificateNumber}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-neutral-600 hover:text-neutral-400 font-mono transition-colors"
-                          >
-                            {level.certificateNumber} &rarr;
-                          </a>
-                          <a
-                            href={`/verify/${level.certificateNumber}/print`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-orange-500/60 hover:text-orange-400 transition-colors"
-                          >
-                            Download PDF
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    )
+                  }}
+                />
               )}
             </div>
           </div>
@@ -1394,90 +1332,6 @@ function calculateStreak(bookings: Booking[]): number {
   }
 
   return streak
-}
-
-/**
- * Belt journey strip — visible Naga → Garuda progression at the top
- * of the student dashboard. Each belt shows state:
- *   earned    → emerald ring + creature icon + check
- *   enrolled  → orange ring + scale-up + glow (active focus)
- *   pending   → dim ring + 40% opacity (locked in spirit, accessible later)
- *
- * Levels prop matches the certProgress shape pulled from the API.
- */
-interface BeltLevel {
-  id: string
-  number: number
-  name: string
-  earned: boolean
-  enrolled: boolean
-  skillsTotal: number
-  skillsSignedOff: number
-}
-
-function BeltJourneyStrip({ levels }: { levels: BeltLevel[] }) {
-  if (levels.length === 0) return null
-  const ICONS: Record<string, string> = {
-    naga: "🐍",
-    "phayra-nak": "🐉",
-    singha: "🦁",
-    hanuman: "🐒",
-    garuda: "🦅",
-  }
-  const sorted = [...levels].sort((a, b) => a.number - b.number)
-  const earnedCount = sorted.filter((l) => l.earned).length
-  return (
-    <section>
-      <div className="flex items-baseline justify-between mb-3">
-        <p className="font-display text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-          The Path
-        </p>
-        <p className="text-[10px] text-zinc-600 tabular-nums">
-          {earnedCount}/{sorted.length} earned
-        </p>
-      </div>
-      <div className="relative">
-        {/* Connecting line — sits behind the belt nodes */}
-        <div className="absolute left-0 right-0 top-1/2 h-px bg-zinc-800/80" />
-        <div className="relative flex items-center justify-between">
-          {sorted.map((lvl) => {
-            const icon = ICONS[lvl.id] ?? "🥊"
-            const baseRing =
-              "h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-[18px] sm:text-[20px] ring-2 transition-all shrink-0"
-            return (
-              <div key={lvl.id} className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                <div
-                  className={
-                    lvl.earned
-                      ? `${baseRing} bg-emerald-500/15 ring-emerald-400/60`
-                      : lvl.enrolled
-                        ? `${baseRing} bg-gradient-to-br from-orange-500/30 to-orange-600/20 ring-orange-400 scale-110 shadow-lg shadow-orange-500/20`
-                        : `${baseRing} bg-zinc-900 ring-zinc-800 opacity-40`
-                  }
-                >
-                  {lvl.earned && (
-                    <Check className="absolute h-3.5 w-3.5 text-emerald-300 -bottom-1 -right-1 bg-zinc-950 rounded-full" />
-                  )}
-                  <span aria-hidden="true">{icon}</span>
-                </div>
-                <p
-                  className={`font-display text-[9px] sm:text-[10px] uppercase tracking-[0.14em] truncate w-full text-center ${
-                    lvl.earned
-                      ? "text-emerald-300"
-                      : lvl.enrolled
-                        ? "text-orange-300"
-                        : "text-zinc-600"
-                  }`}
-                >
-                  {lvl.name}
-                </p>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
 }
 
 /**

@@ -2,8 +2,8 @@
 
 /**
  * AuthCard — the centered card layout used by every login/signup page.
- * Subtle indigo radial glow at the top, MUAYTHAIPAI mark, then the form
- * the consumer passes as children. One look across all auth surfaces.
+ * Subtle indigo radial glow at the top, OckOck mark, then the form the
+ * consumer passes as children. One look across all auth surfaces.
  */
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
@@ -55,9 +55,11 @@ export function AuthCard({
 
           {/* brand mark + wordmark */}
           <div className="flex items-center gap-2 mb-7">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 ring-1 ring-indigo-300/40 shadow-[0_4px_18px_-4px_rgba(99,102,241,0.5)]" />
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-base ring-1 ring-indigo-400/20">
+              🐃
+            </span>
             <p className="text-[13px] font-semibold tracking-[0.04em] text-zinc-200">
-              MUAYTHAIPAI
+              OckOck
             </p>
           </div>
 

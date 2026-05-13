@@ -25,6 +25,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { CertLadderOverview } from "@/components/certifications/cert-ladder"
 import BulkSignoffDialog from "./bulk-signoff-dialog"
 import SkillReviewsPanel from "./skill-reviews-panel"
 import FirstCertCelebration from "./first-cert-celebration"
@@ -307,7 +308,7 @@ export default function CertificatesTab({ role }: { role: string }) {
       <SkillReviewsPanel />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card className="bg-neutral-900/50 border-neutral-800">
           <CardContent className="p-4">
             <p className="text-xs text-neutral-500">Active Certificates</p>
@@ -320,34 +321,22 @@ export default function CertificatesTab({ role }: { role: string }) {
             <p className="text-2xl font-bold text-indigo-300">{stats.enrolledCount}</p>
           </CardContent>
         </Card>
-        {stats.byLevel.filter((l) => l.count > 0).slice(0, 2).map((l) => (
-          <Card key={l.id} className="bg-neutral-900/50 border-neutral-800">
-            <CardContent className="p-4">
-              <p className="text-xs text-neutral-500">{l.icon} {l.name}</p>
-              <p className="text-2xl font-bold text-white">{l.count}</p>
-            </CardContent>
-          </Card>
-        ))}
       </div>
 
-      {/* Level breakdown */}
-      <div className="flex gap-2 flex-wrap">
-        {stats.byLevel.map((l) => {
-          const style = LEVEL_STYLES[l.id] || LEVEL_STYLES.naga
-          return (
-            <button
-              key={l.id}
-              onClick={() => setFilterLevel(filterLevel === l.id ? "all" : l.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                filterLevel === l.id
-                  ? `${style.bg} ${style.text} ${style.border}`
-                  : "bg-neutral-800/50 text-neutral-400 border-neutral-700 hover:border-neutral-600"
-              }`}
-            >
-              {l.icon} {l.name} ({l.count})
-            </button>
-          )
-        })}
+      {/* The Naga–Garuda ladder — your gym's standing on each rank. Tap a rank to filter below. */}
+      <div>
+        <h3 className="font-display text-[11px] uppercase tracking-[0.18em] text-neutral-500 mb-3">
+          The Lineage · Naga → Garuda
+        </h3>
+        <CertLadderOverview
+          activity={stats.byLevel.map((l) => ({
+            id: l.id,
+            issued: l.count,
+            enrolled: activeEnrollments.filter((e: Enrollment) => e.level === l.id).length,
+          }))}
+          activeId={filterLevel === "all" ? null : filterLevel}
+          onSelect={(id) => setFilterLevel((cur) => (cur === id ? "all" : id))}
+        />
       </div>
 
       {/* Action Buttons */}

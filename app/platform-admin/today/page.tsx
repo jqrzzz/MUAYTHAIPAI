@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowUpRight, GraduationCap, Sparkles } from "lucide-react"
+import { ArrowUpRight, Briefcase, GraduationCap, Sparkles } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import TodayPanel from "@/components/platform-admin/today-panel"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import ViewAsPicker from "@/components/platform-admin/view-as-picker"
 import SignalsPanel from "@/components/platform-admin/signals-panel"
+import InvitePartnerPanel from "@/components/platform-admin/invite-partner-panel"
 import { SaasShell, SaasHeader, StatusDot, Surface } from "@/components/saas"
 
 export const metadata: Metadata = {
@@ -30,10 +31,12 @@ export default async function TodayHomePage() {
 
   const { data: u } = await supabase
     .from("users")
-    .select("is_platform_admin, full_name, email")
+    .select("is_platform_admin, platform_admin_role, full_name, email")
     .eq("id", user.id)
     .single()
   if (!u?.is_platform_admin) redirect("/admin")
+  const role: "full" | "partner" =
+    (u as { platform_admin_role?: string }).platform_admin_role === "partner" ? "partner" : "full"
 
   const greeting =
     new Date().getHours() < 12
@@ -113,8 +116,29 @@ export default async function TodayHomePage() {
           </Surface>
         </Link>
 
+        {/* Boardroom — business plan, pitch deck, notes, discussion */}
+        <Link href="/platform-admin/boardroom" className="block group">
+          <Surface interactive>
+            <div className="px-4 py-3.5 flex items-center gap-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10 ring-1 ring-indigo-500/20 shrink-0">
+                <Briefcase className="h-4 w-4 text-indigo-300" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-white">Boardroom</p>
+                <p className="text-[12px] text-zinc-500 truncate">
+                  Business plan, pitch deck, notes, discussion
+                </p>
+              </div>
+              <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-indigo-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </div>
+          </Surface>
+        </Link>
+
         <ViewAsPicker />
         <PlatformCommandBar />
+
+        {/* "Invite a partner" — only full admins can promote others. */}
+        {role === "full" && <InvitePartnerPanel />}
       </main>
 
       <footer className="mx-auto max-w-3xl px-5 py-10 text-center">

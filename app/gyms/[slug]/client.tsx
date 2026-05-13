@@ -17,12 +17,11 @@ import {
   BadgeCheck,
   MessageCircle,
   Award,
-  Trophy,
-  Users,
   ShieldCheck,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { CertLadderOverview } from "@/components/certifications/cert-ladder"
 import OckOckChatWidget from "@/components/public/ockock-chat-widget"
 
 interface GymPageClientProps {
@@ -293,56 +292,13 @@ export default function GymPageClient({
                   </span>
                 )}
               </p>
-              <div className="grid grid-cols-5 gap-2">
-                {CERTIFICATION_LEVELS.map((lvl) => {
-                  const issued = certActivity.issuedByLevel[lvl.id] ?? 0
-                  const enrolled = certActivity.enrolledByLevel[lvl.id] ?? 0
-                  const offered = issued > 0 || enrolled > 0
-                  return (
-                    <div
-                      key={lvl.id}
-                      className={`rounded-lg border p-2.5 text-center ${
-                        offered
-                          ? "border-orange-500/40 bg-orange-500/5"
-                          : "border-neutral-800 bg-neutral-900/50"
-                      }`}
-                      title={lvl.creature}
-                    >
-                      <div
-                        className={`text-2xl mb-1 ${offered ? "" : "opacity-30 grayscale"}`}
-                      >
-                        {lvl.icon}
-                      </div>
-                      <p
-                        className={`text-xs font-medium ${
-                          offered ? "text-white" : "text-neutral-500"
-                        }`}
-                      >
-                        {lvl.name}
-                      </p>
-                      <p className="text-[10px] text-neutral-500 mt-0.5">
-                        Lv. {lvl.number}
-                      </p>
-                      {offered && (
-                        <div className="mt-1.5 space-y-0.5 text-[10px]">
-                          {issued > 0 && (
-                            <p className="text-orange-400 inline-flex items-center gap-0.5">
-                              <Trophy className="h-2.5 w-2.5" />
-                              {issued}
-                            </p>
-                          )}
-                          {enrolled > 0 && (
-                            <p className="text-amber-400 inline-flex items-center gap-0.5">
-                              <Users className="h-2.5 w-2.5" />
-                              {enrolled}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <CertLadderOverview
+                activity={CERTIFICATION_LEVELS.map((lvl) => ({
+                  id: lvl.id,
+                  issued: certActivity.issuedByLevel[lvl.id] ?? 0,
+                  enrolled: certActivity.enrolledByLevel[lvl.id] ?? 0,
+                }))}
+              />
               <p className="text-xs text-neutral-500 mt-3 inline-flex items-center gap-1.5">
                 <Award className="h-3 w-3" />
                 Certificates verifiable at{" "}

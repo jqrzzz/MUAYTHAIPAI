@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { getPlatformAdmin } from "@/lib/auth-helpers"
 import PlatformAdminClient from "./client"
 
 export default async function PlatformAdminPage({
@@ -7,20 +7,13 @@ export default async function PlatformAdminPage({
 }: {
   searchParams: Promise<{ full?: string }>
 }) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
 
   if (!user) {
     redirect("/admin/login")
   }
 
-  // Check if user is platform admin
-  const { data: userData } = await supabase.from("users").select("is_platform_admin").eq("id", user.id).single()
-
-  if (!userData?.is_platform_admin) {
+  if (!isPlatformAdmin) {
     redirect("/admin")
   }
 
@@ -88,6 +81,7 @@ export default async function PlatformAdminPage({
         totalBookings: totalBookings || 0,
         activeSubscriptions: activeSubscriptions?.length || 0,
       }}
+      role={role}
     />
   )
 }

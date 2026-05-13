@@ -141,29 +141,60 @@ export async function getPromoterAuth(supabase: Awaited<ReturnType<typeof create
   return { userId: user.id, orgId: membership.org_id, role: membership.role }
 }
 
+export type PlatformAdminRole = "full" | "partner"
+
 /**
- * Returns the current user along with their platform-admin status.
+ * Returns the current user along with their platform-admin status and tier.
  * Used by /platform-admin endpoints to gate access to platform-wide
  * resources (e.g. the Naga–Garuda cert ladder, network-wide stats).
+ *
+ * `role` distinguishes a "full" platform admin from a "partner" (a platform
+ * admin with the money/billing surfaces hidden — see migration 055). It
+ * degrades to "full" if the platform_admin_role column isn't there yet, so
+ * this keeps working pre-migration.
  */
 export async function getPlatformAdmin() {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { supabase, user: null, isPlatformAdmin: false }
+  if (!user) return { supabase, user: null, isPlatformAdmin: false, role: "full" as PlatformAdminRole }
 
-  const { data } = await supabase
+  let isPlatformAdmin = false
+  let role: PlatformAdminRole = "full"
+
+  const withRole = await supabase
     .from("users")
-    .select("is_platform_admin")
+    .select("is_platform_admin, platform_admin_role")
     .eq("id", user.id)
-    .single()
-
-  return {
-    supabase,
-    user,
-    isPlatformAdmin: !!data?.is_platform_admin,
+    .maybeSingle()
+  if (!withRole.error && withRole.data) {
+    isPlatformAdmin = !!(withRole.data as { is_platform_admin?: boolean }).is_platform_admin
+    role =
+      (withRole.data as { platform_admin_role?: string }).platform_admin_role === "partner"
+        ? "partner"
+        : "full"
+  } else {
+    // Column not present yet (pre-migration) — fall back to the boolean.
+    const basic = await supabase.from("users").select("is_platform_admin").eq("id", user.id).maybeSingle()
+    isPlatformAdmin = !!basic.data?.is_platform_admin
   }
+
+  return { supabase, user, isPlatformAdmin, role }
+}
+
+/**
+ * Gate for /api/platform-admin/* routes. Pass `{ billing: true }` for the
+ * money surfaces (payouts, subscriptions, revenue) — a "partner" is rejected.
+ */
+export async function requirePlatformAdmin(opts?: { billing?: boolean }) {
+  const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
+  if (!user) return { ok: false as const, status: 401, error: "Unauthorized" }
+  if (!isPlatformAdmin) return { ok: false as const, status: 403, error: "Platform admin only" }
+  if (opts?.billing && role !== "full") {
+    return { ok: false as const, status: 403, error: "Billing access required" }
+  }
+  return { ok: true as const, supabase, user, role }
 }
 
 /**
