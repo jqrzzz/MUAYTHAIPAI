@@ -7,6 +7,7 @@ import TodayPanel from "@/components/platform-admin/today-panel"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import ViewAsPicker from "@/components/platform-admin/view-as-picker"
 import SignalsPanel from "@/components/platform-admin/signals-panel"
+import InvitePartnerPanel from "@/components/platform-admin/invite-partner-panel"
 import { SaasShell, SaasHeader, StatusDot, Surface } from "@/components/saas"
 
 export const metadata: Metadata = {
@@ -30,10 +31,12 @@ export default async function TodayHomePage() {
 
   const { data: u } = await supabase
     .from("users")
-    .select("is_platform_admin, full_name, email")
+    .select("is_platform_admin, platform_admin_role, full_name, email")
     .eq("id", user.id)
     .single()
   if (!u?.is_platform_admin) redirect("/admin")
+  const role: "full" | "partner" =
+    (u as { platform_admin_role?: string }).platform_admin_role === "partner" ? "partner" : "full"
 
   const greeting =
     new Date().getHours() < 12
@@ -115,6 +118,9 @@ export default async function TodayHomePage() {
 
         <ViewAsPicker />
         <PlatformCommandBar />
+
+        {/* "Invite a partner" — only full admins can promote others. */}
+        {role === "full" && <InvitePartnerPanel />}
       </main>
 
       <footer className="mx-auto max-w-3xl px-5 py-10 text-center">

@@ -1,6 +1,18 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import InviteAcceptClient from "./client"
+import PlatformInviteAccept from "@/components/invite/platform-invite-accept"
+
+function ExpiredOrInvalid({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-foreground mb-2">{title}</h1>
+        <p className="text-muted-foreground">{body}</p>
+      </div>
+    </div>
+  )
+}
 
 export default async function InviteAcceptPage({
   params,
@@ -15,7 +27,7 @@ export default async function InviteAcceptPage({
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Get invite details
+  // 1. Gym invite (org-scoped) — the original path.
   const { data: invite } = await supabase
     .from("invites")
     .select(`
@@ -30,58 +42,62 @@ export default async function InviteAcceptPage({
       )
     `)
     .eq("token", token)
-    .single()
+    .maybeSingle()
 
-  if (!invite) {
+  if (invite) {
+    if (invite.status === "accepted") redirect("/admin")
+    if (invite.status === "expired" || invite.status === "cancelled") {
+      return <ExpiredOrInvalid title="Invite Expired" body="This invite has expired. Please ask for a new invitation." />
+    }
+    if (new Date(invite.expires_at) < new Date()) {
+      return <ExpiredOrInvalid title="Invite Expired" body="This invite has expired. Please ask for a new invitation." />
+    }
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Invalid Invite</h1>
-          <p className="text-muted-foreground">This invite link is invalid or has expired.</p>
-        </div>
-      </div>
+      <InviteAcceptClient
+        invite={invite}
+        organization={invite.organizations}
+        isLoggedIn={!!user}
+        userEmail={user?.email}
+        defaultName={
+          // Pre-fill from the name they entered on /signup (stored in
+          // Supabase user_metadata at invite-creation time). Saves a
+          // duplicate input on the invite page.
+          (user?.user_metadata?.full_name as string | undefined) ?? null
+        }
+      />
     )
   }
 
-  if (invite.status === "accepted") {
-    redirect("/admin")
-  }
+  // 2. Platform-admin invite (org-less) — the partner-access path.
+  const { data: pInvite } = await supabase
+    .from("platform_invites")
+    .select("id, email, name, role, token, status, expires_at")
+    .eq("token", token)
+    .maybeSingle()
 
-  if (invite.status === "expired" || invite.status === "cancelled") {
+  if (pInvite) {
+    if (pInvite.status === "accepted") redirect("/platform-admin")
+    if (pInvite.status === "expired" || pInvite.status === "cancelled") {
+      return <ExpiredOrInvalid title="Invite Expired" body="This invite has expired. Ask the platform admin for a new one." />
+    }
+    if (new Date(pInvite.expires_at) < new Date()) {
+      return <ExpiredOrInvalid title="Invite Expired" body="This invite has expired. Ask the platform admin for a new one." />
+    }
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Invite Expired</h1>
-          <p className="text-muted-foreground">This invite has expired. Please ask for a new invitation.</p>
-        </div>
-      </div>
+      <PlatformInviteAccept
+        invite={{
+          id: pInvite.id,
+          email: pInvite.email,
+          name: pInvite.name,
+          role: pInvite.role === "full" ? "full" : "partner",
+          token: pInvite.token,
+          expires_at: pInvite.expires_at,
+        }}
+        isLoggedIn={!!user}
+        userEmail={user?.email}
+      />
     )
   }
 
-  // Check if expired by date
-  if (new Date(invite.expires_at) < new Date()) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Invite Expired</h1>
-          <p className="text-muted-foreground">This invite has expired. Please ask for a new invitation.</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <InviteAcceptClient
-      invite={invite}
-      organization={invite.organizations}
-      isLoggedIn={!!user}
-      userEmail={user?.email}
-      defaultName={
-        // Pre-fill from the name they entered on /signup (stored in
-        // Supabase user_metadata at invite-creation time). Saves a
-        // duplicate input on the invite page.
-        (user?.user_metadata?.full_name as string | undefined) ?? null
-      }
-    />
-  )
+  return <ExpiredOrInvalid title="Invalid Invite" body="This invite link is invalid or has expired." />
 }
