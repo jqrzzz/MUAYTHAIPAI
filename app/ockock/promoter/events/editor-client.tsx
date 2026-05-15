@@ -594,6 +594,7 @@ export default function EventEditorClient({
           form={form}
           setForm={setForm}
           eventId={eventId}
+          eventStatus={eventStatus}
           onSave={saveEvent}
           saving={saving}
           isCreate={mode === "create"}
@@ -636,6 +637,7 @@ function DetailsTab({
   form,
   setForm,
   eventId,
+  eventStatus,
   onSave,
   saving,
   isCreate,
@@ -643,6 +645,7 @@ function DetailsTab({
   form: EventForm
   setForm: (f: EventForm) => void
   eventId?: string
+  eventStatus?: string
   onSave: () => void
   saving: boolean
   isCreate: boolean
@@ -884,6 +887,151 @@ function DetailsTab({
           )}
           {isCreate ? "Create Event" : "Save Changes"}
         </button>
+      </div>
+
+      {/* Danger zone — only render in edit mode (no event to cancel
+          in create mode) and never re-render once the event is
+          already cancelled. */}
+      {!isCreate && eventId && eventStatus !== "cancelled" && (
+        <DangerZone eventId={eventId} />
+      )}
+      {!isCreate && eventStatus === "cancelled" && (
+        <div className="mt-10 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-4 text-sm text-rose-200">
+          <p className="font-semibold">This event is cancelled.</p>
+          <p className="mt-1 text-xs text-rose-200/80">
+            Ticket sales are closed and any paid orders were refunded.
+            The event is hidden from /ockock/fights.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Cancel-event control. Visually segregated as "Danger zone" because
+// the action is destructive + irreversible. Two-step InlineConfirm
+// with an optional reason textarea that gets stamped on each
+// Stripe refund (so the receipt to the buyer references the
+// cancellation, not a generic refund).
+function DangerZone({ eventId }: { eventId: string }) {
+  const [reason, setReason] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [summary, setSummary] = useState<{
+    stripe_refunds_initiated: number
+    cash_marked_cancelled: number
+    failed: number
+    total: number
+  } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function cancelEvent() {
+    setSubmitting(true)
+    setError(null)
+    setSummary(null)
+    try {
+      const res = await fetch(`/api/promoter/events/${eventId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Cancellation failed")
+        return
+      }
+      setSummary(data.summary)
+      // Soft refresh — the parent reload will reflect the new status
+      // and swap the Danger Zone for the "already cancelled" panel.
+      setTimeout(() => window.location.reload(), 2000)
+    } catch {
+      setError("Network error — try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Result summary stays visible until the page reloads in 2s. Gives
+  // the promoter a beat to read what just happened.
+  if (summary) {
+    return (
+      <div className="mt-10 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-4">
+        <p className="text-sm font-semibold text-rose-200">Event cancelled.</p>
+        <ul className="mt-2 space-y-1 text-xs text-rose-200/80">
+          <li>
+            <span className="font-mono tabular-nums text-rose-100">
+              {summary.stripe_refunds_initiated}
+            </span>{" "}
+            Stripe refund{summary.stripe_refunds_initiated === 1 ? "" : "s"} initiated
+            {summary.stripe_refunds_initiated > 0 && " (Stripe emails the buyer when processed)"}
+          </li>
+          <li>
+            <span className="font-mono tabular-nums text-rose-100">
+              {summary.cash_marked_cancelled}
+            </span>{" "}
+            cash/transfer order{summary.cash_marked_cancelled === 1 ? "" : "s"} marked refunded
+            {summary.cash_marked_cancelled > 0 && " (reach out manually to return cash)"}
+          </li>
+          {summary.failed > 0 && (
+            <li className="text-amber-300">
+              <span className="font-mono tabular-nums">{summary.failed}</span> failed —
+              check Stripe Dashboard
+            </li>
+          )}
+        </ul>
+        <p className="mt-3 text-[10px] text-rose-200/60">Refreshing…</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-10 rounded-xl border border-rose-500/30 bg-rose-500/[0.04] p-4">
+      <p className="text-sm font-semibold text-rose-200">Danger zone</p>
+      <p className="mt-1 text-xs text-rose-200/70">
+        Cancel this event and refund all paid orders. Stripe orders get
+        a real money refund (Stripe emails the buyer). Cash/transfer
+        orders are marked refunded — you&apos;ll need to reach out and
+        return cash manually.
+      </p>
+
+      <div className="mt-3">
+        <label htmlFor="cancel-reason" className="block text-xs font-medium text-rose-200 mb-1">
+          Reason <span className="text-rose-200/60">(optional — stamped on every refund)</span>
+        </label>
+        <textarea
+          id="cancel-reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          maxLength={500}
+          rows={2}
+          placeholder="e.g. Severe weather — venue closed. Refund processing now."
+          className="w-full resize-none rounded-md border border-rose-500/20 bg-zinc-950 px-3 py-2 text-xs text-white placeholder-rose-200/40 outline-none focus:border-rose-400/50"
+        />
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-rose-400">{error}</p>
+      )}
+
+      <div className="mt-3">
+        <InlineConfirm
+          onConfirm={cancelEvent}
+          disabled={submitting}
+          title="Cancel event and refund all paid orders"
+          confirmLabel="Yes, cancel + refund all"
+          className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/15 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/25 disabled:opacity-50"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Cancelling…
+            </>
+          ) : (
+            <>
+              <X className="h-3.5 w-3.5" />
+              Cancel event
+            </>
+          )}
+        </InlineConfirm>
       </div>
     </div>
   )
