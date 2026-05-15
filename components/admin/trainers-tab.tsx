@@ -28,6 +28,7 @@ import {
   User,
 } from "lucide-react"
 import Image from "next/image"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface Trainer {
   id: string
@@ -195,7 +196,7 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
   }
 
   const deleteTrainer = async (trainerId: string) => {
-    if (!confirm("Are you sure you want to remove this trainer?")) return
+    // Confirmation is handled inline by the <InlineConfirm> trigger.
     setIsUpdating(trainerId)
     try {
       const response = await fetch(`/api/admin/trainers/${trainerId}`, {
@@ -569,15 +570,14 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
                     >
                       {trainer.is_available ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => deleteTrainer(trainer.id)}
+                    <InlineConfirm
+                      onConfirm={() => deleteTrainer(trainer.id)}
                       disabled={isUpdating === trainer.id}
-                      className="border-red-700 text-red-400 hover:bg-red-900/30"
+                      title="Remove trainer"
+                      className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-red-700 text-red-400 hover:bg-red-900/30 disabled:opacity-50"
                     >
                       <Trash2 className="h-3 w-3" />
-                    </Button>
+                    </InlineConfirm>
                   </div>
                 </div>
               ))}

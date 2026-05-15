@@ -32,6 +32,7 @@ import {
   Check,
 } from "lucide-react"
 import { FAQ_CATEGORIES } from "@/lib/chat/faq-categories"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 const OckOckAvatar = ({ size = 32 }: { size?: number }) => (
   <Image src="/images/ockock-avatar.png" alt="OckOck" width={size} height={size} className="rounded-full" />
@@ -163,7 +164,7 @@ export default function TrainOckockTab() {
   }
 
   const handleDeleteFaq = async (id: string) => {
-    if (!confirm("Delete this FAQ?")) return
+    // InlineConfirm component handles the confirmation step inline.
     try {
       const res = await fetch(`/api/admin/faqs?id=${id}`, { method: "DELETE" })
       if (res.ok) fetchFaqs()
@@ -535,14 +536,13 @@ export default function TrainOckockTab() {
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteFaq(faq.id)}
-                              className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
+                            <InlineConfirm
+                              onConfirm={() => handleDeleteFaq(faq.id)}
+                              title="Delete FAQ"
+                              className="inline-flex items-center justify-center h-8 w-8 rounded-md text-red-400 hover:bg-red-900/20 hover:text-red-300"
                             >
                               <Trash2 className="w-4 h-4" />
-                            </Button>
+                            </InlineConfirm>
                           </div>
                         </div>
                       </div>
