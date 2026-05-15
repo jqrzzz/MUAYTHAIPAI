@@ -200,6 +200,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
   const [ockockMessages, setOckockMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([])
   const [ockockInput, setOckockInput] = useState("")
   const [ockockLoading, setOckockLoading] = useState(false)
+  const [copiedStatementGymId, setCopiedStatementGymId] = useState<string | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const [payoutPeriod, setPayoutPeriod] = useState<"week" | "month">("month")
@@ -329,10 +330,17 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
     return statement
   }
 
-  const copyStatement = (gymPayout: GymPayout) => {
+  const copyStatement = async (gymPayout: GymPayout) => {
     const statement = generateStatement(gymPayout)
-    navigator.clipboard.writeText(statement)
-    alert("Statement copied to clipboard!")
+    try {
+      await navigator.clipboard.writeText(statement)
+      // Per-row "Copied" state with a short timeout so the button can
+      // flip back to its normal label. No alert popup.
+      setCopiedStatementGymId(gymPayout.gym_id)
+      setTimeout(() => setCopiedStatementGymId(null), 2500)
+    } catch {
+      // Clipboard denied (rare on https) — silent; the user will retry.
+    }
   }
 
   const handleSignOut = async () => {
@@ -883,7 +891,16 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                                 variant="outline"
                                 size="sm"
                                 onClick={() => copyStatement(gymPayout)}
-                                className="border-zinc-700"
+                                title={
+                                  copiedStatementGymId === gymPayout.gym_id
+                                    ? "Statement copied"
+                                    : "Copy statement"
+                                }
+                                className={`border-zinc-700 ${
+                                  copiedStatementGymId === gymPayout.gym_id
+                                    ? "text-emerald-300 border-emerald-700"
+                                    : ""
+                                }`}
                               >
                                 <FileText className="h-4 w-4" />
                               </Button>
