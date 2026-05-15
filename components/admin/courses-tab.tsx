@@ -16,6 +16,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BookOpen, Plus, Pencil, Trash2, Loader2, Eye, EyeOff } from "lucide-react"
 import CourseModulesView from "./course-modules-view"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface Course {
   id: string
@@ -172,7 +173,7 @@ export default function CoursesTab({
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this course and all its content?")) return
+    // InlineConfirm handles the confirmation step inline.
     await fetch(`${apiBase}?id=${id}`, { method: "DELETE" })
     fetchCourses()
   }
@@ -268,9 +269,13 @@ export default function CoursesTab({
                     <Button size="sm" variant="outline" onClick={() => openEdit(course)} className="border-neutral-700 hover:bg-neutral-800">
                       <Pencil className="h-3 w-3" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(course.id)} className="border-red-700 text-red-400 hover:bg-red-900/30">
+                    <InlineConfirm
+                      onConfirm={() => handleDelete(course.id)}
+                      title="Delete course"
+                      className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-red-700 text-red-400 hover:bg-red-900/30"
+                    >
                       <Trash2 className="h-3 w-3" />
-                    </Button>
+                    </InlineConfirm>
                   </div>
                 </div>
               </CardContent>

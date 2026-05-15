@@ -12,6 +12,7 @@ import { Save, Clock, Bell, Plus, X, Upload, Trash2, Loader2 } from "lucide-reac
 import EmbedSnippetCard from "@/components/admin/embed-snippet-card"
 import WaiverEditorCard from "@/components/admin/waiver-editor-card"
 import BillingCard from "@/components/admin/billing-card"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 export interface SettingsOrgSettings {
   description?: string | null
@@ -179,7 +180,7 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
 
   const handleLogoRemove = async () => {
     if (!settingsForm.logo_url) return
-    if (!confirm("Remove your gym logo?")) return
+    // InlineConfirm handles the confirmation step inline.
     setLogoUploading(true)
     setLogoError(null)
     try {
@@ -347,17 +348,15 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
                   <span className="ml-1.5">{settingsForm.logo_url ? "Replace" : "Upload"} logo</span>
                 </Button>
                 {settingsForm.logo_url && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogoRemove}
+                  <InlineConfirm
+                    onConfirm={handleLogoRemove}
                     disabled={logoUploading}
-                    className="text-red-400 hover:bg-neutral-800 hover:text-red-300"
+                    title="Remove gym logo"
+                    className="inline-flex items-center rounded-md px-3 py-1.5 text-sm text-red-400 hover:bg-neutral-800 hover:text-red-300 disabled:opacity-50"
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1" />
                     Remove
-                  </Button>
+                  </InlineConfirm>
                 )}
               </div>
               {logoError && <p className="mt-2 text-xs text-red-400">{logoError}</p>}

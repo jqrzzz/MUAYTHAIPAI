@@ -32,6 +32,7 @@ import {
   SaasInput,
   SegmentedControl,
 } from "@/components/saas"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface TrainerSummary {
   trainer_id: string
@@ -143,7 +144,7 @@ export default function PayoutsTab() {
 
   const settle = async (trainerId: string) => {
     if (!data) return
-    if (!confirm(`Settle this trainer's commission for ${data.period.from} → ${data.period.to}?`)) return
+    // InlineConfirm handles the confirmation step inline.
     try {
       const res = await fetch("/api/admin/payouts/settle", {
         method: "POST",
@@ -299,14 +300,15 @@ export default function PayoutsTab() {
                       </p>
                       <p className="text-[10px] text-zinc-600">owed</p>
                     </div>
-                    <SaasButton
-                      size="sm"
-                      onClick={() => settle(t.trainer_id)}
+                    <InlineConfirm
+                      onConfirm={() => settle(t.trainer_id)}
                       disabled={t.total_commission_thb === 0}
+                      title="Settle trainer commission for this period"
+                      className="inline-flex items-center gap-1 rounded-md bg-indigo-500/15 ring-1 ring-indigo-500/30 px-2.5 py-1 text-[12px] font-medium text-indigo-200 hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <CheckCircle2 className="h-3 w-3" />
                       Settle
-                    </SaasButton>
+                    </InlineConfirm>
                   </div>
                   {isExpanded && (
                     <div className="px-4 pb-4 -mt-1 space-y-1">
@@ -448,7 +450,7 @@ function RulesEditor({ onChange }: { onChange: () => void }) {
   }, [refresh])
 
   const removeRule = async (id: string) => {
-    if (!confirm("Delete this rule?")) return
+    // InlineConfirm handles the confirmation step inline.
     await fetch(`/api/admin/payouts/rules/${id}`, { method: "DELETE" })
     refresh()
     onChange()
@@ -522,13 +524,13 @@ function RulesEditor({ onChange }: { onChange: () => void }) {
                     {!rule.is_active && " · inactive"}
                   </p>
                 </div>
-                <button
-                  onClick={() => removeRule(rule.id)}
+                <InlineConfirm
+                  onConfirm={() => removeRule(rule.id)}
+                  title="Delete commission rule"
                   className="text-zinc-600 hover:text-red-400 p-1 transition-colors"
-                  title="Delete"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                </InlineConfirm>
               </li>
             ))}
           </ul>
