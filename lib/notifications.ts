@@ -282,3 +282,37 @@ export async function notifyCourseCompleted(data: {
     },
   })
 }
+
+/**
+ * Notify the promoting gym that someone bought a ticket. Fires from
+ * the Stripe webhook after payment_status flips to paid. The bell
+ * icon in the gym dashboard picks this up; clicking through links to
+ * the event's Sales tab so the promoter can see the full order.
+ */
+export async function notifyTicketSold(data: {
+  orgId: string
+  eventId: string
+  eventName: string
+  buyerName: string
+  tierName: string
+  quantity: number
+  totalThb: number
+  orderReference: string
+}) {
+  const ticketsLabel = data.quantity === 1 ? "ticket" : "tickets"
+  await insertNotification({
+    orgId: data.orgId,
+    type: "ticket_sold",
+    title: `🎟️ ${data.quantity} ${ticketsLabel} sold — ${data.eventName}`,
+    body: `${data.buyerName} bought ${data.quantity}× ${data.tierName} (฿${data.totalThb.toLocaleString()}) · ${data.orderReference}`,
+    metadata: {
+      event_id: data.eventId,
+      event_name: data.eventName,
+      buyer_name: data.buyerName,
+      tier_name: data.tierName,
+      quantity: data.quantity,
+      total_thb: data.totalThb,
+      order_reference: data.orderReference,
+    },
+  })
+}

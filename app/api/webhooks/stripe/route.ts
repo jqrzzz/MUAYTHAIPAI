@@ -4,6 +4,7 @@ import Stripe from "stripe"
 import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
+import { notifyTicketSold } from "@/lib/notifications"
 
 // Stripe SDK 18.x typed for the 2025-04-30.basil API. We're pinned to
 // 2024-06-20 (some fields stay at the root level there). Cast the
@@ -490,11 +491,13 @@ async function handleTicketCheckoutCompleted(
       .eq("id", existing.ticket_id)
   }
 
-  // Hydrate event + tier for the confirmation email.
+  // Hydrate event + tier for the confirmation email + the gym
+  // notification. Pull org_id on the event so the bell ping lands in
+  // the right gym's inbox.
   const [{ data: event }, { data: ticketTier }] = await Promise.all([
     supabase
       .from("fight_events")
-      .select("name, event_date, event_time, venue_name, venue_city")
+      .select("name, event_date, event_time, venue_name, venue_city, org_id")
       .eq("id", existing.event_id)
       .maybeSingle(),
     supabase
@@ -503,6 +506,24 @@ async function handleTicketCheckoutCompleted(
       .eq("id", existing.ticket_id)
       .maybeSingle(),
   ])
+
+  // Ping the promoting gym so the bell icon surfaces the sale in
+  // real time. Fire-and-forget — failures here don't block the
+  // confirmation email below.
+  if (event?.org_id) {
+    notifyTicketSold({
+      orgId: event.org_id as string,
+      eventId: existing.event_id,
+      eventName: event.name || "Fight event",
+      buyerName: existing.guest_name || "Guest",
+      tierName: ticketTier?.tier_name || "Ticket",
+      quantity: existing.quantity,
+      totalThb: existing.total_price_thb,
+      orderReference: existing.order_reference || existing.id,
+    }).catch((err) => {
+      console.warn("[ticket.webhook] notification failed:", err)
+    })
+  }
 
   try {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
