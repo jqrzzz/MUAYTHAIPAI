@@ -5,6 +5,16 @@
  */
 import Link from "next/link"
 
+// Browse the consumer/public destinations — fights, fighters, etc.
+// These live under /ockock/* with their own layout but the marketing
+// footer should still surface them so a visitor can move between
+// "this is what I want as a fan" and "this is how I run my gym."
+const BROWSE_LINKS = [
+  { href: "/ockock/fights", label: "Fight events" },
+  { href: "/ockock/fighters", label: "Fighters" },
+  { href: "/ockock/promoter", label: "Promoter dashboard" },
+] as const
+
 const PRODUCT_LINKS = [
   { href: "/for-gyms", label: "Overview" },
   { href: "/for-gyms#features", label: "Features" },
@@ -39,7 +49,7 @@ export function OckOckFooter() {
   return (
     <footer className="border-t border-zinc-900/80 bg-zinc-950 print:hidden">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="grid gap-8 sm:grid-cols-[1.2fr_1fr_1fr_1fr]">
           <div className="max-w-sm">
             <div className="mb-3 flex items-center gap-2">
               <span className="text-lg leading-none">🐃</span>
@@ -50,6 +60,17 @@ export function OckOckFooter() {
               Naga–Garuda cert ladder, and a receptionist who answers your
               customers in your gym&apos;s voice.
             </p>
+          </div>
+
+          <div>
+            <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-zinc-600">Browse</p>
+            <ul className="space-y-2">
+              {BROWSE_LINKS.map((l) => (
+                <li key={l.href}>
+                  <FooterLink {...l} />
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div>
