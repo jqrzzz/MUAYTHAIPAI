@@ -1674,6 +1674,7 @@ interface SalesOrder {
   tier_name: string | null
   payment_status?: string
   status?: string
+  payment_method?: string | null
 }
 
 function SalesTab({ eventId }: { eventId: string }) {
@@ -2014,10 +2015,24 @@ function SalesTab({ eventId }: { eventId: string }) {
                         {o.guest_email || "—"}
                         {o.tier_name && ` · ${o.tier_name}`}
                       </p>
-                      <p className="text-[10px] text-neutral-600">
+                      <p className="text-[10px] text-neutral-600 inline-flex flex-wrap items-center gap-1.5">
                         <span className="font-mono">{o.order_reference}</span>
-                        {" · "}
-                        {purchasedAt}
+                        {/* Payment-method badge — only render for non-Stripe so
+                            the Sales tab can distinguish walkup vs online sales
+                            at a glance. Stripe is the default; cash + transfer
+                            stand out. */}
+                        {o.payment_method === "cash" && (
+                          <span className="rounded bg-emerald-500/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-emerald-300">
+                            Cash
+                          </span>
+                        )}
+                        {o.payment_method === "transfer" && (
+                          <span className="rounded bg-indigo-500/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-indigo-300">
+                            Transfer
+                          </span>
+                        )}
+                        <span>·</span>
+                        <span>{purchasedAt}</span>
                       </p>
                     </div>
                     <div className="text-right shrink-0">
@@ -2051,7 +2066,14 @@ function SalesTab({ eventId }: { eventId: string }) {
                               Not yet scanned
                             </p>
                           )}
-                          {!o.scanned_at && !refundPendingIds.has(o.id) && (
+                          {/* Refund button only renders for Stripe-paid
+                              orders that haven't been scanned. Cash and
+                              transfer orders need to be reconciled
+                              manually — no Stripe payment intent to
+                              refund through. */}
+                          {!o.scanned_at &&
+                            !refundPendingIds.has(o.id) &&
+                            (!o.payment_method || o.payment_method === "stripe") && (
                             <InlineConfirm
                               onConfirm={() => refundOrder(o.id)}
                               disabled={refundingId === o.id}

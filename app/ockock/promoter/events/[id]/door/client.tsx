@@ -25,8 +25,27 @@ import {
   Keyboard,
   Loader2,
   RefreshCw,
+  Plus,
+  Banknote,
 } from "lucide-react"
 import Link from "next/link"
+
+interface Tier {
+  id: string
+  tier_name: string
+  price_thb: number
+  quantity_remaining: number
+}
+
+interface CreatedOrder {
+  id: string
+  order_reference: string
+  guest_name: string | null
+  quantity: number
+  total_price_thb: number
+  tier_name: string | null
+  payment_method: string
+}
 
 type ScanStatus =
   | "valid"
@@ -60,18 +79,27 @@ export default function DoorScanClient({
   eventName,
   eventDate,
   venueName,
+  tiers,
 }: {
   eventId: string
   eventName: string
   eventDate: string | null
   venueName: string | null
+  tiers: Tier[]
 }) {
-  const [mode, setMode] = useState<"camera" | "manual">("camera")
+  // Three modes: scan with camera, type a reference, or record a
+  // walkup sale. Camera defaults except when unsupported (Safari).
+  const [mode, setMode] = useState<"camera" | "manual" | "sale">("camera")
   const [supported, setSupported] = useState<boolean | null>(null)
   const [result, setResult] = useState<ScanResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [manual, setManual] = useState("")
   const [scannedCount, setScannedCount] = useState(0)
+  // Running tally of walkup sales recorded in this session — visible
+  // in the header so the promoter can quickly tell how many manual
+  // sales their staff entered.
+  const [saleCount, setSaleCount] = useState(0)
+  const [lastSale, setLastSale] = useState<CreatedOrder | null>(null)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,15 +241,22 @@ export default function DoorScanClient({
             )}
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">Scanned</p>
-            <p className="font-mono text-sm font-semibold text-emerald-300 tabular-nums">{scannedCount}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+              Scanned · Sold
+            </p>
+            <p className="text-sm tabular-nums">
+              <span className="font-mono font-semibold text-emerald-300">{scannedCount}</span>
+              <span className="mx-1 text-neutral-600">·</span>
+              <span className="font-mono font-semibold text-amber-300">{saleCount}</span>
+            </p>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-4 space-y-4">
-        {/* Mode toggle */}
-        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-neutral-900 p-1">
+        {/* Mode toggle — three tabs: scan (camera), type a code, or
+            record a walkup cash/transfer sale. */}
+        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-neutral-900 p-1">
           <button
             type="button"
             onClick={() => setMode("camera")}
@@ -233,7 +268,8 @@ export default function DoorScanClient({
             }`}
           >
             <Camera className="h-4 w-4" />
-            Camera
+            <span className="hidden xs:inline">Camera</span>
+            <span className="xs:hidden">Scan</span>
           </button>
           <button
             type="button"
@@ -245,7 +281,21 @@ export default function DoorScanClient({
             }`}
           >
             <Keyboard className="h-4 w-4" />
-            Type code
+            <span className="hidden xs:inline">Type code</span>
+            <span className="xs:hidden">Type</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("sale")}
+            className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              mode === "sale"
+                ? "bg-emerald-500/20 text-emerald-200"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            <Banknote className="h-4 w-4" />
+            <span className="hidden xs:inline">Record sale</span>
+            <span className="xs:hidden">Sale</span>
           </button>
         </div>
 
@@ -295,9 +345,289 @@ export default function DoorScanClient({
           </form>
         )}
 
-        {/* Result banner */}
-        <ScanResultBanner result={result} busy={busy} />
+        {mode === "sale" && (
+          <RecordSaleForm
+            eventId={eventId}
+            tiers={tiers}
+            onSold={(order) => {
+              setLastSale(order)
+              setSaleCount((c) => c + 1)
+            }}
+          />
+        )}
+
+        {/* Result — scan result banner OR most recent sale receipt
+            depending on what the staff just did. */}
+        {mode === "sale" && lastSale ? (
+          <RecentSaleCard order={lastSale} />
+        ) : (
+          <ScanResultBanner result={result} busy={busy} />
+        )}
       </main>
+    </div>
+  )
+}
+
+// Walkup ticket-sale form. Tier picker, qty, guest name, optional
+// email/phone, payment method (cash | transfer). Submits to
+// /api/promoter/events/[id]/orders. On success, calls onSold with
+// the created order so the page can show a receipt.
+function RecordSaleForm({
+  eventId,
+  tiers,
+  onSold,
+}: {
+  eventId: string
+  tiers: Tier[]
+  onSold: (order: CreatedOrder) => void
+}) {
+  const availableTiers = tiers.filter((t) => t.quantity_remaining > 0)
+  const [tierId, setTierId] = useState<string>(availableTiers[0]?.id ?? "")
+  const [quantity, setQuantity] = useState(1)
+  const [guestName, setGuestName] = useState("")
+  const [guestEmail, setGuestEmail] = useState("")
+  const [guestPhone, setGuestPhone] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer">("cash")
+  const [notes, setNotes] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const tier = availableTiers.find((t) => t.id === tierId) ?? null
+  const maxQty = tier ? Math.min(10, tier.quantity_remaining) : 0
+  const total = tier ? tier.price_thb * quantity : 0
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!tier) {
+      setError("Pick a tier first.")
+      return
+    }
+    if (!guestName.trim()) {
+      setError("Buyer name is required.")
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/promoter/events/${eventId}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticket_id: tier.id,
+          quantity,
+          guest_name: guestName.trim(),
+          guest_email: guestEmail.trim() || undefined,
+          guest_phone: guestPhone.trim() || undefined,
+          payment_method: paymentMethod,
+          notes: notes.trim() || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.order) {
+        setError(data.error || "Couldn't record the sale.")
+        return
+      }
+      onSold(data.order as CreatedOrder)
+      // Reset for the next walkup. Keep tier + method since the next
+      // sale is usually the same tier.
+      setQuantity(1)
+      setGuestName("")
+      setGuestEmail("")
+      setGuestPhone("")
+      setNotes("")
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (availableTiers.length === 0) {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+        No active tiers with inventory left. Activate a tier in the
+        event editor&apos;s Tickets tab to record walkup sales.
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="rounded-xl border border-white/10 bg-neutral-900 p-4 space-y-3">
+      <div>
+        <label htmlFor="sale-tier" className="block text-xs font-medium text-neutral-400 mb-1">
+          Tier
+        </label>
+        <select
+          id="sale-tier"
+          value={tierId}
+          onChange={(e) => {
+            setTierId(e.target.value)
+            setQuantity(1)
+          }}
+          className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+        >
+          {availableTiers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.tier_name} · ฿{t.price_thb.toLocaleString()} · {t.quantity_remaining} left
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="sale-qty" className="block text-xs font-medium text-neutral-400 mb-1">
+            Quantity
+          </label>
+          <select
+            id="sale-qty"
+            value={quantity}
+            onChange={(e) => setQuantity(parseInt(e.target.value, 10))}
+            className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+          >
+            {Array.from({ length: maxQty }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="sale-method" className="block text-xs font-medium text-neutral-400 mb-1">
+            Paid with
+          </label>
+          <select
+            id="sale-method"
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value as "cash" | "transfer")}
+            className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+          >
+            <option value="cash">Cash</option>
+            <option value="transfer">Bank transfer</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="sale-name" className="block text-xs font-medium text-neutral-400 mb-1">
+          Buyer name *
+        </label>
+        <input
+          id="sale-name"
+          value={guestName}
+          onChange={(e) => setGuestName(e.target.value)}
+          autoComplete="off"
+          className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+          placeholder="Walkup buyer"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="sale-email" className="block text-xs font-medium text-neutral-400 mb-1">
+            Email <span className="text-neutral-600">(optional)</span>
+          </label>
+          <input
+            id="sale-email"
+            type="email"
+            value={guestEmail}
+            onChange={(e) => setGuestEmail(e.target.value)}
+            autoComplete="off"
+            className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+            placeholder="If they want a receipt"
+          />
+        </div>
+        <div>
+          <label htmlFor="sale-phone" className="block text-xs font-medium text-neutral-400 mb-1">
+            Phone <span className="text-neutral-600">(optional)</span>
+          </label>
+          <input
+            id="sale-phone"
+            value={guestPhone}
+            onChange={(e) => setGuestPhone(e.target.value)}
+            autoComplete="off"
+            className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+          />
+        </div>
+      </div>
+
+      {paymentMethod === "transfer" && (
+        <div>
+          <label htmlFor="sale-notes" className="block text-xs font-medium text-neutral-400 mb-1">
+            Transfer reference <span className="text-neutral-600">(optional)</span>
+          </label>
+          <input
+            id="sale-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+            placeholder="Bank slip reference, txn id…"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2">
+        <span className="text-[11px] uppercase tracking-[0.14em] text-emerald-300/80">Total</span>
+        <span className="text-lg font-bold text-emerald-300 tabular-nums">
+          ฿{total.toLocaleString()}
+        </span>
+      </div>
+
+      {error && (
+        <p role="alert" className="text-xs text-red-400">{error}</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting || !tier}
+        className="w-full rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Recording…
+          </>
+        ) : (
+          <>
+            <Plus className="h-4 w-4" />
+            Record sale
+          </>
+        )}
+      </button>
+    </form>
+  )
+}
+
+// Receipt card shown after a walkup sale lands. Big order reference
+// so staff can read it back to the buyer; "Tap to scan" shortcut to
+// admit them immediately (or save the reference for later).
+function RecentSaleCard({ order }: { order: CreatedOrder }) {
+  return (
+    <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-5">
+      <div className="flex items-start gap-3">
+        <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-400" />
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-bold uppercase tracking-wider text-emerald-300">
+            Sale recorded
+          </p>
+          <p className="mt-2 text-sm text-white">
+            <strong>{order.guest_name || "Buyer"}</strong>
+            <span className="ml-1 text-neutral-400">
+              · {order.tier_name ?? "Ticket"} × {order.quantity}
+            </span>
+          </p>
+          <p className="mt-1 text-xs text-neutral-400">
+            ฿{order.total_price_thb.toLocaleString()} · {" "}
+            <span className="capitalize">{order.payment_method}</span>
+          </p>
+          <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-3 py-1.5 font-mono text-sm font-bold text-amber-300">
+            {order.order_reference}
+          </p>
+          <p className="mt-2 text-[11px] text-emerald-200/70">
+            Read this back to the buyer — they can use it at the door
+            to be admitted, or you can flip to Camera/Type code and
+            scan it now.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -42,7 +42,7 @@ export async function GET(
       .from("ticket_orders")
       .select(`
         id, order_reference, guest_name, guest_email, quantity,
-        total_price_thb, payment_status, status, created_at,
+        total_price_thb, payment_status, payment_method, status, created_at,
         scanned_at, scan_count,
         ticket_id,
         ticket:event_tickets!ticket_orders_ticket_id_fkey ( tier_name )
@@ -88,6 +88,7 @@ export async function GET(
       tier_name: tier?.tier_name ?? null,
       payment_status: o.payment_status,
       status: o.status,
+      payment_method: o.payment_method,
     }
   })
 

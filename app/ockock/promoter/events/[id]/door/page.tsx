@@ -33,18 +33,36 @@ export default async function DoorScanPage({ params }: Props) {
 
   // Pull the event name + date so the page header makes it obvious
   // which event the staff is scanning for (preventing wrong-event mix-ups).
-  const { data: event } = await supabase
-    .from("fight_events")
-    .select("name, event_date, venue_name")
-    .eq("id", eventId)
-    .maybeSingle()
+  // Also pull active tiers so the "Record cash sale" tab can show
+  // a picker without a follow-up client fetch.
+  const [eventRes, tiersRes] = await Promise.all([
+    supabase
+      .from("fight_events")
+      .select("name, event_date, venue_name")
+      .eq("id", eventId)
+      .maybeSingle(),
+    supabase
+      .from("event_tickets")
+      .select("id, tier_name, price_thb, quantity_total, quantity_sold, is_active")
+      .eq("event_id", eventId)
+      .eq("is_active", true)
+      .order("price_thb", { ascending: true }),
+  ])
+
+  const tiers = (tiersRes.data ?? []).map((t) => ({
+    id: t.id,
+    tier_name: t.tier_name,
+    price_thb: t.price_thb,
+    quantity_remaining: Math.max(0, (t.quantity_total ?? 0) - (t.quantity_sold ?? 0)),
+  }))
 
   return (
     <DoorScanClient
       eventId={eventId}
-      eventName={event?.name || "Event"}
-      eventDate={event?.event_date ?? null}
-      venueName={event?.venue_name ?? null}
+      eventName={eventRes.data?.name || "Event"}
+      eventDate={eventRes.data?.event_date ?? null}
+      venueName={eventRes.data?.venue_name ?? null}
+      tiers={tiers}
     />
   )
 }
