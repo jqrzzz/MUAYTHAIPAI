@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   Search,
 } from "lucide-react"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 // ============================================
 // Types
@@ -1533,6 +1534,8 @@ interface SalesOrder {
   scanned_at: string | null
   scan_count: number
   tier_name: string | null
+  payment_status?: string
+  status?: string
 }
 
 function SalesTab({ eventId }: { eventId: string }) {
@@ -1543,6 +1546,38 @@ function SalesTab({ eventId }: { eventId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const [refreshing, setRefreshing] = useState(false)
+  // Refund-in-flight tracking. After the Stripe API call returns, we
+  // optimistically show "Refund pending" until the webhook flips the
+  // order to refunded — which usually takes <2 seconds. A short
+  // poll-on-success keeps the UI honest.
+  const [refundingId, setRefundingId] = useState<string | null>(null)
+  const [refundPendingIds, setRefundPendingIds] = useState<Set<string>>(new Set())
+  const [refundError, setRefundError] = useState<string | null>(null)
+
+  const refundOrder = async (orderId: string) => {
+    setRefundingId(orderId)
+    setRefundError(null)
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/orders/${orderId}/refund`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setRefundError(data.error || "Refund failed.")
+        return
+      }
+      // Mark optimistic "refund pending" then refetch after a beat to
+      // pick up the webhook's payment_status flip.
+      setRefundPendingIds((prev) => new Set(prev).add(orderId))
+      setTimeout(() => load(), 1500)
+      setTimeout(() => load(), 4000)
+    } catch {
+      setRefundError("Network error — try again.")
+    } finally {
+      setRefundingId(null)
+    }
+  }
 
   const load = async () => {
     try {
@@ -1714,6 +1749,14 @@ function SalesTab({ eventId }: { eventId: string }) {
             Buyers ({orders.length})
           </h3>
         </div>
+        {refundError && (
+          <div
+            role="alert"
+            className="mb-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300"
+          >
+            {refundError}
+          </div>
+        )}
         <div className="mb-2 relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
           <input
@@ -1763,19 +1806,48 @@ function SalesTab({ eventId }: { eventId: string }) {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-emerald-300 tabular-nums">
-                        ฿{o.total_price_thb.toLocaleString()}
-                      </p>
-                      {o.scanned_at ? (
-                        <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-emerald-400">
-                          <CheckCircle2 className="h-2.5 w-2.5" />
-                          Admitted
-                          {o.scan_count > 1 && ` (${o.scan_count}×)`}
-                        </p>
+                      {o.payment_status === "refunded" ? (
+                        <>
+                          <p className="text-sm font-semibold text-zinc-500 line-through tabular-nums">
+                            ฿{o.total_price_thb.toLocaleString()}
+                          </p>
+                          <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-rose-400">
+                            Refunded
+                          </p>
+                        </>
                       ) : (
-                        <p className="mt-0.5 text-[10px] text-neutral-500">
-                          Not yet scanned
-                        </p>
+                        <>
+                          <p className="text-sm font-semibold text-emerald-300 tabular-nums">
+                            ฿{o.total_price_thb.toLocaleString()}
+                          </p>
+                          {o.scanned_at ? (
+                            <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-emerald-400">
+                              <CheckCircle2 className="h-2.5 w-2.5" />
+                              Admitted
+                              {o.scan_count > 1 && ` (${o.scan_count}×)`}
+                            </p>
+                          ) : refundPendingIds.has(o.id) ? (
+                            <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-amber-400">
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                              Refund pending
+                            </p>
+                          ) : (
+                            <p className="mt-0.5 text-[10px] text-neutral-500">
+                              Not yet scanned
+                            </p>
+                          )}
+                          {!o.scanned_at && !refundPendingIds.has(o.id) && (
+                            <InlineConfirm
+                              onConfirm={() => refundOrder(o.id)}
+                              disabled={refundingId === o.id}
+                              title="Refund this order via Stripe"
+                              className="mt-1.5 inline-flex items-center rounded-md border border-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-rose-400 transition-colors disabled:opacity-50"
+                              confirmLabel="Refund"
+                            >
+                              {refundingId === o.id ? "Refunding…" : "Refund"}
+                            </InlineConfirm>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

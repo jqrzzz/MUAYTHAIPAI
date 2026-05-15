@@ -48,8 +48,9 @@ export async function GET(
         ticket:event_tickets!ticket_orders_ticket_id_fkey ( tier_name )
       `)
       .eq("event_id", eventId)
-      .eq("payment_status", "paid")
-      .eq("status", "confirmed")
+      // Include refunded orders too — the promoter wants to see those
+      // in the history with a "Refunded" badge, not have them disappear.
+      .in("payment_status", ["paid", "refunded"])
       .order("created_at", { ascending: false })
       .limit(200),
   ])
@@ -57,15 +58,16 @@ export async function GET(
   const tiers = tiersRes.data ?? []
   const orders = ordersRes.data ?? []
 
-  // Rollups across paid orders. Sum per-tier revenue from orders rather
-  // than tier price × quantity_sold so refunds/edge-cases stay accurate
-  // if we add them later.
-  const totalSold = orders.reduce((s, o) => s + (o.quantity ?? 0), 0)
-  const totalRevenue = orders.reduce(
+  // Rollups: only paid orders count toward totals (refunded orders are
+  // money returned, not earned). We still list them below so the
+  // promoter can see the history.
+  const paidOrders = orders.filter((o) => o.payment_status === "paid")
+  const totalSold = paidOrders.reduce((s, o) => s + (o.quantity ?? 0), 0)
+  const totalRevenue = paidOrders.reduce(
     (s, o) => s + (o.total_price_thb ?? 0),
     0,
   )
-  const totalScanned = orders.filter((o) => !!o.scanned_at).length
+  const totalScanned = paidOrders.filter((o) => !!o.scanned_at).length
 
   // Defensive: if migration 060 isn't applied the rows just have
   // scanned_at = undefined which the filter handles naturally.
@@ -84,6 +86,8 @@ export async function GET(
       scanned_at: o.scanned_at ?? null,
       scan_count: o.scan_count ?? 0,
       tier_name: tier?.tier_name ?? null,
+      payment_status: o.payment_status,
+      status: o.status,
     }
   })
 
@@ -96,7 +100,7 @@ export async function GET(
     },
     tiers: tiers.map((t) => {
       const remaining = (t.quantity_total ?? 0) - (t.quantity_sold ?? 0)
-      const tierRevenue = orders
+      const tierRevenue = paidOrders
         .filter((o) => o.ticket_id === t.id)
         .reduce((s, o) => s + (o.total_price_thb ?? 0), 0)
       return {

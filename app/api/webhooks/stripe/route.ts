@@ -310,7 +310,11 @@ export async function POST(request: NextRequest) {
           break
         }
         const fullyRefunded = charge.amount_refunded >= charge.amount
-        const { error: refundErr } = await supabase
+
+        // Try bookings first (the older flow). Use .select() so we know
+        // whether any rows actually matched — if not, this might be a
+        // ticket refund and we fall through to that branch.
+        const { data: updatedBookings } = await supabase
           .from("bookings")
           .update({
             payment_status: fullyRefunded ? "refunded" : "paid",
@@ -318,14 +322,72 @@ export async function POST(request: NextRequest) {
             refunded_at: new Date().toISOString(),
           })
           .eq("stripe_payment_intent_id", piId)
-        if (refundErr) {
-          console.error("[webhook] Failed to mark booking refunded:", refundErr)
-        } else {
+          .select("id")
+
+        if (updatedBookings && updatedBookings.length > 0) {
           console.log(
-            `Refund recorded for PI ${piId}: $${(charge.amount_refunded / 100).toFixed(2)}`,
+            `Booking refund recorded for PI ${piId}: $${(charge.amount_refunded / 100).toFixed(2)}`,
             fullyRefunded ? "(full)" : "(partial)",
           )
+          break
         }
+
+        // No booking matched — try ticket_orders. Full refund flips the
+        // order to refunded and decrements quantity_sold so the seat is
+        // released back into inventory. Partial refunds leave the seat
+        // counted (we don't model partial-seat refunds yet) but still
+        // record the refunded amount for the books.
+        const { data: ticketOrder } = await supabase
+          .from("ticket_orders")
+          .select("id, ticket_id, quantity, event_id, order_reference, payment_status")
+          .eq("stripe_payment_intent_id", piId)
+          .maybeSingle()
+
+        if (!ticketOrder) {
+          console.warn(`[webhook] charge.refunded for unknown PI ${piId}`)
+          break
+        }
+
+        // Idempotency: if we already marked this refunded, don't decrement
+        // quantity_sold a second time on a Stripe webhook retry.
+        if (ticketOrder.payment_status === "refunded") {
+          console.log(`[webhook] ticket ${ticketOrder.order_reference} already refunded — skipping`)
+          break
+        }
+
+        const { error: ticketRefundErr } = await supabase
+          .from("ticket_orders")
+          .update({
+            payment_status: fullyRefunded ? "refunded" : "paid",
+            status: fullyRefunded ? "refunded" : "confirmed",
+          })
+          .eq("id", ticketOrder.id)
+        if (ticketRefundErr) {
+          console.error("[webhook] Failed to mark ticket refunded:", ticketRefundErr)
+          break
+        }
+
+        if (fullyRefunded) {
+          // Release the seat. Read-then-write — same trade-off as the
+          // initial purchase increment in handleTicketCheckoutCompleted.
+          const { data: tier } = await supabase
+            .from("event_tickets")
+            .select("quantity_sold")
+            .eq("id", ticketOrder.ticket_id)
+            .maybeSingle()
+          if (tier) {
+            const next = Math.max(0, (tier.quantity_sold ?? 0) - ticketOrder.quantity)
+            await supabase
+              .from("event_tickets")
+              .update({ quantity_sold: next })
+              .eq("id", ticketOrder.ticket_id)
+          }
+        }
+
+        console.log(
+          `Ticket refund recorded for ${ticketOrder.order_reference}: ฿${(charge.amount_refunded).toLocaleString()}`,
+          fullyRefunded ? "(full)" : "(partial)",
+        )
         break
       }
 
