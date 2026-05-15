@@ -49,6 +49,14 @@ export default function ProfileTab() {
     fight_record_draws: 0,
     open_to_fights: false,
     open_to_events: false,
+    // Fighter-network stats — surface on /ockock/fighters and used by
+    // the promoter picker's weight-class filter. Optional; empty values
+    // just mean the picker shows fewer fields for this fighter.
+    weight_class: "",
+    weight_kg: 0,
+    height_cm: 0,
+    reach_cm: 0,
+    fighter_country: "",
   })
 
   useEffect(() => {
@@ -77,6 +85,11 @@ export default function ProfileTab() {
           fight_record_draws: data.profile.fight_record_draws || 0,
           open_to_fights: data.profile.open_to_fights ?? false,
           open_to_events: data.profile.open_to_events ?? false,
+          weight_class: data.profile.weight_class || "",
+          weight_kg: data.profile.weight_kg || 0,
+          height_cm: data.profile.height_cm || 0,
+          reach_cm: data.profile.reach_cm || 0,
+          fighter_country: data.profile.fighter_country || "",
         })
       }
     } catch (error) {
@@ -110,6 +123,11 @@ export default function ProfileTab() {
           fight_record_draws: myProfileForm.fight_record_draws,
           open_to_fights: myProfileForm.open_to_fights,
           open_to_events: myProfileForm.open_to_events,
+          weight_class: myProfileForm.weight_class || null,
+          weight_kg: myProfileForm.weight_kg || null,
+          height_cm: myProfileForm.height_cm || null,
+          reach_cm: myProfileForm.reach_cm || null,
+          fighter_country: myProfileForm.fighter_country || null,
         }),
       })
       if (response.ok) {
@@ -401,6 +419,76 @@ export default function ProfileTab() {
                   </span>
                 </label>
               </div>
+
+              {/* Fighter physical stats — only meaningful when the
+                  trainer is opted into either Open to Fights or Open
+                  to Events. Surfaces on the public fighter directory
+                  and the promoter picker's weight-class filter. */}
+              {(myProfileForm.open_to_fights || myProfileForm.open_to_events) && (
+                <div className="mt-4 space-y-3 rounded-md border border-amber-500/15 bg-zinc-950/40 p-3">
+                  <div>
+                    <p className="text-xs font-medium text-amber-200">Fighter stats</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      Optional. Helps promoters match you to the right card. Empty fields just don&apos;t show.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-neutral-400">Weight class</Label>
+                      <Input
+                        value={myProfileForm.weight_class}
+                        onChange={(e) => setMyProfileForm({ ...myProfileForm, weight_class: e.target.value })}
+                        placeholder="e.g. Lightweight, 70kg, Featherweight"
+                        className="bg-neutral-800 border-neutral-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-neutral-400">Country</Label>
+                      <Input
+                        value={myProfileForm.fighter_country}
+                        onChange={(e) => setMyProfileForm({ ...myProfileForm, fighter_country: e.target.value })}
+                        placeholder="Thailand"
+                        className="bg-neutral-800 border-neutral-700 text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs text-neutral-400">Weight (kg)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={myProfileForm.weight_kg || ""}
+                        onChange={(e) => setMyProfileForm({ ...myProfileForm, weight_kg: Number.parseInt(e.target.value) || 0 })}
+                        placeholder="70"
+                        className="bg-neutral-800 border-neutral-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-neutral-400">Height (cm)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={myProfileForm.height_cm || ""}
+                        onChange={(e) => setMyProfileForm({ ...myProfileForm, height_cm: Number.parseInt(e.target.value) || 0 })}
+                        placeholder="175"
+                        className="bg-neutral-800 border-neutral-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-neutral-400">Reach (cm)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={myProfileForm.reach_cm || ""}
+                        onChange={(e) => setMyProfileForm({ ...myProfileForm, reach_cm: Number.parseInt(e.target.value) || 0 })}
+                        placeholder="178"
+                        className="bg-neutral-800 border-neutral-700 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Save Button */}
