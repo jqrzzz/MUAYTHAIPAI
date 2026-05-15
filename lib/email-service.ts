@@ -67,6 +67,43 @@ export interface CourseCompletedEmailData {
   siteUrl: string
 }
 
+export interface BoutInvitationEmailData {
+  // Recipient (fighter being invited)
+  fighterEmail: string
+  fighterName: string
+  // Who's inviting them
+  promoterOrgName: string
+  promoterCity: string | null
+  // The bout / event
+  eventName: string
+  eventDate: string | null
+  venue: string | null
+  weightClass: string | null
+  scheduledRounds: number
+  corner: "red" | "blue"
+  isMainEvent: boolean
+  // Optional message the promoter included
+  message: string | null
+  // Where the fighter goes to respond
+  respondUrl: string
+}
+
+export interface BoutInvitationResponseEmailData {
+  // Recipient (promoter who sent the invite)
+  promoterEmail: string
+  promoterName: string | null
+  // The fighter who responded
+  fighterName: string
+  // What they did
+  action: "accepted" | "declined"
+  declineReason: string | null
+  // The event for context
+  eventName: string
+  corner: "red" | "blue"
+  // Deep link to the event editor
+  editorUrl: string
+}
+
 interface EmailTemplate {
   subject: string
   html: string
@@ -1094,6 +1131,194 @@ Muay Thai Pai
         messageId: null,
         error: err instanceof Error ? err.message : "unknown_error",
       }
+    }
+  }
+
+  // Sent to the fighter the moment a promoter invites them to a bout.
+  // Without this email, the L4 invitation loop is fragile — fighters
+  // wouldn't know they'd been invited unless they happened to load
+  // their dashboard. The email links straight to the trainer dashboard
+  // where they can accept or decline.
+  async sendBoutInvitationEmail(data: BoutInvitationEmailData): Promise<boolean> {
+    try {
+      if (!this.resend) {
+        console.log("[email] Bout invitation (no Resend):", data.fighterEmail, data.eventName)
+        return false
+      }
+
+      const firstName = data.fighterName.split(" ")[0] || data.fighterName
+      const eventDateLabel = data.eventDate
+        ? new Date(data.eventDate).toLocaleDateString(undefined, {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "Date TBD"
+      const venueLabel = data.venue || "Venue TBD"
+      const cornerLabel = data.corner === "red" ? "Red Corner" : "Blue Corner"
+      const subject = data.isMainEvent
+        ? `🥊 Main-event invitation — ${data.eventName}`
+        : `🥊 Fight invitation — ${data.eventName}`
+
+      const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;font-family:Inter,-apple-system,sans-serif;background:#09090b;color:#fafafa;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#09090b;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;background:#18181b;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:32px 32px 8px 32px;">
+          <p style="margin:0 0 16px 0;font-size:11px;letter-spacing:3px;color:#fbbf24;text-transform:uppercase;">MUAYTHAIPAI · Fight Invitation</p>
+          <h1 style="margin:0 0 16px 0;font-size:26px;line-height:1.25;color:#fafafa;font-weight:700;">${escapeHtml(data.promoterOrgName)} wants you on the card.</h1>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">Hey ${escapeHtml(firstName)},</p>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">${escapeHtml(data.promoterOrgName)}${data.promoterCity ? ` (${escapeHtml(data.promoterCity)})` : ""} just invited you to fight ${data.isMainEvent ? "<strong style='color:#fbbf24'>the main event</strong> " : ""}at <strong style="color:#fafafa">${escapeHtml(data.eventName)}</strong>.</p>
+        </td></tr>
+        <tr><td style="padding:0 32px 16px 32px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#0a0a0a;border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+            <tr><td>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Event</p>
+              <p style="margin:0 0 14px 0;font-size:15px;color:#fafafa;">${escapeHtml(data.eventName)}</p>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">When · Where</p>
+              <p style="margin:0 0 14px 0;font-size:14px;color:#d4d4d8;">${eventDateLabel} · ${escapeHtml(venueLabel)}</p>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Bout</p>
+              <p style="margin:0;font-size:14px;color:#d4d4d8;">${cornerLabel} · ${data.scheduledRounds} rounds${data.weightClass ? ` · ${escapeHtml(data.weightClass)}` : ""}</p>
+            </td></tr>
+          </table>
+        </td></tr>
+        ${data.message ? `<tr><td style="padding:0 32px 16px 32px;">
+          <p style="margin:0 0 8px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Note from the promoter</p>
+          <p style="margin:0;padding:12px 16px;background:#0a0a0a;border-left:3px solid #fbbf24;font-size:14px;color:#d4d4d8;line-height:1.55;font-style:italic;">${escapeHtml(data.message)}</p>
+        </td></tr>` : ""}
+        <tr><td style="padding:8px 32px 32px 32px;">
+          <a href="${data.respondUrl}" style="display:inline-block;background:#fbbf24;color:#000;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:6px;">Open dashboard to respond →</a>
+          <p style="margin:20px 0 0 0;font-size:12px;color:#71717a;line-height:1.5;">You'll see Accept / Decline buttons at the top of your trainer dashboard. The promoter can't book you until you accept.</p>
+          <p style="margin:16px 0 0 0;font-size:12px;color:#71717a;">— The MUAYTHAIPAI team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+
+      const text = `Hey ${firstName},
+
+${data.promoterOrgName}${data.promoterCity ? ` (${data.promoterCity})` : ""} just invited you to fight${data.isMainEvent ? " the main event" : ""} at ${data.eventName}.
+
+When · Where: ${eventDateLabel} · ${venueLabel}
+Bout: ${cornerLabel} · ${data.scheduledRounds} rounds${data.weightClass ? ` · ${data.weightClass}` : ""}
+${data.message ? `\nNote from the promoter:\n"${data.message}"\n` : ""}
+Open your dashboard to respond: ${data.respondUrl}
+
+The promoter can't book you until you accept.
+
+— The MUAYTHAIPAI team`
+
+      const result = await this.resend.emails.send({
+        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        to: data.fighterEmail,
+        subject,
+        html,
+        text,
+      })
+      if (result.error) {
+        console.error("[email] Bout invitation failed:", result.error)
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error("[email] Failed to send bout invitation:", error instanceof Error ? error.message : String(error))
+      return false
+    }
+  }
+
+  // Sent to the promoter the moment a fighter accepts or declines.
+  // Closes the loop so the promoter doesn't have to babysit the editor
+  // waiting for a response. On decline, includes any reason the fighter
+  // gave so the promoter has context.
+  async sendBoutInvitationResponseEmail(
+    data: BoutInvitationResponseEmailData,
+  ): Promise<boolean> {
+    try {
+      if (!this.resend) {
+        console.log(
+          "[email] Bout invitation response (no Resend):",
+          data.promoterEmail,
+          data.action,
+        )
+        return false
+      }
+
+      const firstName = data.promoterName ? data.promoterName.split(" ")[0] : null
+      const greeting = firstName ? `Hey ${firstName},` : "Hey,"
+      const cornerLabel = data.corner === "red" ? "Red Corner" : "Blue Corner"
+      const accent = data.action === "accepted" ? "#34d399" : "#f87171"
+      const headlineEmoji = data.action === "accepted" ? "✅" : "✋"
+      const headline =
+        data.action === "accepted"
+          ? `${escapeHtml(data.fighterName)} accepted your invitation.`
+          : `${escapeHtml(data.fighterName)} declined your invitation.`
+      const subject =
+        data.action === "accepted"
+          ? `${headlineEmoji} ${data.fighterName} accepted — ${data.eventName}`
+          : `${headlineEmoji} ${data.fighterName} declined — ${data.eventName}`
+
+      const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;font-family:Inter,-apple-system,sans-serif;background:#09090b;color:#fafafa;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#09090b;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;background:#18181b;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:32px 32px 8px 32px;">
+          <p style="margin:0 0 16px 0;font-size:11px;letter-spacing:3px;color:${accent};text-transform:uppercase;">MUAYTHAIPAI · Invitation ${data.action}</p>
+          <h1 style="margin:0 0 16px 0;font-size:24px;line-height:1.3;color:#fafafa;font-weight:700;">${headline}</h1>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">${greeting}</p>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">${
+            data.action === "accepted"
+              ? `<strong style="color:#fafafa">${escapeHtml(data.fighterName)}</strong> is in for <strong style="color:#fafafa">${escapeHtml(data.eventName)}</strong> (${cornerLabel}). The bout card is updated and the public fight page reflects the confirmed fighter.`
+              : `<strong style="color:#fafafa">${escapeHtml(data.fighterName)}</strong> won't fight at <strong style="color:#fafafa">${escapeHtml(data.eventName)}</strong> (${cornerLabel}). The corner is open again — invite someone else from the bout editor when you're ready.`
+          }</p>
+        </td></tr>
+        ${data.action === "declined" && data.declineReason ? `<tr><td style="padding:0 32px 16px 32px;">
+          <p style="margin:0 0 8px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Reason given</p>
+          <p style="margin:0;padding:12px 16px;background:#0a0a0a;border-left:3px solid #f87171;font-size:14px;color:#d4d4d8;line-height:1.55;font-style:italic;">${escapeHtml(data.declineReason)}</p>
+        </td></tr>` : ""}
+        <tr><td style="padding:8px 32px 32px 32px;">
+          <a href="${data.editorUrl}" style="display:inline-block;background:#fbbf24;color:#000;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">Open event editor →</a>
+          <p style="margin:24px 0 0 0;font-size:12px;color:#71717a;">— The MUAYTHAIPAI team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+
+      const text = `${greeting}
+
+${data.fighterName} ${data.action} your invitation for ${data.eventName} (${cornerLabel}).
+
+${
+  data.action === "accepted"
+    ? "The bout card is updated and the public fight page now shows them as confirmed."
+    : `The corner is open again — invite someone else from the bout editor when you're ready.${data.declineReason ? `\n\nReason given: "${data.declineReason}"` : ""}`
+}
+
+Open the event editor: ${data.editorUrl}
+
+— The MUAYTHAIPAI team`
+
+      const result = await this.resend.emails.send({
+        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        to: data.promoterEmail,
+        subject,
+        html,
+        text,
+      })
+      if (result.error) {
+        console.error("[email] Bout invitation response failed:", result.error)
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error(
+        "[email] Failed to send bout invitation response:",
+        error instanceof Error ? error.message : String(error),
+      )
+      return false
     }
   }
 }

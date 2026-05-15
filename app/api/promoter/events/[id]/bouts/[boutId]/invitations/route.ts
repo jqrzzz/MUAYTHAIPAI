@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getPromoterAuth, verifyEventOwnership } from "@/lib/auth-helpers"
+import { EmailService } from "@/lib/email-service"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -160,5 +161,93 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Fire-and-forget notification email — the L4 loop falls apart if the
+  // fighter has to remember to check their dashboard. Fail silent so a
+  // Resend hiccup doesn't break the invitation itself; the dashboard
+  // card still surfaces the invite even if the email never lands.
+  sendInvitationEmailBestEffort(supabase, boutId, fighter_id, message).catch(
+    (err) => console.warn("[invitations.POST] email send failed:", err),
+  )
+
   return NextResponse.json({ invitation })
+}
+
+// Hydrate the rich data the email template needs (fighter email, event
+// name + date + venue, promoter org name, bout details) and dispatch.
+// Lives here rather than inline so the POST handler stays readable.
+async function sendInvitationEmailBestEffort(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  boutId: string,
+  fighterId: string,
+  message: string | null,
+) {
+  // Fighter — pull email from the users row backing the trainer profile.
+  const { data: fighter } = await supabase
+    .from("trainer_profiles")
+    .select("display_name, user_id, users:user_id (email)")
+    .eq("id", fighterId)
+    .maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fighterUser = fighter ? (fighter as any).users : null
+  const fighterEmail = Array.isArray(fighterUser)
+    ? fighterUser[0]?.email
+    : fighterUser?.email
+  if (!fighter || !fighterEmail) return
+
+  // Bout + event for context — name, date, venue, weight class, rounds.
+  const { data: boutRow } = await supabase
+    .from("event_bouts")
+    .select(`
+      weight_class, scheduled_rounds, is_main_event,
+      event:fight_events!event_bouts_event_id_fkey (
+        name, event_date, venue_name, venue_city, org_id,
+        organizations:org_id (name, city)
+      )
+    `)
+    .eq("id", boutId)
+    .maybeSingle()
+  if (!boutRow) return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const event = Array.isArray((boutRow as any).event)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? (boutRow as any).event[0]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    : (boutRow as any).event
+  if (!event) return
+  const promoterOrg = Array.isArray(event.organizations)
+    ? event.organizations[0]
+    : event.organizations
+
+  // Find this invitation's corner. We don't have it as a parameter so
+  // re-read it (cheaper than threading it through and the only round
+  // trip in the email path).
+  const { data: inv } = await supabase
+    .from("bout_invitations")
+    .select("corner")
+    .eq("bout_id", boutId)
+    .eq("fighter_id", fighterId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!inv) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+  await EmailService.getInstance().sendBoutInvitationEmail({
+    fighterEmail,
+    fighterName: fighter.display_name || "Fighter",
+    promoterOrgName: promoterOrg?.name || "Promoter",
+    promoterCity: promoterOrg?.city ?? null,
+    eventName: event.name || "Fight event",
+    eventDate: event.event_date ?? null,
+    venue:
+      [event.venue_name, event.venue_city].filter(Boolean).join(", ") || null,
+    weightClass: boutRow.weight_class ?? null,
+    scheduledRounds: boutRow.scheduled_rounds ?? 5,
+    corner: inv.corner === "blue" ? "blue" : "red",
+    isMainEvent: !!boutRow.is_main_event,
+    message,
+    respondUrl: `${siteUrl}/trainer`,
+  })
 }

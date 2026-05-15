@@ -21,6 +21,7 @@
  */
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { EmailService } from "@/lib/email-service"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -103,6 +104,9 @@ export async function POST(
     if (invErr) {
       return NextResponse.json({ error: invErr.message }, { status: 500 })
     }
+    sendResponseEmailBestEffort(supabase, invitationId, "accepted", null).catch(
+      (err) => console.warn("[invitations.respond] email send failed:", err),
+    )
     return NextResponse.json({ ok: true, status: "accepted" })
   }
 
@@ -118,5 +122,72 @@ export async function POST(
   if (declineErr) {
     return NextResponse.json({ error: declineErr.message }, { status: 500 })
   }
+  sendResponseEmailBestEffort(supabase, invitationId, "declined", reason).catch(
+    (err) => console.warn("[invitations.respond] email send failed:", err),
+  )
   return NextResponse.json({ ok: true, status: "declined" })
+}
+
+// Notify the promoter that the fighter responded. Pulls everything the
+// email template needs in one round trip and fires the send fire-and-
+// forget so a Resend hiccup doesn't roll back the response itself.
+async function sendResponseEmailBestEffort(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  invitationId: string,
+  action: "accepted" | "declined",
+  reason: string | null,
+) {
+  const { data: inv } = await supabase
+    .from("bout_invitations")
+    .select(`
+      corner,
+      invited_by_user_id,
+      invited_by:users!bout_invitations_invited_by_user_id_fkey (email, full_name),
+      fighter:trainer_profiles!bout_invitations_fighter_id_fkey (display_name),
+      bout:event_bouts!bout_invitations_bout_id_fkey (
+        event_id,
+        event:fight_events!event_bouts_event_id_fkey (name)
+      )
+    `)
+    .eq("id", invitationId)
+    .maybeSingle()
+  if (!inv) return
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const invitedBy = Array.isArray((inv as any).invited_by)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? (inv as any).invited_by[0]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    : (inv as any).invited_by
+  const promoterEmail = invitedBy?.email
+  if (!promoterEmail) return
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fighter = Array.isArray((inv as any).fighter)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? (inv as any).fighter[0]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    : (inv as any).fighter
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bout = Array.isArray((inv as any).bout)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? (inv as any).bout[0]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    : (inv as any).bout
+  const event = Array.isArray(bout?.event) ? bout.event[0] : bout?.event
+  const eventId = bout?.event_id
+  if (!event || !eventId) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+  await EmailService.getInstance().sendBoutInvitationResponseEmail({
+    promoterEmail,
+    promoterName: invitedBy?.full_name ?? null,
+    fighterName: fighter?.display_name || "Fighter",
+    action,
+    declineReason: reason,
+    eventName: event.name || "Fight event",
+    corner: inv.corner === "blue" ? "blue" : "red",
+    editorUrl: `${siteUrl}/ockock/promoter/events/${eventId}`,
+  })
 }
