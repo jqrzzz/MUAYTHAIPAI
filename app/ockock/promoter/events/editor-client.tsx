@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -36,6 +36,10 @@ interface EventForm {
   venue_province: string
   venue_country: string
   max_capacity: string
+  // Cover image — uploaded separately via /api/promoter/events/[id]/
+  // cover. The URL lives on the form so saveEvent treats it as just
+  // another field and the public fight page / OG image render it.
+  cover_image_url: string
 }
 
 interface Bout {
@@ -99,6 +103,7 @@ const EMPTY_FORM: EventForm = {
   venue_province: "",
   venue_country: "Thailand",
   max_capacity: "",
+  cover_image_url: "",
 }
 
 // ============================================
@@ -158,6 +163,7 @@ export default function EventEditorClient({
           venue_province: e.venue_province || "",
           venue_country: e.venue_country || "Thailand",
           max_capacity: e.max_capacity?.toString() || "",
+          cover_image_url: e.cover_image_url || "",
         })
         setEventStatus(e.status)
         setTicketSalesOpen(e.ticket_sales_open)
@@ -214,6 +220,7 @@ export default function EventEditorClient({
         venue_province: form.venue_province || null,
         venue_country: form.venue_country || "Thailand",
         max_capacity: form.max_capacity ? parseInt(form.max_capacity) : null,
+        cover_image_url: form.cover_image_url || null,
       }
 
       if (mode === "create") {
@@ -586,6 +593,7 @@ export default function EventEditorClient({
         <DetailsTab
           form={form}
           setForm={setForm}
+          eventId={eventId}
           onSave={saveEvent}
           saving={saving}
           isCreate={mode === "create"}
@@ -627,18 +635,74 @@ export default function EventEditorClient({
 function DetailsTab({
   form,
   setForm,
+  eventId,
   onSave,
   saving,
   isCreate,
 }: {
   form: EventForm
   setForm: (f: EventForm) => void
+  eventId?: string
   onSave: () => void
   saving: boolean
   isCreate: boolean
 }) {
   const update = (field: keyof EventForm, value: string) =>
     setForm({ ...form, [field]: value })
+
+  // Cover image upload state. Only meaningful in edit mode — create
+  // mode shows the field but disabled with a note since the event
+  // doesn't have an ID yet to attach the file to.
+  const coverFileInputRef = useRef<HTMLInputElement>(null)
+  const [coverUploading, setCoverUploading] = useState(false)
+  const [coverError, setCoverError] = useState<string | null>(null)
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !eventId) return
+    setCoverUploading(true)
+    setCoverError(null)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch(`/api/promoter/events/${eventId}/cover`, {
+        method: "POST",
+        body: fd,
+      })
+      const data = (await res.json().catch(() => ({}))) as { cover_image_url?: string; error?: string }
+      if (!res.ok) {
+        setCoverError(data.error || "Upload failed")
+        return
+      }
+      setForm({ ...form, cover_image_url: data.cover_image_url || "" })
+    } catch {
+      setCoverError("Network error — try again")
+    } finally {
+      setCoverUploading(false)
+      if (coverFileInputRef.current) coverFileInputRef.current.value = ""
+    }
+  }
+
+  async function handleCoverRemove() {
+    if (!eventId || !form.cover_image_url) return
+    setCoverUploading(true)
+    setCoverError(null)
+    try {
+      const res = await fetch(`/api/promoter/events/${eventId}/cover`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        setForm({ ...form, cover_image_url: "" })
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        setCoverError(data.error || "Remove failed")
+      }
+    } catch {
+      setCoverError("Network error — try again")
+    } finally {
+      setCoverUploading(false)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -650,6 +714,80 @@ function DetailsTab({
           placeholder="e.g. Friday Night Fights Vol. 12"
           className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-amber-500/50"
         />
+      </Field>
+
+      {/* Cover image — only editable in edit mode (needs an event ID
+          to attach the upload to). In create mode we show a hint to
+          come back after saving. */}
+      <Field label="Cover image">
+        <div className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+          <div className="h-20 w-32 shrink-0 overflow-hidden rounded-md bg-zinc-950 ring-1 ring-white/10">
+            {form.cover_image_url ? (
+              // Plain <img> so we don't need to whitelist the Supabase
+              // Storage hostname in next/image config.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={form.cover_image_url}
+                alt="Event cover"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[10px] text-zinc-600">
+                No cover
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-zinc-500">
+              Shows on the public fight page hero, the event card on
+              /ockock/fights, and the social preview when shared.
+              JPEG / PNG / WebP / GIF, up to 8MB. Landscape works best.
+            </p>
+            {isCreate ? (
+              <p className="mt-2 text-[11px] text-amber-300/80">
+                Save the event first, then come back to upload a cover.
+              </p>
+            ) : (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  ref={coverFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleCoverUpload}
+                  disabled={coverUploading}
+                  className="sr-only"
+                />
+                <button
+                  type="button"
+                  onClick={() => coverFileInputRef.current?.click()}
+                  disabled={coverUploading}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white hover:bg-white/10 disabled:opacity-50"
+                >
+                  {coverUploading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5" />
+                  )}
+                  {form.cover_image_url ? "Replace cover" : "Upload cover"}
+                </button>
+                {form.cover_image_url && (
+                  <button
+                    type="button"
+                    onClick={handleCoverRemove}
+                    disabled={coverUploading}
+                    className="inline-flex items-center rounded-md px-3 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    Remove
+                  </button>
+                )}
+              </div>
+            )}
+            {coverError && (
+              <p className="mt-2 text-xs text-red-400">{coverError}</p>
+            )}
+          </div>
+        </div>
       </Field>
 
       <Field label="Description">

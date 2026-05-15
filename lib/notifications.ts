@@ -316,3 +316,39 @@ export async function notifyTicketSold(data: {
     },
   })
 }
+
+/**
+ * Notify the promoter that a fighter responded to their bout
+ * invitation. Fires alongside the email from Batch Q so the dashboard
+ * bell shows the response too. Deep-links via metadata.event_id (the
+ * notification bell's getNotificationHref switch handles the route).
+ */
+export async function notifyInvitationResponded(data: {
+  orgId: string
+  eventId: string
+  eventName: string
+  fighterName: string
+  action: "accepted" | "declined"
+  declineReason?: string | null
+}) {
+  const emoji = data.action === "accepted" ? "✅" : "✋"
+  const verb = data.action === "accepted" ? "accepted" : "declined"
+  await insertNotification({
+    orgId: data.orgId,
+    type: data.action === "accepted" ? "invitation_accepted" : "invitation_declined",
+    title: `${emoji} ${data.fighterName} ${verb} — ${data.eventName}`,
+    body:
+      data.action === "declined" && data.declineReason
+        ? `Reason: ${data.declineReason}`
+        : data.action === "accepted"
+          ? "The bout card is updated. The public fight page now shows them as confirmed."
+          : "The corner is open again — invite someone else from the bout editor.",
+    metadata: {
+      event_id: data.eventId,
+      event_name: data.eventName,
+      fighter_name: data.fighterName,
+      action: data.action,
+      decline_reason: data.declineReason ?? null,
+    },
+  })
+}

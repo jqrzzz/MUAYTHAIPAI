@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Bell, Check, CheckCheck, Calendar, XCircle, Banknote, MessageSquare, Award, GraduationCap, Ticket } from "lucide-react"
+import { Bell, Check, CheckCheck, Calendar, XCircle, Banknote, MessageSquare, Award, GraduationCap, Ticket, Swords } from "lucide-react"
 
 interface Notification {
   id: string
@@ -29,6 +29,10 @@ function getNotificationIcon(type: string) {
       return <GraduationCap className="w-4 h-4 text-purple-400" />
     case "ticket_sold":
       return <Ticket className="w-4 h-4 text-amber-400" />
+    case "invitation_accepted":
+      return <Swords className="w-4 h-4 text-emerald-400" />
+    case "invitation_declined":
+      return <Swords className="w-4 h-4 text-rose-400" />
     default:
       return <Bell className="w-4 h-4 text-zinc-400" />
   }
@@ -40,7 +44,9 @@ function getNotificationIcon(type: string) {
 function getNotificationHref(n: Notification): string | null {
   const m = n.metadata || {}
   switch (n.type) {
-    case "ticket_sold": {
+    case "ticket_sold":
+    case "invitation_accepted":
+    case "invitation_declined": {
       const eventId = (m.event_id as string | undefined) ?? null
       return eventId ? `/ockock/promoter/events/${eventId}` : null
     }

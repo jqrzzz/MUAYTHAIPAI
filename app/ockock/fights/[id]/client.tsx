@@ -154,6 +154,21 @@ export default function FightDetailClient() {
         All Events
       </Link>
 
+      {/* Cover image — renders as a 16:9 hero above the event name
+          when the promoter uploaded one. Soft gradient overlay so
+          the wordmark below stays readable on busy artwork. */}
+      {event.cover_image_url && (
+        <div className="mb-6 relative overflow-hidden rounded-2xl ring-1 ring-white/10 aspect-[16/9] bg-zinc-950">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={event.cover_image_url}
+            alt={`${event.name} cover`}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
+        </div>
+      )}
+
       {/* Event Header */}
       <div className="mb-8">
         <p className="mb-2 text-sm font-medium text-amber-400">

@@ -22,6 +22,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { EmailService } from "@/lib/email-service"
+import { notifyInvitationResponded } from "@/lib/notifications"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -143,11 +144,12 @@ async function sendResponseEmailBestEffort(
     .select(`
       corner,
       invited_by_user_id,
+      invited_by_org_id,
       invited_by:users!bout_invitations_invited_by_user_id_fkey (email, full_name),
       fighter:trainer_profiles!bout_invitations_fighter_id_fkey (display_name),
       bout:event_bouts!bout_invitations_bout_id_fkey (
         event_id,
-        event:fight_events!event_bouts_event_id_fkey (name)
+        event:fight_events!event_bouts_event_id_fkey (name, org_id)
       )
     `)
     .eq("id", invitationId)
@@ -190,4 +192,22 @@ async function sendResponseEmailBestEffort(
     corner: inv.corner === "blue" ? "blue" : "red",
     editorUrl: `${siteUrl}/ockock/promoter/events/${eventId}`,
   })
+
+  // Bell-ping the promoting gym too so the dashboard surfaces the
+  // response in real time. Email lands in the inbox; the bell badge
+  // ensures it's visible the next time they open /admin or /ockock/
+  // promoter. Fire-and-forget — email already shipped above.
+  const orgId = (inv as { invited_by_org_id?: string }).invited_by_org_id
+  if (orgId) {
+    notifyInvitationResponded({
+      orgId,
+      eventId,
+      eventName: event.name || "Fight event",
+      fighterName: fighter?.display_name || "Fighter",
+      action,
+      declineReason: reason,
+    }).catch((err) => {
+      console.warn("[invitations.respond] notification failed:", err)
+    })
+  }
 }
