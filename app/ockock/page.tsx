@@ -1,24 +1,24 @@
 import Link from "next/link"
-import { Swords, Users, MapPin, Ticket } from "lucide-react"
+import { Swords, Users, MapPin, Megaphone } from "lucide-react"
 
 const features = [
   {
     href: "/ockock/fights",
     icon: Swords,
     title: "Fight Events",
-    description: "Browse upcoming Muay Thai fight nights across Thailand. See the fight cards, venues, and dates.",
+    description: "Browse upcoming Muay Thai fight nights across Thailand. See the fight cards, venues, and buy tickets.",
   },
   {
     href: "/ockock/fighters",
     icon: Users,
     title: "Fighters",
-    description: "Discover fighters from gyms across Thailand. View records, weight classes, and stats.",
+    description: "Discover fighters from gyms across Thailand. View records, weight classes, and stats. Promoters: invite them to your next card.",
   },
   {
-    href: "/ockock/fights",
-    icon: Ticket,
-    title: "Buy Tickets",
-    description: "Get ringside, VIP, or general admission tickets to live Muay Thai events.",
+    href: "/ockock/promoter",
+    icon: Megaphone,
+    title: "For Promoters",
+    description: "Run your fight events end-to-end: build the card, set ticket tiers, sell online, scan at the door.",
   },
   {
     href: "/gyms",

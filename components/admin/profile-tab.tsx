@@ -352,27 +352,53 @@ export default function ProfileTab() {
               />
             </div>
 
-            {/* Ock Ock Options */}
-            <div className="space-y-3">
-              <Label className="text-white">Ock Ock Options</Label>
-              <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 text-white">
+            {/* Fighter Network — opt-in toggles that surface this profile
+                publicly on /ockock/fighters and let promoters send bout
+                invitations. Worth being explicit about what each does so
+                trainers know what they're opting into. */}
+            <div className="space-y-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-4">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-white">Fighter Network (OckOck)</Label>
+                <a
+                  href="/ockock/fighters"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-amber-300 hover:text-amber-200 inline-flex items-center gap-1"
+                >
+                  Preview directory ↗
+                </a>
+              </div>
+              <p className="text-[12px] text-neutral-400">
+                Opt in to be discovered by promoters and other gyms across the Naga–Garuda network.
+              </p>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={myProfileForm.open_to_fights}
                     onChange={(e) => setMyProfileForm({ ...myProfileForm, open_to_fights: e.target.checked })}
-                    className="rounded"
+                    className="mt-1 rounded"
                   />
-                  Open to Fights
+                  <span>
+                    <span className="block text-sm font-medium text-white">Open to Fights</span>
+                    <span className="block text-xs text-neutral-500">
+                      Promoters can find you in the fighter directory and send you bout invitations. You decide each one.
+                    </span>
+                  </span>
                 </label>
-                <label className="flex items-center gap-2 text-white">
+                <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={myProfileForm.open_to_events}
                     onChange={(e) => setMyProfileForm({ ...myProfileForm, open_to_events: e.target.checked })}
-                    className="rounded"
+                    className="mt-1 rounded"
                   />
-                  Open to Events
+                  <span>
+                    <span className="block text-sm font-medium text-white">Open to Events</span>
+                    <span className="block text-xs text-neutral-500">
+                      Available for seminars, demos, exhibitions, and other non-fight bookings.
+                    </span>
+                  </span>
                 </label>
               </div>
             </div>
