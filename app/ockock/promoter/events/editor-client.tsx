@@ -15,6 +15,9 @@ import {
   Eye,
   Globe,
   X,
+  TrendingUp,
+  CheckCircle2,
+  Search,
 } from "lucide-react"
 
 // ============================================
@@ -82,7 +85,7 @@ interface TicketTier {
   is_active: boolean
 }
 
-type Tab = "details" | "bouts" | "tickets"
+type Tab = "details" | "bouts" | "tickets" | "sales"
 
 const EMPTY_FORM: EventForm = {
   name: "",
@@ -499,6 +502,7 @@ export default function EventEditorClient({
       ? [
           { key: "bouts" as Tab, label: "Fight Card", icon: <Swords className="h-4 w-4" /> },
           { key: "tickets" as Tab, label: "Tickets", icon: <Ticket className="h-4 w-4" /> },
+          { key: "sales" as Tab, label: "Sales", icon: <TrendingUp className="h-4 w-4" /> },
         ]
       : []),
   ]
@@ -607,6 +611,9 @@ export default function EventEditorClient({
           onDelete={deleteTicketTier}
           onUpdate={updateTicketTier}
         />
+      )}
+      {tab === "sales" && eventId && (
+        <SalesTab eventId={eventId} />
       )}
     </div>
   )
@@ -1479,6 +1486,331 @@ function Field({
         {required && <span className="ml-0.5 text-red-400">*</span>}
       </label>
       {children}
+    </div>
+  )
+}
+
+// ============================================
+// Sales Tab — real-time view of ticket sales for the event
+// ============================================
+
+interface SalesTotals {
+  tickets_sold: number
+  revenue_thb: number
+  scanned_at_door: number
+  orders: number
+}
+
+interface SalesTier {
+  id: string
+  tier_name: string
+  price_thb: number
+  quantity_total: number
+  quantity_sold: number
+  quantity_remaining: number
+  revenue_thb: number
+  is_active: boolean
+}
+
+interface SalesOrder {
+  id: string
+  order_reference: string
+  guest_name: string | null
+  guest_email: string | null
+  quantity: number
+  total_price_thb: number
+  created_at: string
+  scanned_at: string | null
+  scan_count: number
+  tier_name: string | null
+}
+
+function SalesTab({ eventId }: { eventId: string }) {
+  const [loading, setLoading] = useState(true)
+  const [totals, setTotals] = useState<SalesTotals | null>(null)
+  const [tiers, setTiers] = useState<SalesTier[]>([])
+  const [orders, setOrders] = useState<SalesOrder[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
+  const [refreshing, setRefreshing] = useState(false)
+
+  const load = async () => {
+    try {
+      const res = await fetch(`/api/promoter/events/${eventId}/sales`, {
+        cache: "no-store",
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data?.error || "Couldn't load sales data.")
+        return
+      }
+      const data = await res.json()
+      setTotals(data.totals)
+      setTiers(data.tiers ?? [])
+      setOrders(data.orders ?? [])
+      setError(null)
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-neutral-500" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+        {error}
+      </div>
+    )
+  }
+
+  const q = query.trim().toLowerCase()
+  const filteredOrders = q
+    ? orders.filter(
+        (o) =>
+          (o.guest_name || "").toLowerCase().includes(q) ||
+          (o.guest_email || "").toLowerCase().includes(q) ||
+          (o.order_reference || "").toLowerCase().includes(q),
+      )
+    : orders
+
+  const scanProgress =
+    totals && totals.tickets_sold > 0
+      ? Math.round((totals.scanned_at_door / totals.tickets_sold) * 100)
+      : 0
+
+  return (
+    <div className="space-y-6">
+      {/* Totals */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard
+          label="Revenue"
+          value={`฿${(totals?.revenue_thb ?? 0).toLocaleString()}`}
+          icon={<TrendingUp className="h-4 w-4 text-emerald-300" />}
+          tone="emerald"
+        />
+        <StatCard
+          label="Tickets sold"
+          value={(totals?.tickets_sold ?? 0).toLocaleString()}
+          icon={<Ticket className="h-4 w-4 text-amber-300" />}
+          tone="amber"
+        />
+        <StatCard
+          label="Orders"
+          value={(totals?.orders ?? 0).toLocaleString()}
+          icon={<FileText className="h-4 w-4 text-indigo-300" />}
+          tone="indigo"
+        />
+        <StatCard
+          label="Scanned at door"
+          value={`${totals?.scanned_at_door ?? 0}${
+            totals && totals.tickets_sold > 0 ? ` / ${totals.tickets_sold}` : ""
+          }`}
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-300" />}
+          tone="emerald"
+          sub={totals && totals.tickets_sold > 0 ? `${scanProgress}% admitted` : undefined}
+        />
+      </div>
+
+      {/* Per-tier breakdown */}
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
+            By tier
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              setRefreshing(true)
+              load()
+            }}
+            disabled={refreshing}
+            className="text-xs text-neutral-500 hover:text-white"
+          >
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
+        {tiers.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-white/10 py-6 text-center text-sm text-neutral-500">
+            No tiers yet — add some in the Tickets tab.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+            {tiers.map((t, i) => {
+              const pct =
+                t.quantity_total > 0
+                  ? Math.round((t.quantity_sold / t.quantity_total) * 100)
+                  : 0
+              return (
+                <div
+                  key={t.id}
+                  className={`px-4 py-3 ${i > 0 ? "border-t border-white/5" : ""} ${
+                    !t.is_active ? "opacity-60" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {t.tier_name}
+                        {!t.is_active && (
+                          <span className="ml-2 text-[10px] uppercase tracking-wider text-neutral-500">
+                            inactive
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        ฿{t.price_thb.toLocaleString()} · {t.quantity_sold} of{" "}
+                        {t.quantity_total} sold
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-emerald-300 tabular-nums">
+                        ฿{t.revenue_thb.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-neutral-500">{pct}% sold</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full bg-amber-500/70"
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Orders */}
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
+            Buyers ({orders.length})
+          </h3>
+        </div>
+        <div className="mb-2 relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name, email, or reference…"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.02] pl-9 pr-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-white/30"
+          />
+        </div>
+        {filteredOrders.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-white/10 py-8 text-center">
+            <Ticket className="mx-auto mb-2 h-8 w-8 text-neutral-600" />
+            <p className="text-sm text-neutral-400">
+              {orders.length === 0
+                ? "No paid orders yet — share the public fight page to drive sales."
+                : `No buyers match "${query}".`}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+            {filteredOrders.map((o, i) => {
+              const purchasedAt = new Date(o.created_at).toLocaleDateString(
+                undefined,
+                { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
+              )
+              return (
+                <div
+                  key={o.id}
+                  className={`px-4 py-3 ${i > 0 ? "border-t border-white/5" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-white truncate">
+                        {o.guest_name || "Guest"}
+                        <span className="ml-2 text-[10px] uppercase tracking-wider text-neutral-500">
+                          ×{o.quantity}
+                        </span>
+                      </p>
+                      <p className="text-xs text-neutral-500 truncate">
+                        {o.guest_email || "—"}
+                        {o.tier_name && ` · ${o.tier_name}`}
+                      </p>
+                      <p className="text-[10px] text-neutral-600">
+                        <span className="font-mono">{o.order_reference}</span>
+                        {" · "}
+                        {purchasedAt}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-emerald-300 tabular-nums">
+                        ฿{o.total_price_thb.toLocaleString()}
+                      </p>
+                      {o.scanned_at ? (
+                        <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-emerald-400">
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                          Admitted
+                          {o.scan_count > 1 && ` (${o.scan_count}×)`}
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-[10px] text-neutral-500">
+                          Not yet scanned
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {orders.length === 200 && (
+          <p className="mt-2 text-[11px] text-neutral-600">
+            Showing the most recent 200 orders. Older orders aren&apos;t loaded.
+          </p>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+  tone,
+  sub,
+}: {
+  label: string
+  value: string
+  icon: React.ReactNode
+  tone: "amber" | "emerald" | "indigo"
+  sub?: string
+}) {
+  const toneRing =
+    tone === "emerald"
+      ? "ring-emerald-500/20"
+      : tone === "indigo"
+        ? "ring-indigo-500/20"
+        : "ring-amber-500/20"
+  return (
+    <div className={`rounded-xl bg-white/[0.03] ring-1 ${toneRing} p-3`}>
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-neutral-500">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <p className="text-lg font-semibold text-white tabular-nums">{value}</p>
+      {sub && <p className="text-[10px] text-neutral-500 mt-0.5">{sub}</p>}
     </div>
   )
 }
