@@ -284,8 +284,11 @@ function FighterCorner({
   const cornerColor = corner === "red" ? "text-red-400" : "text-blue-400"
 
   return (
-    <div className="flex flex-1 flex-col items-center text-center">
-      <div className="relative mb-2 h-14 w-14 overflow-hidden rounded-full bg-neutral-800">
+    <Link
+      href={`/ockock/fighters/${fighter.id}`}
+      className="group flex flex-1 flex-col items-center text-center rounded-lg px-2 py-1 transition-colors hover:bg-white/5"
+    >
+      <div className="relative mb-2 h-14 w-14 overflow-hidden rounded-full bg-neutral-800 ring-1 ring-transparent group-hover:ring-white/20 transition">
         {fighter.photo_url ? (
           <Image
             src={fighter.photo_url}
@@ -300,7 +303,7 @@ function FighterCorner({
           </div>
         )}
       </div>
-      <p className="text-sm font-semibold text-white">
+      <p className="text-sm font-semibold text-white group-hover:text-amber-300 transition-colors">
         {fighter.display_name}
       </p>
       <p className="text-xs text-neutral-400">{record}</p>
@@ -312,7 +315,7 @@ function FighterCorner({
           {fighter.organizations.name}
         </p>
       )}
-    </div>
+    </Link>
   )
 }
 

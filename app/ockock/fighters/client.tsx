@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Loader2, Search, Filter, X } from "lucide-react"
+import { Loader2, Search, Filter, X, Users } from "lucide-react"
 import { FighterCard } from "@/components/ockock/fighter-card"
 
 interface Fighter {
@@ -303,17 +303,38 @@ export default function FightersClient() {
           <span className="ml-3 text-neutral-400">Loading fighters...</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="py-20 text-center">
-          <p className="mb-2 text-neutral-400">No fighters match your filters</p>
-          {activeFilterCount > 0 && (
-            <button
-              onClick={resetFilters}
-              className="text-sm text-amber-400 hover:text-amber-300"
+        fighters.length === 0 ? (
+          // No fighters in the system at all — surface the path for a
+          // trainer to opt in, so the page isn't a dead end.
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] py-16 px-6 text-center">
+            <Users className="mx-auto mb-3 h-10 w-10 text-neutral-600" />
+            <p className="mb-1 text-lg font-medium text-neutral-300">
+              No fighters in the directory yet
+            </p>
+            <p className="mx-auto mb-6 max-w-md text-sm text-neutral-500">
+              Trainers and fighters can list themselves by setting
+              &ldquo;Open to fights&rdquo; on their trainer profile.
+            </p>
+            <Link
+              href="/trainer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400"
             >
-              Reset Filters
-            </button>
-          )}
-        </div>
+              Open trainer dashboard
+            </Link>
+          </div>
+        ) : (
+          <div className="py-20 text-center">
+            <p className="mb-2 text-neutral-400">No fighters match your filters</p>
+            {activeFilterCount > 0 && (
+              <button
+                onClick={resetFilters}
+                className="text-sm text-amber-400 hover:text-amber-300"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((fighter) => (
