@@ -88,6 +88,21 @@ export interface BoutInvitationEmailData {
   respondUrl: string
 }
 
+export interface TicketConfirmationEmailData {
+  buyerEmail: string
+  buyerName: string
+  eventName: string
+  eventDate: string | null
+  eventTime: string | null
+  venue: string | null
+  tierName: string
+  tierDescription: string | null
+  quantity: number
+  totalThb: number
+  orderReference: string
+  eventUrl: string
+}
+
 export interface BoutInvitationResponseEmailData {
   // Recipient (promoter who sent the invite)
   promoterEmail: string
@@ -1131,6 +1146,101 @@ Muay Thai Pai
         messageId: null,
         error: err instanceof Error ? err.message : "unknown_error",
       }
+    }
+  }
+
+  // Confirmation email after a Stripe-paid ticket purchase. Includes
+  // the order reference (shown at the door) and the event details.
+  // Fires from the Stripe webhook so it only goes out on actual payment
+  // success, not from the checkout-session create step.
+  async sendTicketConfirmationEmail(
+    data: TicketConfirmationEmailData,
+  ): Promise<boolean> {
+    try {
+      if (!this.resend) {
+        console.log("[email] Ticket confirmation (no Resend):", data.buyerEmail, data.orderReference)
+        return false
+      }
+      if (!data.buyerEmail) return false
+
+      const firstName = data.buyerName.split(" ")[0] || data.buyerName
+      const eventDateLabel = data.eventDate
+        ? new Date(data.eventDate).toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "Date TBD"
+      const timeLabel = data.eventTime ? ` · ${data.eventTime}` : ""
+      const venueLabel = data.venue || "Venue TBD"
+      const subject = `🎟️ Ticket confirmed — ${data.eventName}`
+
+      const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;font-family:Inter,-apple-system,sans-serif;background:#09090b;color:#fafafa;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#09090b;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;background:#18181b;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:32px 32px 8px 32px;">
+          <p style="margin:0 0 16px 0;font-size:11px;letter-spacing:3px;color:#fbbf24;text-transform:uppercase;">MUAYTHAIPAI · Ticket confirmed</p>
+          <h1 style="margin:0 0 16px 0;font-size:26px;line-height:1.25;color:#fafafa;font-weight:700;">You're in.</h1>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">Hey ${escapeHtml(firstName)}, your ticket${data.quantity > 1 ? "s" : ""} to <strong style="color:#fff">${escapeHtml(data.eventName)}</strong> ${data.quantity > 1 ? "are" : "is"} confirmed.</p>
+        </td></tr>
+        <tr><td style="padding:0 32px 16px 32px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#0a0a0a;border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+            <tr><td>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Order reference</p>
+              <p style="margin:0 0 14px 0;font-size:18px;color:#fbbf24;font-family:ui-monospace,monospace;font-weight:600;">${escapeHtml(data.orderReference)}</p>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Tier · Quantity</p>
+              <p style="margin:0 0 14px 0;font-size:14px;color:#fafafa;">${escapeHtml(data.tierName)} × ${data.quantity}${data.tierDescription ? ` — ${escapeHtml(data.tierDescription)}` : ""}</p>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">When · Where</p>
+              <p style="margin:0 0 14px 0;font-size:14px;color:#d4d4d8;">${eventDateLabel}${timeLabel}<br/>${escapeHtml(venueLabel)}</p>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Total paid</p>
+              <p style="margin:0;font-size:14px;color:#fafafa;">฿${data.totalThb.toLocaleString()}</p>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:8px 32px 32px 32px;">
+          <p style="margin:0 0 16px 0;font-size:13px;line-height:1.55;color:#a1a1aa;"><strong style="color:#fff">At the door:</strong> show this email or your order reference (<span style="font-family:ui-monospace,monospace;color:#fbbf24">${escapeHtml(data.orderReference)}</span>). Arrive 30 minutes early.</p>
+          <a href="${data.eventUrl}" style="display:inline-block;background:#fbbf24;color:#000;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">View fight card →</a>
+          <p style="margin:24px 0 0 0;font-size:12px;color:#71717a;">— The MUAYTHAIPAI team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+
+      const text = `Hey ${firstName},
+
+Your ticket${data.quantity > 1 ? "s" : ""} to ${data.eventName} ${data.quantity > 1 ? "are" : "is"} confirmed.
+
+Order reference: ${data.orderReference}
+Tier: ${data.tierName} × ${data.quantity}
+When: ${eventDateLabel}${timeLabel}
+Where: ${venueLabel}
+Total: ฿${data.totalThb.toLocaleString()}
+
+At the door: show this email or your order reference. Arrive 30 minutes early.
+
+Fight card: ${data.eventUrl}
+
+— The MUAYTHAIPAI team`
+
+      const result = await this.resend.emails.send({
+        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        to: data.buyerEmail,
+        subject,
+        html,
+        text,
+      })
+      if (result.error) {
+        console.error("[email] Ticket confirmation failed:", result.error)
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error("[email] Failed to send ticket confirmation:", error instanceof Error ? error.message : String(error))
+      return false
     }
   }
 
