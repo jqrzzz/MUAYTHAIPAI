@@ -64,6 +64,10 @@ END $$;
 -- New columns the code expects but the original `events` table didn't have.
 ALTER TABLE public.fight_events ADD COLUMN IF NOT EXISTS ticket_sales_open BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE public.fight_events ADD COLUMN IF NOT EXISTS venue_province TEXT;
+-- created_by is set by the promoter event-create endpoint so we have an
+-- audit trail of "which user spun this event up." Nullable since older
+-- rows (if any) won't have it.
+ALTER TABLE public.fight_events ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.users(id);
 
 -- ---------------------------------------------------------------
 -- 2. Align event_bouts column names with the code
@@ -92,6 +96,47 @@ ALTER TABLE public.event_bouts ADD COLUMN IF NOT EXISTS result TEXT;
 -- Default scheduled_rounds if the rename gave us NULLs (shouldn't but
 -- defensive). Production has 0 rows, this is a no-op there.
 UPDATE public.event_bouts SET scheduled_rounds = 5 WHERE scheduled_rounds IS NULL;
+
+-- Repoint event_bouts.fighter_*_id from public.fighters → public.trainer_profiles.
+-- Production's event_bouts FKs point at the separate `fighters` table
+-- (which has 0 rows and is unused by the L4 code), but our picker,
+-- public fighters API, and bout invitations all model fighters as
+-- trainer_profiles rows. Renaming the FK constraint targets keeps the
+-- existing constraint names so PostgREST joins like
+-- `trainer_profiles!event_bouts_fighter_red_id_fkey` continue to resolve.
+-- Safe to rewire: 0 rows in event_bouts means no FK violation risk.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.event_bouts'::regclass
+      AND conname = 'event_bouts_fighter_red_id_fkey'
+      AND confrelid = 'public.fighters'::regclass
+  ) THEN
+    EXECUTE 'ALTER TABLE public.event_bouts DROP CONSTRAINT event_bouts_fighter_red_id_fkey';
+    EXECUTE 'ALTER TABLE public.event_bouts ADD CONSTRAINT event_bouts_fighter_red_id_fkey FOREIGN KEY (fighter_red_id) REFERENCES public.trainer_profiles(id) ON DELETE SET NULL';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.event_bouts'::regclass
+      AND conname = 'event_bouts_fighter_blue_id_fkey'
+      AND confrelid = 'public.fighters'::regclass
+  ) THEN
+    EXECUTE 'ALTER TABLE public.event_bouts DROP CONSTRAINT event_bouts_fighter_blue_id_fkey';
+    EXECUTE 'ALTER TABLE public.event_bouts ADD CONSTRAINT event_bouts_fighter_blue_id_fkey FOREIGN KEY (fighter_blue_id) REFERENCES public.trainer_profiles(id) ON DELETE SET NULL';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.event_bouts'::regclass
+      AND conname = 'event_bouts_winner_id_fkey'
+      AND confrelid = 'public.fighters'::regclass
+  ) THEN
+    EXECUTE 'ALTER TABLE public.event_bouts DROP CONSTRAINT event_bouts_winner_id_fkey';
+    EXECUTE 'ALTER TABLE public.event_bouts ADD CONSTRAINT event_bouts_winner_id_fkey FOREIGN KEY (winner_id) REFERENCES public.trainer_profiles(id) ON DELETE SET NULL';
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------
 -- 3. event_tickets — ticket-tier definitions (VIP, GA, etc.)
