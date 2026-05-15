@@ -1579,7 +1579,22 @@ function SalesTab({ eventId }: { eventId: string }) {
     }
   }
 
-  const load = async () => {
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  // "Live" toggle — polls /sales every POLL_MS so the promoter sees
+  // new orders / scans roll in without manually refreshing. Pauses
+  // when the tab isn't visible (no point hitting the API while the
+  // user is in another window) and resumes when it comes back.
+  const [live, setLive] = useState(true)
+  // 5s heartbeat so the "Updated Xs ago" label advances between
+  // polls — purely for the relative-time display, doesn't trigger
+  // any network activity.
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 5_000)
+    return () => clearInterval(t)
+  }, [])
+
+  const load = async (opts?: { background?: boolean }) => {
     try {
       const res = await fetch(`/api/promoter/events/${eventId}/sales`, {
         cache: "no-store",
@@ -1594,18 +1609,56 @@ function SalesTab({ eventId }: { eventId: string }) {
       setTiers(data.tiers ?? [])
       setOrders(data.orders ?? [])
       setError(null)
+      setLastUpdated(new Date())
     } catch {
-      setError("Network error. Try again.")
+      // Background polls fail silent — only foreground loads surface
+      // the error to avoid spam if the network blips during a poll.
+      if (!opts?.background) setError("Network error. Try again.")
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
   }
 
+  // Initial load on mount + when eventId changes.
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
+
+  // Live polling loop. 20s cadence — slow enough to be cheap, fast
+  // enough that event-night door scans land within the next pull.
+  // Listening to document.visibilityState lets us pause when the
+  // page is backgrounded (mobile lock screen, tab switched).
+  useEffect(() => {
+    if (!live) return
+    const POLL_MS = 20_000
+    let cancelled = false
+    let timer: ReturnType<typeof setInterval> | null = null
+
+    const tick = () => {
+      if (cancelled) return
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return
+      load({ background: true })
+    }
+
+    timer = setInterval(tick, POLL_MS)
+    // Catch up immediately when the tab regains focus.
+    const onVis = () => {
+      if (document.visibilityState === "visible") load({ background: true })
+    }
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis)
+    }
+    return () => {
+      cancelled = true
+      if (timer) clearInterval(timer)
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, eventId])
 
   if (loading) {
     return (
@@ -1669,6 +1722,30 @@ function SalesTab({ eventId }: { eventId: string }) {
           tone="emerald"
           sub={totals && totals.tickets_sold > 0 ? `${scanProgress}% admitted` : undefined}
         />
+      </div>
+
+      {/* Live status bar — shows freshness + toggle. Worth its own row
+          because event-night promoters check this constantly. */}
+      <div className="-mt-2 mb-2 flex items-center justify-between text-[11px] text-neutral-500">
+        <button
+          type="button"
+          onClick={() => setLive((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900/50 ring-1 ring-zinc-800 px-2 py-0.5 hover:bg-zinc-900 transition-colors"
+          aria-pressed={live}
+          title={live ? "Click to pause auto-refresh" : "Click to enable live updates"}
+        >
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              live ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
+            }`}
+          />
+          <span className={live ? "text-emerald-300" : "text-zinc-500"}>
+            {live ? "Live" : "Paused"}
+          </span>
+        </button>
+        <span className="tabular-nums">
+          {lastUpdated ? `Updated ${formatRelativeTime(lastUpdated)}` : "—"}
+        </span>
       </div>
 
       {/* Per-tier breakdown */}
@@ -1895,4 +1972,16 @@ function StatCard({
       {sub && <p className="text-[10px] text-neutral-500 mt-0.5">{sub}</p>}
     </div>
   )
+}
+
+// "Updated 5s ago" style relative time. Sales tab polls every 20s
+// so we mostly need sub-minute resolution. Falls back to a clock
+// time once the data's more than an hour stale (shouldn't happen
+// with the polling on, but harmless).
+function formatRelativeTime(d: Date): string {
+  const diff = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000))
+  if (diff < 5) return "just now"
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
 }
