@@ -60,6 +60,17 @@ interface FighterInfo {
   organizations: { name: string } | null
 }
 
+interface BoutInvitation {
+  id: string
+  bout_id: string
+  corner: "red" | "blue"
+  fighter_id: string
+  status: "pending" | "accepted" | "declined" | "cancelled"
+  message: string | null
+  created_at: string
+  fighter: FighterInfo | null
+}
+
 interface TicketTier {
   id: string
   tier_name: string
@@ -104,6 +115,11 @@ export default function EventEditorClient({
   const [ticketSalesOpen, setTicketSalesOpen] = useState(false)
   const [bouts, setBouts] = useState<Bout[]>([])
   const [tickets, setTickets] = useState<TicketTier[]>([])
+  // Keyed by bout_id, holds the pending invitations sent for that bout
+  // so each BoutCard can show "Awaiting [Fighter]" until accept/decline.
+  const [invitationsByBout, setInvitationsByBout] = useState<
+    Record<string, BoutInvitation[]>
+  >({})
   const [loading, setLoading] = useState(mode === "edit")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -141,8 +157,33 @@ export default function EventEditorClient({
         })
         setEventStatus(e.status)
         setTicketSalesOpen(e.ticket_sales_open)
-        setBouts(boutsData.bouts || [])
+        const loadedBouts: Bout[] = boutsData.bouts || []
+        setBouts(loadedBouts)
         setTickets(ticketsData.tickets || [])
+
+        // Pull pending invitations for each bout in parallel. Endpoint
+        // returns [] if migration 059 isn't applied so this stays safe
+        // pre-migration; the editor just looks like it always did.
+        if (loadedBouts.length > 0) {
+          const invs = await Promise.all(
+            loadedBouts.map(async (b) => {
+              try {
+                const r = await fetch(
+                  `/api/promoter/events/${eventId}/bouts/${b.id}/invitations`,
+                )
+                if (!r.ok) return [b.id, [] as BoutInvitation[]] as const
+                const j = await r.json()
+                const pending = ((j.invitations ?? []) as BoutInvitation[]).filter(
+                  (i) => i.status === "pending",
+                )
+                return [b.id, pending] as const
+              } catch {
+                return [b.id, [] as BoutInvitation[]] as const
+              }
+            }),
+          )
+          setInvitationsByBout(Object.fromEntries(invs))
+        }
       } catch (err) {
         setError("Failed to load event")
       } finally {
@@ -290,6 +331,64 @@ export default function EventEditorClient({
       ))
     } catch {
       setError("Failed to update bout")
+    }
+  }
+
+  // Send a pending invitation to a fighter for a corner. Adds to the
+  // local invitationsByBout map so the BoutCard surfaces "Awaiting…"
+  // without a refetch. Promoter can cancel via cancelInvitation.
+  async function inviteFighter(
+    boutId: string,
+    corner: "red" | "blue",
+    fighter: FighterInfo,
+    message?: string,
+  ) {
+    if (!eventId) return
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/bouts/${boutId}/invitations`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fighter_id: fighter.id,
+            corner,
+            message: message ?? undefined,
+          }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Failed to send invitation")
+        return
+      }
+      setInvitationsByBout((prev) => ({
+        ...prev,
+        [boutId]: [...(prev[boutId] ?? []), data.invitation as BoutInvitation],
+      }))
+    } catch {
+      setError("Network error — couldn't send invitation")
+    }
+  }
+
+  async function cancelInvitation(boutId: string, invId: string) {
+    if (!eventId) return
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/bouts/${boutId}/invitations/${invId}`,
+        { method: "DELETE" },
+      )
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || "Failed to cancel invitation")
+        return
+      }
+      setInvitationsByBout((prev) => ({
+        ...prev,
+        [boutId]: (prev[boutId] ?? []).filter((i) => i.id !== invId),
+      }))
+    } catch {
+      setError("Network error — couldn't cancel invitation")
     }
   }
 
@@ -490,10 +589,13 @@ export default function EventEditorClient({
       {tab === "bouts" && (
         <BoutsTab
           bouts={bouts}
+          invitationsByBout={invitationsByBout}
           onAdd={addBout}
           onDelete={deleteBout}
           onToggleMain={toggleMainEvent}
           onAssignFighter={assignFighter}
+          onInviteFighter={inviteFighter}
+          onCancelInvitation={cancelInvitation}
         />
       )}
       {tab === "tickets" && (
@@ -647,16 +749,22 @@ function DetailsTab({
 
 function BoutsTab({
   bouts,
+  invitationsByBout,
   onAdd,
   onDelete,
   onToggleMain,
   onAssignFighter,
+  onInviteFighter,
+  onCancelInvitation,
 }: {
   bouts: Bout[]
+  invitationsByBout: Record<string, BoutInvitation[]>
   onAdd: () => void
   onDelete: (id: string) => void
   onToggleMain: (id: string, current: boolean) => void
   onAssignFighter: (boutId: string, corner: "red" | "blue", fighter: FighterInfo | null) => void | Promise<void>
+  onInviteFighter: (boutId: string, corner: "red" | "blue", fighter: FighterInfo, message?: string) => void | Promise<void>
+  onCancelInvitation: (boutId: string, invId: string) => void | Promise<void>
 }) {
   return (
     <div className="space-y-4">
@@ -687,9 +795,12 @@ function BoutsTab({
               key={bout.id}
               bout={bout}
               index={index}
+              invitations={invitationsByBout[bout.id] ?? []}
               onDelete={() => onDelete(bout.id)}
               onToggleMain={() => onToggleMain(bout.id, bout.is_main_event)}
               onAssignFighter={(corner, fighter) => onAssignFighter(bout.id, corner, fighter)}
+              onInviteFighter={(corner, fighter, message) => onInviteFighter(bout.id, corner, fighter, message)}
+              onCancelInvitation={(invId) => onCancelInvitation(bout.id, invId)}
             />
           ))}
         </div>
@@ -701,17 +812,27 @@ function BoutsTab({
 function BoutCard({
   bout,
   index,
+  invitations,
   onDelete,
   onToggleMain,
   onAssignFighter,
+  onInviteFighter,
+  onCancelInvitation,
 }: {
   bout: Bout
   index: number
+  invitations: BoutInvitation[]
   onDelete: () => void
   onToggleMain: () => void
   onAssignFighter: (corner: "red" | "blue", fighter: FighterInfo | null) => void | Promise<void>
+  onInviteFighter: (corner: "red" | "blue", fighter: FighterInfo, message?: string) => void | Promise<void>
+  onCancelInvitation: (invId: string) => void | Promise<void>
 }) {
   const [pickerOpen, setPickerOpen] = useState<"red" | "blue" | null>(null)
+  const pendingByCorner = {
+    red: invitations.find((i) => i.corner === "red" && i.status === "pending") ?? null,
+    blue: invitations.find((i) => i.corner === "blue" && i.status === "pending") ?? null,
+  }
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -750,20 +871,25 @@ function BoutCard({
       </div>
 
       {/* Fighters — corners are interactive: click to open picker,
-          existing assignments show a Change/Clear control. */}
+          existing assignments show a Change/Clear control. Pending
+          invitations show an Awaiting state with a Cancel option. */}
       <div className="flex items-center gap-3">
         <CornerSlot
           corner="red"
           fighter={bout.fighter_red}
+          pending={pendingByCorner.red}
           onPick={() => setPickerOpen("red")}
           onClear={() => onAssignFighter("red", null)}
+          onCancelInvitation={onCancelInvitation}
         />
         <span className="text-sm font-bold text-neutral-600">VS</span>
         <CornerSlot
           corner="blue"
           fighter={bout.fighter_blue}
+          pending={pendingByCorner.blue}
           onPick={() => setPickerOpen("blue")}
           onClear={() => onAssignFighter("blue", null)}
+          onCancelInvitation={onCancelInvitation}
         />
       </div>
 
@@ -778,10 +904,17 @@ function BoutCard({
           excludeIds={[
             bout.fighter_red?.id,
             bout.fighter_blue?.id,
+            // Don't surface fighters with a pending invitation for this bout —
+            // either corner — so the promoter doesn't double-invite.
+            ...invitations.filter((i) => i.status === "pending").map((i) => i.fighter_id),
           ].filter((x): x is string => !!x)}
           onClose={() => setPickerOpen(null)}
-          onPick={async (f) => {
+          onAssign={async (f) => {
             await onAssignFighter(pickerOpen, f)
+            setPickerOpen(null)
+          }}
+          onInvite={async (f, message) => {
+            await onInviteFighter(pickerOpen, f, message)
             setPickerOpen(null)
           }}
         />
@@ -790,23 +923,56 @@ function BoutCard({
   )
 }
 
-// Single corner — either shows an empty "Assign fighter" slot or the
-// assigned fighter with Change / Clear affordances.
+// Single corner — three possible states:
+//   1. Empty       → CTA to open the picker
+//   2. Pending     → "Awaiting [Fighter]" with Cancel link (invitation sent,
+//                    fighter hasn't responded)
+//   3. Assigned    → confirmed fighter with Change / Clear
 function CornerSlot({
   corner,
   fighter,
+  pending,
   onPick,
   onClear,
+  onCancelInvitation,
 }: {
   corner: "red" | "blue"
   fighter: FighterInfo | null
+  pending: BoutInvitation | null
   onPick: () => void
   onClear: () => void
+  onCancelInvitation: (invId: string) => void | Promise<void>
 }) {
   const tone =
     corner === "red"
       ? { bg: "bg-red-500/5", label: "text-red-400", ring: "ring-red-500/20" }
       : { bg: "bg-blue-500/5", label: "text-blue-400", ring: "ring-blue-500/20" }
+
+  // Pending state — fighter is invited but hasn't accepted. Takes
+  // priority over the empty CTA so the promoter sees who's outstanding
+  // and can cancel if they want to invite someone else.
+  if (!fighter && pending) {
+    return (
+      <div className={`flex-1 rounded-lg ${tone.bg} ring-1 ring-amber-500/30 p-3 text-center`}>
+        <p className={`text-[10px] font-semibold uppercase ${tone.label}`}>
+          {corner === "red" ? "Red Corner" : "Blue Corner"}
+        </p>
+        <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-amber-300">
+          <Loader2 className="h-2.5 w-2.5 animate-spin" />
+          Awaiting response
+        </p>
+        <p className="mt-0.5 text-sm font-medium text-white truncate">
+          {pending.fighter?.display_name ?? "Invited fighter"}
+        </p>
+        <button
+          onClick={() => onCancelInvitation(pending.id)}
+          className="mt-2 rounded px-2 py-0.5 text-[10px] text-neutral-400 hover:bg-red-500/10 hover:text-red-400"
+        >
+          Cancel invite
+        </button>
+      </div>
+    )
+  }
 
   if (!fighter) {
     return (
@@ -857,27 +1023,35 @@ function CornerSlot({
   )
 }
 
-// Search-and-select dialog for assigning a fighter to a corner. Queries
-// the public fighters API which already filters to open_to_fights=true
-// and is_available=true (the right pool for promoters).
+// Search-and-select dialog for picking a fighter for a corner. The
+// promoter can either send an invitation (requires fighter consent —
+// fighter accepts/declines) or assign directly (instant — best for
+// fighters at their own gym or already-confirmed verbally). The fighter
+// pool is the public fighters API filtered to open_to_fights=true.
 function FighterPickerDialog({
   corner,
   weightClass,
   excludeIds,
   onClose,
-  onPick,
+  onAssign,
+  onInvite,
 }: {
   corner: "red" | "blue"
   weightClass: string | null
   excludeIds: string[]
   onClose: () => void
-  onPick: (fighter: FighterInfo) => void | Promise<void>
+  onAssign: (fighter: FighterInfo) => void | Promise<void>
+  onInvite: (fighter: FighterInfo, message?: string) => void | Promise<void>
 }) {
   const [query, setQuery] = useState("")
   const [matchWeight, setMatchWeight] = useState(!!weightClass)
   const [results, setResults] = useState<FighterInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [picking, setPicking] = useState<string | null>(null)
+  // Invite-or-assign toggle. Default to invite — it's the safer flow
+  // for cross-gym promoters and explicit consent is the better norm.
+  const [mode, setMode] = useState<"invite" | "assign">("invite")
+  const [inviteMessage, setInviteMessage] = useState("")
 
   useEffect(() => {
     let cancelled = false
@@ -955,6 +1129,39 @@ function FighterPickerDialog({
           </button>
         </div>
 
+        {/* Mode toggle — Invite (with consent) is the default; the
+            "Assign now" path is for promoters booking their own gym's
+            fighters or fighters who've already verbally confirmed. */}
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-white/10 bg-neutral-900 p-1">
+          <button
+            type="button"
+            onClick={() => setMode("invite")}
+            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+              mode === "invite"
+                ? "bg-amber-500/20 text-amber-200"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            Send invitation
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("assign")}
+            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+              mode === "assign"
+                ? "bg-emerald-500/20 text-emerald-200"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            Assign now
+          </button>
+        </div>
+        <p className="mb-3 text-[11px] text-neutral-500 leading-relaxed">
+          {mode === "invite"
+            ? "Fighter must accept before they appear on the card. Best for cross-gym bookings."
+            : "Fighter is added to the card immediately. Use for your own gym or already-confirmed fighters."}
+        </p>
+
         <input
           autoFocus
           value={query}
@@ -962,6 +1169,17 @@ function FighterPickerDialog({
           placeholder="Search by fighter name…"
           className="mb-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none focus:border-white/30"
         />
+
+        {mode === "invite" && (
+          <textarea
+            value={inviteMessage}
+            onChange={(e) => setInviteMessage(e.target.value)}
+            maxLength={500}
+            rows={2}
+            placeholder="Optional note to the fighter (e.g. 'Three-round bout, June 15 in Bangkok')"
+            className="mb-2 w-full resize-none rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-xs text-white placeholder-neutral-600 outline-none focus:border-white/30"
+          />
+        )}
 
         {weightClass && (
           <label className="mb-3 flex cursor-pointer items-center gap-2 text-xs text-neutral-400">
@@ -1002,7 +1220,11 @@ function FighterPickerDialog({
                       onClick={async () => {
                         setPicking(f.id)
                         try {
-                          await onPick(f)
+                          if (mode === "invite") {
+                            await onInvite(f, inviteMessage.trim() || undefined)
+                          } else {
+                            await onAssign(f)
+                          }
                         } finally {
                           setPicking(null)
                         }
@@ -1025,8 +1247,12 @@ function FighterPickerDialog({
                       {isPicking ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-500" />
                       ) : (
-                        <span className="text-[10px] font-medium uppercase text-amber-400">
-                          Assign
+                        <span
+                          className={`text-[10px] font-medium uppercase ${
+                            mode === "invite" ? "text-amber-400" : "text-emerald-400"
+                          }`}
+                        >
+                          {mode === "invite" ? "Invite" : "Assign"}
                         </span>
                       )}
                     </button>

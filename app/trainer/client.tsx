@@ -46,6 +46,7 @@ import {
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import NavButton from "@/components/ui/nav-button"
 import { Switch } from "@/components/ui/switch"
+import FightInvitationsCard from "@/components/trainer/fight-invitations-card"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
 
@@ -796,6 +797,8 @@ export default function TrainerDashboardClient({
         {/* Today View */}
         {activeView === "today" && (
           <div className="space-y-4">
+            {/* Fight invitations — self-hides when nothing is pending */}
+            <FightInvitationsCard />
             {/* Welcome strip — indigo accent, restrained */}
             <div className="rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.06] to-zinc-900/40 backdrop-blur-sm px-4 py-3">
               <p className="text-[13px] text-white">
