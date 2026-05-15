@@ -1,8 +1,21 @@
 "use client"
 
+import { Suspense } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { ArrowRight, Dumbbell, Users, Building2 } from "lucide-react"
 import { AuthCard } from "@/components/saas"
+
+function errorMessageFor(code: string | null): string | null {
+  switch (code) {
+    case "auth_callback_error":
+      return "That magic link didn't work — try requesting a new one below."
+    case "expired":
+      return "Your magic link expired. Send yourself a fresh one."
+    default:
+      return null
+  }
+}
 
 const ROLES = [
   {
@@ -29,12 +42,22 @@ const ROLES = [
   },
 ] as const
 
-export default function LoginClient() {
+function LoginInner() {
+  const searchParams = useSearchParams()
+  const errorMessage = errorMessageFor(searchParams.get("error"))
   return (
     <AuthCard
       title="Sign in"
       subtitle="Pick the option that fits — we'll email you a magic link."
     >
+      {errorMessage && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg ring-1 ring-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-[12px] text-amber-200"
+        >
+          {errorMessage}
+        </div>
+      )}
       <div className="grid gap-2">
         {ROLES.map((role) => {
           const Icon = role.icon
@@ -71,5 +94,14 @@ export default function LoginClient() {
         </Link>
       </p>
     </AuthCard>
+  )
+}
+
+// useSearchParams requires the component to be in a Suspense boundary.
+export default function LoginClient() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
   )
 }
