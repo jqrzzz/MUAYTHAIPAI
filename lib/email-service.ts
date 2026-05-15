@@ -1,5 +1,6 @@
 // Email service for booking confirmations and notifications
 import { Resend } from "resend"
+import QRCode from "qrcode"
 import { env, hasEnv } from "@/lib/env"
 import { formatBookingDateTime } from "@/lib/timezone"
 
@@ -1163,6 +1164,25 @@ Muay Thai Pai
       }
       if (!data.buyerEmail) return false
 
+      // Generate a QR encoding the order reference. Resend supports
+      // CID-style inline attachments — we attach the PNG with a CID
+      // and reference it from the HTML via cid:ticket-qr. Falls back
+      // to text-only display if generation fails so the email always
+      // ships even without the QR.
+      let qrPngBuffer: Buffer | null = null
+      try {
+        // Returns a Buffer of the PNG. M = ~15% error correction, enough
+        // for door-staff scanning at oblique angles + small screens.
+        qrPngBuffer = await QRCode.toBuffer(data.orderReference, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 320,
+          color: { dark: "#000000", light: "#FFFFFF" },
+        })
+      } catch (err) {
+        console.warn("[email] QR generation failed, sending text-only:", err)
+      }
+
       const firstName = data.buyerName.split(" ")[0] || data.buyerName
       const eventDateLabel = data.eventDate
         ? new Date(data.eventDate).toLocaleDateString(undefined, {
@@ -1200,8 +1220,12 @@ Muay Thai Pai
             </td></tr>
           </table>
         </td></tr>
+        ${qrPngBuffer ? `<tr><td style="padding:8px 32px 16px 32px;" align="center">
+          <p style="margin:0 0 8px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Scan at the door</p>
+          <img src="cid:ticket-qr" alt="Ticket QR code: ${escapeHtml(data.orderReference)}" width="160" height="160" style="display:block;border:8px solid #fff;border-radius:8px;background:#fff;" />
+        </td></tr>` : ""}
         <tr><td style="padding:8px 32px 32px 32px;">
-          <p style="margin:0 0 16px 0;font-size:13px;line-height:1.55;color:#a1a1aa;"><strong style="color:#fff">At the door:</strong> show this email or your order reference (<span style="font-family:ui-monospace,monospace;color:#fbbf24">${escapeHtml(data.orderReference)}</span>). Arrive 30 minutes early.</p>
+          <p style="margin:0 0 16px 0;font-size:13px;line-height:1.55;color:#a1a1aa;"><strong style="color:#fff">At the door:</strong> show this email${qrPngBuffer ? " — staff will scan the QR above" : ""}, or give your order reference (<span style="font-family:ui-monospace,monospace;color:#fbbf24">${escapeHtml(data.orderReference)}</span>). Arrive 30 minutes early.</p>
           <a href="${data.eventUrl}" style="display:inline-block;background:#fbbf24;color:#000;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">View fight card →</a>
           <p style="margin:24px 0 0 0;font-size:12px;color:#71717a;">— The MUAYTHAIPAI team</p>
         </td></tr>
@@ -1232,6 +1256,19 @@ Fight card: ${data.eventUrl}
         subject,
         html,
         text,
+        // Attach the QR as an inline image referenced via cid:ticket-qr
+        // in the HTML. Resend forwards content_id to the SMTP layer so
+        // Gmail / Outlook / Apple Mail all render it inline.
+        attachments: qrPngBuffer
+          ? [
+              {
+                filename: `${data.orderReference}.png`,
+                content: qrPngBuffer,
+                contentId: "ticket-qr",
+                contentType: "image/png",
+              },
+            ]
+          : undefined,
       })
       if (result.error) {
         console.error("[email] Ticket confirmation failed:", result.error)
