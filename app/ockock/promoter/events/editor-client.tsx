@@ -1206,13 +1206,23 @@ function FighterPickerDialog({
               <Loader2 className="mx-auto h-4 w-4 animate-spin text-neutral-600" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-8 text-center">
+            <div className="py-8 px-4 text-center">
               <p className="text-sm text-neutral-500">
-                {q ? `No fighters match "${query}"` : "No fighters available"}
+                {q ? `No fighters match "${query}"` : "No fighters opted in yet"}
               </p>
               <p className="mt-1 text-[11px] text-neutral-600">
-                Fighters need to opt in (Open to Fights) to appear here.
+                Fighters need to flip &ldquo;Open to Fights&rdquo; on their trainer profile to appear here.
               </p>
+              {!q && (
+                <a
+                  href="/trainer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-[11px] font-medium text-amber-300 hover:bg-amber-500/15"
+                >
+                  Open my trainer profile ↗
+                </a>
+              )}
             </div>
           ) : (
             <ul className="divide-y divide-white/5">
