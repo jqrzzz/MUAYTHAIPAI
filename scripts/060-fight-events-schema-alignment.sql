@@ -31,13 +31,23 @@
 
 -- Drop the policies that reference `events` by name BEFORE renaming
 -- the table, so the rename doesn't fail. We recreate them below with
--- the new name.
+-- the new name. Wrapped in a DO block that first checks the events
+-- table still exists — when this migration has already run once,
+-- events has been renamed to fight_events and the DROP POLICY
+-- statements would otherwise throw "relation public.events does not
+-- exist." This lets the whole file be re-run safely.
 DROP POLICY IF EXISTS "Public can view bouts" ON public.event_bouts;
 DROP POLICY IF EXISTS "Event organizers can manage bouts" ON public.event_bouts;
 DROP POLICY IF EXISTS "Platform admins full access to bouts" ON public.event_bouts;
-DROP POLICY IF EXISTS "Org staff can manage events" ON public.events;
-DROP POLICY IF EXISTS "Platform admins full access to events" ON public.events;
-DROP POLICY IF EXISTS "Public can view announced events" ON public.events;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema='public' AND table_name='events') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Org staff can manage events" ON public.events';
+    EXECUTE 'DROP POLICY IF EXISTS "Platform admins full access to events" ON public.events';
+    EXECUTE 'DROP POLICY IF EXISTS "Public can view announced events" ON public.events';
+  END IF;
+END $$;
 
 DO $$
 BEGIN

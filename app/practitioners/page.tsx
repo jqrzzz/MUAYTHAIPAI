@@ -112,8 +112,62 @@ export default async function PractitionersPage({ searchParams }: Props) {
     })
     .sort((a, b) => b.highest_level_number - a.highest_level_number)
 
+  // Schema.org ItemList of Person — the canonical type for a
+  // registry/directory. Each practitioner with their public passport
+  // URL + highest cert as a nested EducationalOccupationalCredential.
+  // Lets AI engines answer "show me certified Muay Thai practitioners
+  // in Thailand" with the registry itself rather than scraping the
+  // page for names.
+  const siteUrl = "https://muaythaipai.com"
+  const listJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": `${siteUrl}/practitioners`,
+    name: "MUAYTHAIPAI Practitioners Registry",
+    description:
+      "Public registry of credentialed Muay Thai practitioners across the Naga-to-Garuda certification network in Thailand. Every entry is independently verifiable via /p/[handle].",
+    numberOfItems: rows.length,
+    itemListElement: rows.slice(0, 100).map((r, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/p/${r.handle}`,
+      item: {
+        "@type": "Person",
+        name: r.name,
+        url: `${siteUrl}/p/${r.handle}`,
+        ...(r.gym?.name
+          ? {
+              affiliation: {
+                "@type": "SportsOrganization",
+                name: r.gym.name,
+                ...(r.gym.city ? { address: { "@type": "PostalAddress", addressLocality: r.gym.city, addressCountry: "Thailand" } } : {}),
+              },
+            }
+          : {}),
+        ...(r.highest_level
+          ? {
+              hasCredential: {
+                "@type": "EducationalOccupationalCredential",
+                name: `${r.highest_level.replace(/-/g, " ")} (Level ${r.highest_level_number}) — MUAYTHAIPAI`,
+                credentialCategory: "Certificate",
+                recognizedBy: {
+                  "@type": "Organization",
+                  "@id": `${siteUrl}/#organization`,
+                  name: "MUAYTHAIPAI",
+                },
+              },
+            }
+          : {}),
+      },
+    })),
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listJsonLd) }}
+      />
       {/* Header */}
       <header className="border-b border-white/10">
         <div className="mx-auto max-w-5xl px-5 py-10 sm:py-14">
