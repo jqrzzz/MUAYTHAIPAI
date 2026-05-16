@@ -18,6 +18,9 @@ import {
   TrendingUp,
   CheckCircle2,
   Search,
+  Download,
+  Bell,
+  ChevronDown,
 } from "lucide-react"
 import { InlineConfirm } from "@/components/ui/inline-confirm"
 
@@ -708,6 +711,7 @@ export default function EventEditorClient({
       )}
       {tab === "tickets" && (
         <TicketsTab
+          eventId={eventId}
           tickets={tickets}
           ticketSalesOpen={ticketSalesOpen}
           togglingSales={togglingSales}
@@ -1204,12 +1208,19 @@ function BoutsTab({
       </div>
 
       {bouts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 py-12 text-center">
+        // Empty state IS the CTA — clicking the dashed card adds the
+        // first bout, same as the Add Bout button above. Saves the
+        // promoter from hunting for the affordance on a fresh event.
+        <button
+          type="button"
+          onClick={onAdd}
+          className="w-full rounded-xl border border-dashed border-white/10 py-12 text-center transition-colors hover:border-amber-500/40 hover:bg-amber-500/[0.03] focus:outline-none focus-visible:border-amber-500/60 focus-visible:bg-amber-500/[0.05]"
+        >
           <Swords className="mx-auto mb-2 h-8 w-8 text-neutral-600" />
-          <p className="text-sm text-neutral-500">
-            No bouts yet. Add your first bout to build the fight card.
+          <p className="text-sm text-neutral-400">
+            No bouts yet. Click to add your first bout.
           </p>
-        </div>
+        </button>
       ) : (
         <div className="space-y-3">
           {bouts.map((bout, index) => (
@@ -1719,6 +1730,7 @@ function FighterPickerDialog({
 // ============================================
 
 function TicketsTab({
+  eventId,
   tickets,
   ticketSalesOpen,
   togglingSales,
@@ -1727,6 +1739,7 @@ function TicketsTab({
   onDelete,
   onUpdate,
 }: {
+  eventId: string | null
   tickets: TicketTier[]
   ticketSalesOpen: boolean
   togglingSales: boolean
@@ -1737,6 +1750,15 @@ function TicketsTab({
 }) {
   return (
     <div className="space-y-4">
+      {/* Waitlist banner — shown only when there's an actual waitlist
+          AND sales are still closed. Once sales are open, the prompt
+          to notify is moot. The banner sits above the toggle so the
+          promoter sees the demand signal at the moment they're
+          deciding whether to publish tickets. */}
+      {eventId && !ticketSalesOpen && (
+        <InterestBanner eventId={eventId} />
+      )}
+
       {/* Sales toggle */}
       <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
         <div>
@@ -1781,12 +1803,16 @@ function TicketsTab({
       </div>
 
       {tickets.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 py-12 text-center">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="w-full rounded-xl border border-dashed border-white/10 py-12 text-center transition-colors hover:border-amber-500/40 hover:bg-amber-500/[0.03] focus:outline-none focus-visible:border-amber-500/60 focus-visible:bg-amber-500/[0.05]"
+        >
           <Ticket className="mx-auto mb-2 h-8 w-8 text-neutral-600" />
-          <p className="text-sm text-neutral-500">
-            No ticket tiers. Add tiers to start selling tickets.
+          <p className="text-sm text-neutral-400">
+            No ticket tiers. Click to add your first tier.
           </p>
-        </div>
+        </button>
       ) : (
         <div className="space-y-3">
           {tickets.map((tier) => (
@@ -2258,7 +2284,9 @@ function SalesTab({ eventId }: { eventId: string }) {
       </div>
       {totals?.approximate && (
         <p className="-mt-3 text-[11px] text-amber-400/80">
-          Totals shown are approximate (first 10,000 orders). Export for exact numbers.
+          Totals shown are approximate (first 10,000 orders). Use{" "}
+          <span className="font-medium text-amber-300">Export CSV</span> below
+          for the complete history.
         </p>
       )}
 
@@ -2359,10 +2387,27 @@ function SalesTab({ eventId }: { eventId: string }) {
 
       {/* Orders */}
       <section>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
             Buyers ({(pagination?.total ?? orders.length).toLocaleString()})
           </h3>
+          {/* CSV export — the only path to the full order history when
+              an event exceeds the 10k aggregation cap on the live
+              endpoint. Works at any size though, so we expose it
+              whenever there's anything to export. The endpoint sets
+              the Content-Disposition header so the browser handles
+              the download natively. */}
+          {(pagination?.total ?? 0) > 0 && (
+            <a
+              href={`/api/promoter/events/${eventId}/sales/export`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/10"
+              title="Download all orders as CSV"
+            >
+              <Download className="h-3 w-3" />
+              Export CSV
+            </a>
+          )}
         </div>
         {refundError && (
           <div
@@ -2569,4 +2614,140 @@ function formatRelativeTime(d: Date): string {
   if (diff < 60) return `${diff}s ago`
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+}
+
+// ============================================
+// Notify-me waitlist banner — surfaces the count of people who
+// signed up for "tickets coming soon" notifications. Lives in the
+// Tickets tab so it sits next to the sales-open toggle (the moment
+// the promoter sees the demand signal is also the moment they're
+// deciding whether to publish). Expandable into a list so the
+// promoter can email everyone manually until we wire the auto-blast.
+// ============================================
+
+interface InterestEntry {
+  email: string
+  created_at: string
+  notified_at: string | null
+}
+
+function InterestBanner({ eventId }: { eventId: string }) {
+  const [count, setCount] = useState<number | null>(null)
+  const [entries, setEntries] = useState<InterestEntry[]>([])
+  const [installed, setInstalled] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/promoter/events/${eventId}/interest`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setCount(data.count ?? 0)
+        setEntries(data.entries ?? [])
+        setInstalled(data.installed !== false)
+      } catch {
+        // Silent — banner just doesn't render. Not worth interrupting
+        // the editor's primary flow over.
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId])
+
+  // Hide entirely if migration isn't applied or there are no signups
+  // — the banner is purely a positive demand signal, not a state
+  // toggle. Empty == nothing to show.
+  if (!installed || count === null || count === 0) return null
+
+  const copyEmails = async () => {
+    setError(null)
+    try {
+      await navigator.clipboard.writeText(
+        entries.map((e) => e.email).join(", "),
+      )
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError("Couldn't copy to clipboard.")
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <Bell className="h-4 w-4 shrink-0 text-amber-300" />
+          <div>
+            <p className="text-sm font-semibold text-amber-100">
+              {count.toLocaleString()} {count === 1 ? "person is" : "people are"}{" "}
+              waiting for tickets
+            </p>
+            <p className="text-[11px] text-amber-200/70">
+              Open ticket sales below to make tickets visible — then notify them
+              manually until the auto-blast ships.
+            </p>
+          </div>
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-amber-300 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="mt-4 border-t border-amber-500/20 pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[11px] uppercase tracking-wider text-amber-300/70">
+              Registered emails
+            </p>
+            <button
+              type="button"
+              onClick={copyEmails}
+              className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-200 hover:bg-amber-500/20"
+            >
+              {copied ? "Copied!" : "Copy all"}
+            </button>
+          </div>
+          {error && (
+            <p role="alert" className="mb-2 text-[11px] text-rose-300">
+              {error}
+            </p>
+          )}
+          <ul className="max-h-48 space-y-1 overflow-y-auto rounded-md bg-amber-500/[0.04] p-2 text-[12px] font-mono text-amber-100">
+            {entries.map((e) => (
+              <li key={e.email} className="flex items-center justify-between">
+                <span className="truncate">{e.email}</span>
+                <span className="ml-2 shrink-0 text-[10px] text-amber-200/50">
+                  {new Date(e.created_at).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {count > entries.length && (
+            <p className="mt-2 text-[10px] text-amber-200/60">
+              Showing {entries.length.toLocaleString()} of{" "}
+              {count.toLocaleString()} — paste your email client&apos;s BCC
+              field with the copy above to reach everyone shown.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }

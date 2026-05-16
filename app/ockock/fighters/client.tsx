@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useId, useState } from "react"
 import Link from "next/link"
 import { Loader2, Search, Filter, X, Users } from "lucide-react"
 import { FighterCard } from "@/components/ockock/fighter-card"
@@ -205,7 +205,11 @@ export default function FightersClient() {
             </div>
           </div>
 
-          {/* Weight Range */}
+          {/* Weight Range — two stacked sliders so each thumb is
+              independently focusable and labeled. Auto-push semantics:
+              moving "From" above "To" drags To along, and vice versa.
+              Previous design overlapped the thumbs which made the
+              extremes (min==max) unreachable in one direction. */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-neutral-300">
@@ -215,37 +219,31 @@ export default function FightersClient() {
                 {weightRange[0]}–{weightRange[1]} kg
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
+            <div className="space-y-2">
+              <RangeRow
+                label="From"
                 min={45}
                 max={120}
                 value={weightRange[0]}
-                onChange={(e) =>
-                  setWeightRange([
-                    Math.min(+e.target.value, weightRange[1]),
-                    weightRange[1],
-                  ])
+                unit="kg"
+                onChange={(v) =>
+                  setWeightRange([v, Math.max(v, weightRange[1])])
                 }
-                className="flex-1 accent-amber-500"
               />
-              <input
-                type="range"
+              <RangeRow
+                label="To"
                 min={45}
                 max={120}
                 value={weightRange[1]}
-                onChange={(e) =>
-                  setWeightRange([
-                    weightRange[0],
-                    Math.max(+e.target.value, weightRange[0]),
-                  ])
+                unit="kg"
+                onChange={(v) =>
+                  setWeightRange([Math.min(v, weightRange[0]), v])
                 }
-                className="flex-1 accent-amber-500"
               />
             </div>
           </div>
 
-          {/* Height Range */}
+          {/* Height Range — same pattern. */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-neutral-300">
@@ -255,32 +253,26 @@ export default function FightersClient() {
                 {heightRange[0]}–{heightRange[1]} cm
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
+            <div className="space-y-2">
+              <RangeRow
+                label="From"
                 min={150}
                 max={200}
                 value={heightRange[0]}
-                onChange={(e) =>
-                  setHeightRange([
-                    Math.min(+e.target.value, heightRange[1]),
-                    heightRange[1],
-                  ])
+                unit="cm"
+                onChange={(v) =>
+                  setHeightRange([v, Math.max(v, heightRange[1])])
                 }
-                className="flex-1 accent-amber-500"
               />
-              <input
-                type="range"
+              <RangeRow
+                label="To"
                 min={150}
                 max={200}
                 value={heightRange[1]}
-                onChange={(e) =>
-                  setHeightRange([
-                    heightRange[0],
-                    Math.max(+e.target.value, heightRange[0]),
-                  ])
+                unit="cm"
+                onChange={(v) =>
+                  setHeightRange([Math.min(v, heightRange[0]), v])
                 }
-                className="flex-1 accent-amber-500"
               />
             </div>
           </div>
@@ -380,6 +372,54 @@ export default function FightersClient() {
         </div>
       )}
       </div>
+    </div>
+  )
+}
+
+// One labeled slider row. Used twice per range (From + To) so each
+// thumb is independently keyboard-reachable. The aria-valuetext gives
+// screen readers the unit ("65 kg" instead of just "65").
+function RangeRow({
+  label,
+  min,
+  max,
+  value,
+  unit,
+  onChange,
+}: {
+  label: string
+  min: number
+  max: number
+  value: number
+  unit: string
+  onChange: (v: number) => void
+}) {
+  const id = useId()
+  return (
+    <div className="flex items-center gap-3">
+      <label
+        htmlFor={id}
+        className="w-9 shrink-0 text-[11px] uppercase tracking-wider text-neutral-500"
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(+e.target.value)}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        aria-valuetext={`${value} ${unit}`}
+        className="flex-1 accent-amber-500"
+      />
+      <span className="w-12 shrink-0 text-right text-xs tabular-nums text-neutral-300">
+        {value}
+        {unit}
+      </span>
     </div>
   )
 }

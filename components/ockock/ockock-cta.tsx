@@ -34,16 +34,27 @@ export function OckOckCta({
       ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_-1px_0_rgba(0,0,0,0.2)_inset]"
       : "bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 ring-1 ring-white/5"
 
+  const cls = cn(
+    "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
+    sizeCls,
+    variantCls,
+    className,
+  )
+
+  // mailto:/tel:/sms: aren't real client-side routes — render a plain
+  // anchor so the browser hands off to the OS handler without Next's
+  // router intercepting. Everything else goes through <Link>.
+  const isProtocolHref = /^(mailto:|tel:|sms:)/i.test(href)
+  if (isProtocolHref) {
+    return (
+      <a href={href} className={cls}>
+        {children}
+      </a>
+    )
+  }
+
   return (
-    <Link
-      href={href}
-      className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
-        sizeCls,
-        variantCls,
-        className,
-      )}
-    >
+    <Link href={href} className={cls}>
       {children}
     </Link>
   )

@@ -358,12 +358,14 @@ export default function VisionPage() {
               Start free {PLAN.trialDays}-day trial
               <ArrowRight className="h-4 w-4" />
             </OckOckCta>
-            <a
+            <OckOckCta
               href="mailto:hello@muaythaipai.com?subject=Tell%20me%20more%20about%20OckOck"
-              className="inline-flex h-12 items-center gap-2 rounded-xl bg-zinc-800/80 px-7 text-[15px] font-medium text-zinc-100 transition-colors hover:bg-zinc-700"
+              variant="subtle"
+              size="lg"
             >
-              Talk to us first →
-            </a>
+              Talk to us first
+              <ArrowRight className="h-4 w-4" />
+            </OckOckCta>
           </div>
           <p className="mt-8 inline-flex items-center gap-1.5 text-[11px] text-zinc-600">
             <MapPin className="h-3 w-3" /> Pai · Thailand

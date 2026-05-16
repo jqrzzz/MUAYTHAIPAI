@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Plus,
   Banknote,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -432,7 +433,7 @@ export default function DoorScanClient({
         {/* Result — scan result banner OR most recent sale receipt
             depending on what the staff just did. */}
         {mode === "sale" && lastSale ? (
-          <RecentSaleCard order={lastSale} />
+          <RecentSaleCard order={lastSale} onDismiss={() => setLastSale(null)} />
         ) : (
           <ScanResultBanner result={result} busy={busy} />
         )}
@@ -679,10 +680,28 @@ function RecordSaleForm({
 // Receipt card shown after a walkup sale lands. Big order reference
 // so staff can read it back to the buyer; "Tap to scan" shortcut to
 // admit them immediately (or save the reference for later).
-function RecentSaleCard({ order }: { order: CreatedOrder }) {
+function RecentSaleCard({
+  order,
+  onDismiss,
+}: {
+  order: CreatedOrder
+  onDismiss: () => void
+}) {
   return (
-    <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-5">
-      <div className="flex items-start gap-3">
+    <div className="relative rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-5">
+      {/* Dismiss button — staff often wants to clear the receipt
+          before the next sale (e.g. line is moving and they want a
+          clean slate). Positioned top-right with a generous 44px hit
+          area so it's easy to tap on a phone at the door. */}
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss receipt"
+        className="absolute right-1.5 top-1.5 inline-flex h-11 w-11 items-center justify-center rounded-lg text-emerald-200/70 hover:bg-emerald-500/10 hover:text-emerald-100"
+      >
+        <X className="h-4 w-4" />
+      </button>
+      <div className="flex items-start gap-3 pr-8">
         <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-400" />
         <div className="min-w-0 flex-1">
           <p className="text-base font-bold uppercase tracking-wider text-emerald-300">
