@@ -1871,6 +1871,7 @@ function TicketsTab({
           {tickets.map((tier) => (
             <TicketTierCard
               key={tier.id}
+              eventId={eventId}
               tier={tier}
               onDelete={() => onDelete(tier.id)}
               onUpdate={(updates) => onUpdate(tier.id, updates)}
@@ -1883,10 +1884,12 @@ function TicketsTab({
 }
 
 function TicketTierCard({
+  eventId,
   tier,
   onDelete,
   onUpdate,
 }: {
+  eventId: string | null
   tier: TicketTier
   onDelete: () => void
   onUpdate: (updates: Partial<TicketTier>) => void
@@ -1895,6 +1898,7 @@ function TicketTierCard({
   const [name, setName] = useState(tier.tier_name)
   const [price, setPrice] = useState(tier.price_thb.toString())
   const [qty, setQty] = useState(tier.quantity_total.toString())
+  const [oracleOpen, setOracleOpen] = useState(false)
   // Surface the specific reason a save was rejected rather than
   // silently coercing bad input back to the old value. Cleared on
   // each edit attempt + every keystroke.
@@ -2000,40 +2004,77 @@ function TicketTierCard({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="font-semibold text-white">{tier.tier_name}</p>
-          {!tier.is_active && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] text-red-400">
-              Inactive
-            </span>
-          )}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-white">{tier.tier_name}</p>
+            {!tier.is_active && (
+              <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] text-red-400">
+                Inactive
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-sm text-neutral-400">
+            ฿{tier.price_thb.toLocaleString()} &middot;{" "}
+            {tier.quantity_sold > 0
+              ? `${tier.quantity_sold} sold / ${remaining} remaining`
+              : `${tier.quantity_total} available`}
+          </p>
         </div>
-        <p className="mt-0.5 text-sm text-neutral-400">
-          ฿{tier.price_thb.toLocaleString()} &middot;{" "}
-          {tier.quantity_sold > 0
-            ? `${tier.quantity_sold} sold / ${remaining} remaining`
-            : `${tier.quantity_total} available`}
-        </p>
+        <div className="flex items-center gap-1">
+          {/* Pricing Oracle — fetches an AI rec for this tier. Only
+              available once the event has an ID (i.e. after first save). */}
+          {eventId && (
+            <button
+              type="button"
+              onClick={() => setOracleOpen((v) => !v)}
+              aria-expanded={oracleOpen}
+              aria-label={oracleOpen ? "Close pricing check" : "Pricing check with AI"}
+              className={`rounded p-1.5 transition-colors ${
+                oracleOpen
+                  ? "bg-amber-500/15 text-amber-300"
+                  : "text-neutral-500 hover:bg-amber-500/10 hover:text-amber-300"
+              }`}
+              title="AI pricing check"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded p-1.5 text-neutral-500 hover:bg-white/5 hover:text-white"
+            aria-label="Edit ticket tier"
+          >
+            <FileText className="h-3.5 w-3.5" />
+          </button>
+          <InlineConfirm
+            onConfirm={onDelete}
+            title="Delete ticket tier"
+            confirmLabel="Delete"
+            className="rounded p-1.5 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </InlineConfirm>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setEditing(true)}
-          className="rounded p-1.5 text-neutral-500 hover:bg-white/5 hover:text-white"
-          aria-label="Edit ticket tier"
-        >
-          <FileText className="h-3.5 w-3.5" />
-        </button>
-        <InlineConfirm
-          onConfirm={onDelete}
-          title="Delete ticket tier"
-          confirmLabel="Delete"
-          className="rounded p-1.5 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </InlineConfirm>
-      </div>
+      {oracleOpen && eventId && (
+        <PricingOraclePanel
+          eventId={eventId}
+          tier={tier}
+          onApplied={(price_thb, quantity_total) => {
+            // Mirror server-side change into local editor state so
+            // the card reflects the new numbers without a refetch.
+            const updates: Partial<TicketTier> = { price_thb }
+            if (typeof quantity_total === "number") {
+              updates.quantity_total = quantity_total
+            }
+            onUpdate(updates)
+            setOracleOpen(false)
+          }}
+          onClose={() => setOracleOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -3170,6 +3211,394 @@ function SuggestionFighter({
         {fighter.gym_name ?? "Unaffiliated"}
         {fighter.fighter_country ? ` · ${fighter.fighter_country}` : ""}
       </p>
+    </div>
+  )
+}
+
+// ============================================
+// AI Pricing Oracle panel — Door B's second AI feature. Per-tier
+// AI-recommended pricing with comparable-event evidence + an Apply
+// button that updates the tier and records the decision for the
+// learning loop.
+// ============================================
+
+interface PricingRecommendation {
+  id: string
+  recommended_price_thb: number
+  recommended_quantity_total: number | null
+  projected_sold: number | null
+  confidence: "low" | "medium" | "high"
+  signal: "underpriced" | "overpriced" | "on-target" | "cold-start"
+  reasoning: string
+}
+
+interface PricingComparable {
+  event_name: string
+  venue: string | null
+  city: string | null
+  date: string
+  tier_name: string
+  price_thb: number
+  sold: number
+  sold_percent: number
+}
+
+function PricingOraclePanel({
+  eventId,
+  tier,
+  onApplied,
+  onClose,
+}: {
+  eventId: string
+  tier: TicketTier
+  onApplied: (price_thb: number, quantity_total?: number) => void
+  onClose: () => void
+}) {
+  const [loading, setLoading] = useState(true)
+  const [rec, setRec] = useState<PricingRecommendation | null>(null)
+  const [comparables, setComparables] = useState<PricingComparable[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [applying, setApplying] = useState(false)
+  // Promoter can tweak before applying. Initialized from the rec
+  // when it lands.
+  const [tweakedPrice, setTweakedPrice] = useState<string>("")
+  const [tweakedQty, setTweakedQty] = useState<string>("")
+  const [comparablesOpen, setComparablesOpen] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(
+          `/api/promoter/events/${eventId}/pricing`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tier_id: tier.id,
+              tier_name: tier.tier_name,
+              current_price_thb: tier.price_thb,
+              current_quantity_total: tier.quantity_total,
+            }),
+          },
+        )
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok) {
+          setError(data.error || "Couldn't generate a pricing recommendation.")
+          return
+        }
+        setRec(data.recommendation)
+        setComparables(data.comparables ?? [])
+        setTweakedPrice(String(data.recommendation.recommended_price_thb))
+        if (data.recommendation.recommended_quantity_total != null) {
+          setTweakedQty(String(data.recommendation.recommended_quantity_total))
+        } else {
+          setTweakedQty(String(tier.quantity_total))
+        }
+      } catch {
+        if (!cancelled) setError("Network error reaching the pricing oracle.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+    // Intentionally only run on tier id changes — refetching on
+    // every keystroke in the tweaked inputs would be wasteful and
+    // re-roll the rec on the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, tier.id])
+
+  async function apply() {
+    if (!rec) return
+    const priceNum = Number(tweakedPrice)
+    if (!Number.isFinite(priceNum) || priceNum < 50 || !Number.isInteger(priceNum)) {
+      setError("Price must be a whole number ฿50 or higher.")
+      return
+    }
+    const qtyNum = Number(tweakedQty)
+    if (!Number.isFinite(qtyNum) || qtyNum < 0 || !Number.isInteger(qtyNum)) {
+      setError("Quantity must be a whole number 0 or greater.")
+      return
+    }
+    if (qtyNum < tier.quantity_sold) {
+      setError(
+        `Can't set quantity below ${tier.quantity_sold} — that many are already sold.`,
+      )
+      return
+    }
+
+    setApplying(true)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/pricing/${rec.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "apply",
+            applied_price_thb: priceNum,
+            applied_quantity_total: qtyNum,
+          }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Couldn't apply recommendation.")
+        return
+      }
+      onApplied(priceNum, qtyNum)
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  async function dismiss() {
+    if (!rec) {
+      onClose()
+      return
+    }
+    // Best-effort dismiss — we record the rejection for learning
+    // but don't block the UI if it fails.
+    fetch(`/api/promoter/events/${eventId}/pricing/${rec.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "dismiss" }),
+    }).catch(() => {})
+    onClose()
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] p-6 text-center">
+        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-amber-400" />
+        <p className="text-xs text-amber-200/70">
+          Pulling comparables, reasoning over price points…
+        </p>
+      </div>
+    )
+  }
+
+  if (error && !rec) {
+    return (
+      <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-4">
+        <p className="text-sm text-rose-200">{error}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3 text-xs text-rose-300 hover:text-rose-200"
+        >
+          Close
+        </button>
+      </div>
+    )
+  }
+
+  if (!rec) return null
+
+  const priceDelta = rec.recommended_price_thb - tier.price_thb
+  const priceDeltaPct =
+    tier.price_thb > 0 ? Math.round((priceDelta / tier.price_thb) * 100) : 0
+
+  const signalCopy = {
+    underpriced: {
+      label: "Underpriced",
+      tone: "bg-emerald-500/15 text-emerald-300",
+      icon: <TrendingUp className="h-3 w-3" />,
+    },
+    overpriced: {
+      label: "Overpriced",
+      tone: "bg-rose-500/15 text-rose-300",
+      icon: <TrendingUp className="h-3 w-3 rotate-180" />,
+    },
+    "on-target": {
+      label: "On target",
+      tone: "bg-zinc-700/40 text-zinc-300",
+      icon: <CheckCircle2 className="h-3 w-3" />,
+    },
+    "cold-start": {
+      label: "Cold start",
+      tone: "bg-sky-500/15 text-sky-300",
+      icon: <Sparkles className="h-3 w-3" />,
+    },
+  }[rec.signal]
+
+  const confidenceTone =
+    rec.confidence === "high"
+      ? "text-emerald-300"
+      : rec.confidence === "medium"
+        ? "text-amber-300"
+        : "text-zinc-400"
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-amber-500/[0.02] p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="rounded-lg bg-amber-500/15 p-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+        </div>
+        <p className="text-sm font-semibold text-amber-100">
+          AI pricing for {tier.tier_name}
+        </p>
+        <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${signalCopy.tone}`}>
+          {signalCopy.icon}
+          {signalCopy.label}
+        </span>
+      </div>
+
+      {/* Headline price + delta */}
+      <div className="mb-3 grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+            Current
+          </p>
+          <p className="text-lg font-semibold tabular-nums text-neutral-300">
+            ฿{tier.price_thb.toLocaleString()}
+          </p>
+        </div>
+        <div className="border-l border-amber-500/15 pl-3">
+          <p className="text-[10px] uppercase tracking-wider text-amber-300/70">
+            Recommended
+          </p>
+          <p className="text-lg font-bold tabular-nums text-amber-200">
+            ฿{rec.recommended_price_thb.toLocaleString()}
+          </p>
+          {priceDelta !== 0 && (
+            <p
+              className={`text-[10px] tabular-nums ${
+                priceDelta > 0 ? "text-emerald-300" : "text-rose-300"
+              }`}
+            >
+              {priceDelta > 0 ? "+" : ""}
+              ฿{priceDelta.toLocaleString()} ({priceDeltaPct > 0 ? "+" : ""}
+              {priceDeltaPct}%)
+            </p>
+          )}
+        </div>
+        <div className="border-l border-amber-500/15 pl-3">
+          <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+            Projected
+          </p>
+          <p className="text-lg font-semibold tabular-nums text-neutral-300">
+            {rec.projected_sold != null
+              ? `${rec.projected_sold.toLocaleString()} sold`
+              : "—"}
+          </p>
+          <p className={`text-[10px] uppercase tracking-wider ${confidenceTone}`}>
+            {rec.confidence} confidence
+          </p>
+        </div>
+      </div>
+
+      {/* Reasoning */}
+      <p className="mb-3 rounded-lg bg-zinc-950/40 p-3 text-[12px] italic leading-relaxed text-amber-100/80">
+        &ldquo;{rec.reasoning}&rdquo;
+      </p>
+
+      {/* Tweak before applying */}
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-amber-300/70">
+            Apply price (THB)
+          </label>
+          <input
+            type="number"
+            min={50}
+            step={1}
+            value={tweakedPrice}
+            onChange={(e) => setTweakedPrice(e.target.value)}
+            className="w-full rounded-lg border border-amber-500/20 bg-zinc-950 px-3 py-1.5 text-sm tabular-nums text-amber-100 outline-none focus:border-amber-400/60"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-amber-300/70">
+            Apply quantity
+          </label>
+          <input
+            type="number"
+            min={tier.quantity_sold}
+            step={1}
+            value={tweakedQty}
+            onChange={(e) => setTweakedQty(e.target.value)}
+            className="w-full rounded-lg border border-amber-500/20 bg-zinc-950 px-3 py-1.5 text-sm tabular-nums text-amber-100 outline-none focus:border-amber-400/60"
+          />
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="mb-3 text-xs text-rose-300">
+          {error}
+        </p>
+      )}
+
+      {/* Comparables (collapsible) */}
+      {comparables.length > 0 && (
+        <div className="mb-3">
+          <button
+            type="button"
+            onClick={() => setComparablesOpen((v) => !v)}
+            aria-expanded={comparablesOpen}
+            className="inline-flex items-center gap-1 text-[11px] text-amber-300/70 hover:text-amber-200"
+          >
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${comparablesOpen ? "rotate-180" : ""}`}
+            />
+            {comparablesOpen ? "Hide" : "Show"} {comparables.length} comparable
+            event{comparables.length === 1 ? "" : "s"} the AI used
+          </button>
+          {comparablesOpen && (
+            <ul className="mt-2 space-y-1 rounded-lg bg-zinc-950/40 p-2 text-[11px]">
+              {comparables.map((c, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 text-amber-100/70">
+                  <span className="truncate">
+                    {c.event_name}
+                    {c.venue ? ` @ ${c.venue}` : ""}
+                    {" · "}
+                    <span className="text-amber-200/90">{c.tier_name}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    ฿{c.price_thb.toLocaleString()} · {c.sold_percent}% sold
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={apply}
+          disabled={applying}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {applying ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Applying…
+            </>
+          ) : (
+            <>Apply to tier</>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={dismiss}
+          disabled={applying}
+          className="rounded-lg border border-white/10 px-3 py-2 text-sm text-neutral-400 hover:bg-white/5 hover:text-neutral-200 disabled:opacity-50"
+        >
+          Dismiss
+        </button>
+      </div>
     </div>
   )
 }
