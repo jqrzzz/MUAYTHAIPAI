@@ -97,7 +97,16 @@ export function OckOckFooter() {
         </div>
 
         <div className="mt-10 flex flex-col gap-1.5 border-t border-zinc-900/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[12px] text-zinc-600">© {year} OckOck · Part of the MUAYTHAIPAI network</p>
+          <p className="text-[12px] text-zinc-600">
+            © {year} OckOck — gym software for the{" "}
+            <a
+              href="/practitioners"
+              className="text-zinc-500 underline-offset-2 hover:underline hover:text-zinc-300"
+            >
+              MUAYTHAIPAI
+            </a>{" "}
+            certification network
+          </p>
           <p className="text-[12px] text-zinc-600">Made in Thailand 🇹🇭</p>
         </div>
       </div>
