@@ -131,7 +131,11 @@ export default function EventEditorClient({
   >({})
   const [loading, setLoading] = useState(mode === "edit")
   const [saving, setSaving] = useState(false)
+  const [togglingSales, setTogglingSales] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Transient "Saved" confirmation after a successful PATCH so the user
+  // knows the round-trip worked. Cleared by a timer below.
+  const [savedFlash, setSavedFlash] = useState(false)
 
   // Load existing event data
   useEffect(() => {
@@ -245,6 +249,7 @@ export default function EventEditorClient({
           const data = await res.json()
           throw new Error(data.error || "Failed to update event")
         }
+        setSavedFlash(true)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed")
@@ -274,9 +279,13 @@ export default function EventEditorClient({
     }
   }
 
-  // Toggle ticket sales
+  // Toggle ticket sales. Uses a dedicated `togglingSales` flag (not the
+  // shared `saving`) so the switch can disable itself without locking
+  // out the rest of the form. Double-taps are blocked while in flight
+  // so we can't queue duplicate PATCHes.
   async function toggleTicketSales() {
-    if (!eventId) return
+    if (!eventId || togglingSales) return
+    setTogglingSales(true)
     const newValue = !ticketSalesOpen
 
     try {
@@ -289,8 +298,17 @@ export default function EventEditorClient({
       setTicketSalesOpen(newValue)
     } catch {
       setError("Failed to toggle ticket sales")
+    } finally {
+      setTogglingSales(false)
     }
   }
+
+  // Clear the "Saved" flash after 2.5s so it doesn't linger.
+  useEffect(() => {
+    if (!savedFlash) return
+    const t = setTimeout(() => setSavedFlash(false), 2500)
+    return () => clearTimeout(t)
+  }, [savedFlash])
 
   // Add bout
   async function addBout() {
@@ -558,11 +576,19 @@ export default function EventEditorClient({
         )}
       </div>
 
+      {/* Saved confirmation — clears itself after 2.5s. Lives above the
+          tabs so users get visible feedback after PATCH succeeds. */}
+      {savedFlash && (
+        <div role="status" aria-live="polite" className="mb-4 rounded-lg bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+          Saved
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="mb-4 flex items-center justify-between rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {error}
-          <button onClick={() => setError(null)}>
+          <button onClick={() => setError(null)} aria-label="Dismiss error">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -616,6 +642,7 @@ export default function EventEditorClient({
         <TicketsTab
           tickets={tickets}
           ticketSalesOpen={ticketSalesOpen}
+          togglingSales={togglingSales}
           onToggleSales={toggleTicketSales}
           onAdd={addTicketTier}
           onDelete={deleteTicketTier}
@@ -1154,13 +1181,14 @@ function BoutCard({
           >
             {bout.is_main_event ? "Remove Main" : "Set Main"}
           </button>
-          <button
-            onClick={onDelete}
+          <InlineConfirm
+            onConfirm={onDelete}
+            title="Delete bout"
+            confirmLabel="Delete"
             className="rounded p-1 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
-            aria-label="Delete bout"
           >
             <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          </InlineConfirm>
         </div>
       </div>
 
@@ -1258,12 +1286,14 @@ function CornerSlot({
         <p className="mt-0.5 text-sm font-medium text-white truncate">
           {pending.fighter?.display_name ?? "Invited fighter"}
         </p>
-        <button
-          onClick={() => onCancelInvitation(pending.id)}
+        <InlineConfirm
+          onConfirm={() => onCancelInvitation(pending.id)}
+          title="Cancel invitation"
+          confirmLabel="Cancel invite"
           className="mt-2 rounded px-2 py-0.5 text-[10px] text-neutral-400 hover:bg-red-500/10 hover:text-red-400"
         >
           Cancel invite
-        </button>
+        </InlineConfirm>
       </div>
     )
   }
@@ -1306,12 +1336,14 @@ function CornerSlot({
           Change
         </button>
         <span className="text-neutral-700">·</span>
-        <button
-          onClick={onClear}
+        <InlineConfirm
+          onConfirm={onClear}
+          title="Clear fighter"
+          confirmLabel="Clear"
           className="rounded px-2 py-0.5 text-[10px] text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
         >
           Clear
-        </button>
+        </InlineConfirm>
       </div>
     </div>
   )
@@ -1578,6 +1610,7 @@ function FighterPickerDialog({
 function TicketsTab({
   tickets,
   ticketSalesOpen,
+  togglingSales,
   onToggleSales,
   onAdd,
   onDelete,
@@ -1585,6 +1618,7 @@ function TicketsTab({
 }: {
   tickets: TicketTier[]
   ticketSalesOpen: boolean
+  togglingSales: boolean
   onToggleSales: () => void
   onAdd: () => void
   onDelete: (id: string) => void
@@ -1603,8 +1637,13 @@ function TicketsTab({
           </p>
         </div>
         <button
+          type="button"
+          role="switch"
+          aria-checked={ticketSalesOpen}
+          aria-label={ticketSalesOpen ? "Close ticket sales" : "Open ticket sales"}
           onClick={onToggleSales}
-          className={`relative h-6 w-11 rounded-full transition-colors ${
+          disabled={togglingSales}
+          className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
             ticketSalesOpen ? "bg-emerald-500" : "bg-white/10"
           }`}
         >
@@ -1749,15 +1788,18 @@ function TicketTierCard({
         <button
           onClick={() => setEditing(true)}
           className="rounded p-1.5 text-neutral-500 hover:bg-white/5 hover:text-white"
+          aria-label="Edit ticket tier"
         >
           <FileText className="h-3.5 w-3.5" />
         </button>
-        <button
-          onClick={onDelete}
+        <InlineConfirm
+          onConfirm={onDelete}
+          title="Delete ticket tier"
+          confirmLabel="Delete"
           className="rounded p-1.5 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </InlineConfirm>
       </div>
     </div>
   )

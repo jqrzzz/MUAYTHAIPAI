@@ -14,7 +14,12 @@ import {
   Ticket,
   Trophy,
   Star,
+  X,
 } from "lucide-react"
+
+// Mirrors HTML5 input type="email" — good enough to catch the common
+// typos (`a@`, `@b`, `joe@gmail`) that `.includes("@")` waves through.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface FighterInfo {
   id: string
@@ -489,10 +494,24 @@ function BuyTicketDialog({
   const maxQty = Math.min(ticket.quantity_remaining, 10)
   const totalThb = ticket.price_thb * quantity
 
+  // Escape-to-close. Backdrop click already works; this matches the
+  // expected modal interaction for keyboard users.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !submitting) onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose, submitting])
+
   async function submit() {
     setError(null)
-    if (!name.trim() || !email.trim() || !email.includes("@")) {
-      setError("Name and a valid email are required.")
+    if (!name.trim()) {
+      setError("Your full name is required.")
+      return
+    }
+    if (!EMAIL_REGEX.test(email.trim())) {
+      setError("Enter a valid email — your ticket is sent here.")
       return
     }
     setSubmitting(true)
@@ -533,15 +552,32 @@ function BuyTicketDialog({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 p-5 shadow-2xl">
-        <div className="mb-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
-            {ticket.tier_name}
-          </p>
-          <h3 className="mt-1 text-lg font-semibold text-white">{eventName}</h3>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            ฿{ticket.price_thb.toLocaleString()} per ticket
-          </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+        className="w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 p-5 shadow-2xl"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+              {ticket.tier_name}
+            </p>
+            <h3 className="mt-1 text-lg font-semibold text-white">{eventName}</h3>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              ฿{ticket.price_thb.toLocaleString()} per ticket
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            aria-label="Close"
+            className="-mr-1 -mt-1 rounded-lg p-1.5 text-neutral-500 hover:bg-white/5 hover:text-white disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="space-y-3">
@@ -555,6 +591,7 @@ function BuyTicketDialog({
               onChange={(e) => setName(e.target.value)}
               autoComplete="name"
               autoFocus
+              required
               className="w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none focus:border-white/30"
             />
           </div>
@@ -565,9 +602,11 @@ function BuyTicketDialog({
             <input
               id="ticket-buyer-email"
               type="email"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              required
               className="w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none focus:border-white/30"
             />
           </div>
@@ -577,6 +616,8 @@ function BuyTicketDialog({
             </label>
             <input
               id="ticket-buyer-phone"
+              type="tel"
+              inputMode="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               autoComplete="tel"
@@ -613,7 +654,7 @@ function BuyTicketDialog({
 
         <div className="mt-4 flex gap-2">
           <button
-            onClick={submit}
+            type="submit"
             disabled={submitting}
             className="flex-1 rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
           >
@@ -627,6 +668,7 @@ function BuyTicketDialog({
             )}
           </button>
           <button
+            type="button"
             onClick={onClose}
             disabled={submitting}
             className="rounded-lg border border-white/10 px-4 py-2.5 text-sm text-neutral-300 hover:bg-white/5 disabled:opacity-50"
@@ -638,7 +680,7 @@ function BuyTicketDialog({
         <p className="mt-3 text-[10px] text-neutral-600 text-center">
           You&apos;ll be redirected to Stripe to complete payment securely. Confirmation email goes to the address above.
         </p>
-      </div>
+      </form>
     </div>
   )
 }

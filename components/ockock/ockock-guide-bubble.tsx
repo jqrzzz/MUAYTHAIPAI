@@ -72,7 +72,18 @@ export function OckOckGuideBubble() {
     }
   }, [open, messages.length])
 
-  if (HIDE_ON_PREFIXES.some((p) => pathname.startsWith(p))) return null
+  // Escape closes the chat when it's open — matches the nav drawer's
+  // behavior and is the standard modal interaction for keyboard users.
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open])
+
+  if (HIDE_ON_PREFIXES.some((p) => pathname?.startsWith(p))) return null
 
   return (
     <div className="print:hidden">
@@ -89,7 +100,12 @@ export function OckOckGuideBubble() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 flex h-[min(560px,calc(100vh-2.5rem))] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl bg-zinc-950 text-zinc-100 shadow-2xl ring-1 ring-zinc-800">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="OckOck chat"
+          className="fixed bottom-5 right-5 z-50 flex h-[min(560px,calc(100vh-2.5rem))] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl bg-zinc-950 text-zinc-100 shadow-2xl ring-1 ring-zinc-800"
+        >
           <header className="flex items-center gap-2 border-b border-zinc-900 bg-zinc-900/50 px-4 py-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={AVATAR} alt="" className="h-7 w-7 rounded-full bg-zinc-800 object-contain p-0.5" />

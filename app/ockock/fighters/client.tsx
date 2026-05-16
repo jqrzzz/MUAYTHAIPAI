@@ -37,6 +37,7 @@ const LOCATIONS = ["Bangkok", "Chiang Mai", "Phuket", "Pattaya", "Pai"]
 export default function FightersClient() {
   const [fighters, setFighters] = useState<Fighter[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [showFilters, setShowFilters] = useState(false)
 
@@ -49,15 +50,21 @@ export default function FightersClient() {
 
   useEffect(() => {
     async function fetchFighters() {
+      // Reset both loading + error on every refetch so toggling
+      // `readyOnly` shows the spinner and clears stale errors.
+      setLoading(true)
+      setLoadError(null)
       try {
         const params = new URLSearchParams()
         if (readyOnly) params.set("open_to_fights", "true")
         const response = await fetch(`/api/public/fighters?${params}`)
+        if (!response.ok) throw new Error("Failed to fetch")
         const data = await response.json()
         setFighters(data.fighters || [])
       } catch (error) {
         console.error("Error fetching fighters:", error)
         setFighters([])
+        setLoadError("Couldn't load the fighter directory. Check your connection and try again.")
       } finally {
         setLoading(false)
       }
@@ -313,6 +320,20 @@ export default function FightersClient() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
           <span className="ml-3 text-neutral-400">Loading fighters...</span>
+        </div>
+      ) : loadError ? (
+        // Real fetch failure — distinguish from the "no fighters yet"
+        // empty state below so visitors don't get a misleading
+        // "become a fighter" CTA when the API is just down.
+        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] px-6 py-16 text-center">
+          <p className="mb-2 text-lg font-medium text-red-300">Couldn&apos;t load fighters</p>
+          <p className="mb-6 text-sm text-neutral-400">{loadError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-white/10"
+          >
+            Retry
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         fighters.length === 0 ? (

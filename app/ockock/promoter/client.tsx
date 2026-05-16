@@ -42,16 +42,19 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }>
 export default function PromoterDashboardClient({ orgName }: { orgName: string }) {
   const [events, setEvents] = useState<PromoterEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchEvents() {
       try {
+        setLoadError(null)
         const response = await fetch("/api/promoter/events")
         if (!response.ok) throw new Error("Failed to fetch")
         const data = await response.json()
         setEvents(data.events || [])
       } catch (error) {
         console.error("Error fetching events:", error)
+        setLoadError("Couldn't load your events. Check your connection and try again.")
       } finally {
         setLoading(false)
       }
@@ -121,6 +124,20 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
           <span className="ml-3 text-neutral-400">Loading events...</span>
+        </div>
+      ) : loadError ? (
+        // Distinguish a real network error from the "no events yet"
+        // empty state — otherwise an outage looks like a brand-new
+        // promoter who hasn't created anything yet.
+        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] px-6 py-12 text-center">
+          <p className="mb-2 text-lg font-medium text-red-300">Couldn&apos;t load your events</p>
+          <p className="mb-6 text-sm text-neutral-400">{loadError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-white/10"
+          >
+            Retry
+          </button>
         </div>
       ) : events.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] py-20 text-center">
