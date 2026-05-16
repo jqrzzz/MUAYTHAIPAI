@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Award, Calendar, MessageCircle, ArrowRight } from "lucide-react"
 import { useTheme } from "next-themes"
+import { ockockUrl } from "@/lib/ockock/url"
 
 export function PlatformCtaSection() {
   const { theme } = useTheme()
@@ -110,7 +111,7 @@ export function PlatformCtaSection() {
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
-            href="/for-gyms"
+            href={ockockUrl("/for-gyms")}
             className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold transition-colors ${
               isDark
                 ? "border border-white/20 text-white hover:bg-white/5"
