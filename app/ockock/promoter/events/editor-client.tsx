@@ -21,6 +21,8 @@ import {
   Download,
   Bell,
   ChevronDown,
+  Sparkles,
+  Send,
 } from "lucide-react"
 import { InlineConfirm } from "@/components/ui/inline-confirm"
 
@@ -354,6 +356,43 @@ export default function EventEditorClient({
       setBouts([...bouts, { ...data.bout, fighter_red: null, fighter_blue: null }])
     } catch {
       setError("Failed to add bout")
+    }
+  }
+
+  // Refetch bouts + their invitations from the server. Used after the
+  // AI matchmaker accepts a suggestion (which creates a bout + invites
+  // server-side and we want the editor to reflect the new state with
+  // full fighter data + pending-invitation chips).
+  async function refetchBouts() {
+    if (!eventId) return
+    try {
+      const boutsRes = await fetch(`/api/promoter/events/${eventId}/bouts`)
+      if (!boutsRes.ok) throw new Error("Failed to reload bouts")
+      const data = await boutsRes.json()
+      const loadedBouts: Bout[] = data.bouts || []
+      setBouts(loadedBouts)
+      if (loadedBouts.length > 0) {
+        const invs = await Promise.all(
+          loadedBouts.map(async (b) => {
+            try {
+              const r = await fetch(
+                `/api/promoter/events/${eventId}/bouts/${b.id}/invitations`,
+              )
+              if (!r.ok) return [b.id, [] as BoutInvitation[]] as const
+              const j = await r.json()
+              const pending = ((j.invitations ?? []) as BoutInvitation[]).filter(
+                (i) => i.status === "pending",
+              )
+              return [b.id, pending] as const
+            } catch {
+              return [b.id, [] as BoutInvitation[]] as const
+            }
+          }),
+        )
+        setInvitationsByBout(Object.fromEntries(invs))
+      }
+    } catch (err) {
+      console.error("[refetchBouts]", err)
     }
   }
 
@@ -699,6 +738,7 @@ export default function EventEditorClient({
       )}
       {tab === "bouts" && (
         <BoutsTab
+          eventId={eventId}
           bouts={bouts}
           invitationsByBout={invitationsByBout}
           onAdd={addBout}
@@ -707,6 +747,7 @@ export default function EventEditorClient({
           onAssignFighter={assignFighter}
           onInviteFighter={inviteFighter}
           onCancelInvitation={cancelInvitation}
+          onBoutsChanged={refetchBouts}
         />
       )}
       {tab === "tickets" && (
@@ -1174,6 +1215,7 @@ function DangerZone({
 // ============================================
 
 function BoutsTab({
+  eventId,
   bouts,
   invitationsByBout,
   onAdd,
@@ -1182,7 +1224,9 @@ function BoutsTab({
   onAssignFighter,
   onInviteFighter,
   onCancelInvitation,
+  onBoutsChanged,
 }: {
+  eventId: string | null
   bouts: Bout[]
   invitationsByBout: Record<string, BoutInvitation[]>
   onAdd: () => void
@@ -1191,9 +1235,18 @@ function BoutsTab({
   onAssignFighter: (boutId: string, corner: "red" | "blue", fighter: FighterInfo | null) => void | Promise<void>
   onInviteFighter: (boutId: string, corner: "red" | "blue", fighter: FighterInfo, message?: string) => void | Promise<void>
   onCancelInvitation: (boutId: string, invId: string) => void | Promise<void>
+  onBoutsChanged: () => void | Promise<void>
 }) {
   return (
     <div className="space-y-4">
+      {/* AI Matchmaker — proposes bout pairs from the open-to-fight
+          fighter pool. Each accepted suggestion creates a bout (and
+          invites cross-gym fighters via the existing consent flow),
+          each dismissed suggestion is logged as a learning signal.
+          Lives above the manual Add Bout flow so AI is the default
+          path for a fresh card. */}
+      {eventId && <MatchmakerPanel eventId={eventId} onAccepted={onBoutsChanged} />}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-400">
           {bouts.length} bout{bouts.length !== 1 ? "s" : ""} on the card
@@ -2748,6 +2801,375 @@ function InterestBanner({ eventId }: { eventId: string }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// ============================================
+// AI Matchmaker panel — Door B's first AI feature. Proposes bout
+// pairs from the open-to-fights fighter pool. Each suggestion lands
+// in matchmaker_suggestions for the learning loop regardless of the
+// promoter's decision. Accepting creates a real event_bouts row +
+// fires invitations for cross-gym fighters; dismissing is a one-tap
+// "no thanks" that still feeds the model.
+// ============================================
+
+interface MatchmakerFighter {
+  id: string
+  display_name: string
+  photo_url: string | null
+  record: string
+  weight_class: string | null
+  weight_kg: number | null
+  fighter_country: string | null
+  gym_name: string | null
+  gym_id: string | null
+}
+
+interface MatchmakerSuggestion {
+  id: string
+  fighter_red: MatchmakerFighter
+  fighter_blue: MatchmakerFighter
+  weight_class: string | null
+  scheduled_rounds: number
+  reasoning: string
+  estimated_draw: "low" | "medium" | "high"
+  cross_gym: boolean
+}
+
+function MatchmakerPanel({
+  eventId,
+  onAccepted,
+}: {
+  eventId: string
+  onAccepted: () => void | Promise<void>
+}) {
+  const [suggestions, setSuggestions] = useState<MatchmakerSuggestion[]>([])
+  const [generating, setGenerating] = useState(false)
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [notes, setNotes] = useState("")
+  const [notesOpen, setNotesOpen] = useState(false)
+  // Brief confirmation shown after an accept — clears itself after
+  // a few seconds. Says how many invitations went out vs assignments
+  // happened, so the promoter knows the consent flow ran.
+  const [acceptedToast, setAcceptedToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!acceptedToast) return
+    const t = setTimeout(() => setAcceptedToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [acceptedToast])
+
+  async function generate() {
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/promoter/events/${eventId}/matchmaker`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          count: 4,
+          notes: notes.trim() || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "The matchmaker couldn't generate suggestions.")
+        return
+      }
+      setSuggestions(data.suggestions ?? [])
+    } catch {
+      setError("Network error reaching the matchmaker.")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function resolve(suggestion: MatchmakerSuggestion, action: "accept" | "dismiss") {
+    setResolvingId(suggestion.id)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/matchmaker/${suggestion.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Couldn't resolve suggestion. Try again.")
+        return
+      }
+      // Drop the suggestion from the local list regardless of
+      // dismiss/accept so the UI doesn't restate decisions.
+      setSuggestions((s) => s.filter((x) => x.id !== suggestion.id))
+      if (action === "accept") {
+        const inv = data.invitations?.length ?? 0
+        const asg = data.assignments?.length ?? 0
+        let summary = "Bout added to the card."
+        if (inv > 0 && asg > 0) {
+          summary = `Bout created. ${asg} fighter${asg === 1 ? "" : "s"} assigned, ${inv} invitation${inv === 1 ? "" : "s"} sent.`
+        } else if (inv > 0) {
+          summary = `Bout created. ${inv} invitation${inv === 1 ? "" : "s"} sent.`
+        } else if (asg > 0) {
+          summary = `Bout created with ${asg} fighter${asg === 1 ? "" : "s"} assigned.`
+        }
+        setAcceptedToast(summary)
+        await onAccepted()
+      }
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setResolvingId(null)
+    }
+  }
+
+  // Pre-generate state: the pitch + the button.
+  if (suggestions.length === 0 && !generating) {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-amber-500/[0.02] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-amber-500/15 p-2">
+              <Sparkles className="h-5 w-5 text-amber-300" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-amber-100">
+                AI Matchmaker
+              </p>
+              <p className="mt-0.5 text-[12px] text-amber-200/70">
+                Propose bouts from the Open-to-Fight pool — record-balanced,
+                cross-gym storylines, weight-matched.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={generate}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-amber-400"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Suggest bouts
+          </button>
+        </div>
+
+        {/* Collapsible notes — lets the promoter steer the model
+            without cluttering the default state. Examples are
+            in-placeholder so the promoter knows what to write. */}
+        <button
+          type="button"
+          onClick={() => setNotesOpen((v) => !v)}
+          aria-expanded={notesOpen}
+          className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300/70 hover:text-amber-200"
+        >
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${notesOpen ? "rotate-180" : ""}`}
+          />
+          {notesOpen ? "Hide notes" : "Add notes for the matchmaker (optional)"}
+        </button>
+        {notesOpen && (
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. Lean technical, no international fighters, save the big names for main event"
+            rows={2}
+            maxLength={500}
+            className="mt-2 w-full resize-none rounded-md border border-amber-500/20 bg-zinc-950 px-3 py-2 text-xs text-amber-100 placeholder-amber-200/30 outline-none focus:border-amber-400/50"
+          />
+        )}
+
+        {error && (
+          <p role="alert" className="mt-3 text-xs text-rose-300">
+            {error}
+          </p>
+        )}
+        {acceptedToast && (
+          <p role="status" aria-live="polite" className="mt-3 text-xs text-emerald-300">
+            {acceptedToast}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  // Generating state.
+  if (generating) {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] p-8 text-center">
+        <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-amber-400" />
+        <p className="text-sm font-medium text-amber-100">
+          Building your card…
+        </p>
+        <p className="mt-1 text-[11px] text-amber-200/60">
+          Reasoning over the fighter pool, balancing records, weighing gym storylines.
+        </p>
+      </div>
+    )
+  }
+
+  // Results state.
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-amber-300" />
+          <p className="text-sm font-semibold text-amber-100">
+            {suggestions.length} suggestion{suggestions.length === 1 ? "" : "s"} —
+            review, accept, or skip
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={generate}
+          className="text-xs text-amber-300 hover:text-amber-200"
+        >
+          Generate more
+        </button>
+      </div>
+
+      {acceptedToast && (
+        <p role="status" aria-live="polite" className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+          {acceptedToast}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          {error}
+        </p>
+      )}
+
+      {suggestions.map((s) => (
+        <SuggestionCard
+          key={s.id}
+          suggestion={s}
+          resolving={resolvingId === s.id}
+          onAccept={() => resolve(s, "accept")}
+          onDismiss={() => resolve(s, "dismiss")}
+        />
+      ))}
+    </div>
+  )
+}
+
+function SuggestionCard({
+  suggestion,
+  resolving,
+  onAccept,
+  onDismiss,
+}: {
+  suggestion: MatchmakerSuggestion
+  resolving: boolean
+  onAccept: () => void
+  onDismiss: () => void
+}) {
+  const drawColor =
+    suggestion.estimated_draw === "high"
+      ? "bg-emerald-500/15 text-emerald-300"
+      : suggestion.estimated_draw === "medium"
+        ? "bg-amber-500/15 text-amber-300"
+        : "bg-zinc-700/40 text-zinc-400"
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] p-4">
+      {/* Meta row: weight class, draw estimate, cross-gym flag */}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px]">
+        {suggestion.weight_class && (
+          <span className="rounded-full bg-white/5 px-2 py-0.5 text-neutral-300">
+            {suggestion.weight_class}
+          </span>
+        )}
+        <span className="rounded-full bg-white/5 px-2 py-0.5 text-neutral-300">
+          {suggestion.scheduled_rounds} rounds
+        </span>
+        <span className={`rounded-full px-2 py-0.5 font-medium uppercase tracking-wider ${drawColor}`}>
+          {suggestion.estimated_draw} draw
+        </span>
+        {suggestion.cross_gym && (
+          <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-300">
+            Cross-gym — invitations will fire
+          </span>
+        )}
+      </div>
+
+      {/* Fighters */}
+      <div className="flex items-center gap-3">
+        <SuggestionFighter fighter={suggestion.fighter_red} corner="red" />
+        <span className="text-xs font-bold text-neutral-600">VS</span>
+        <SuggestionFighter fighter={suggestion.fighter_blue} corner="blue" />
+      </div>
+
+      {/* Reasoning */}
+      <p className="mt-3 text-[12px] italic leading-relaxed text-amber-100/80">
+        &ldquo;{suggestion.reasoning}&rdquo;
+      </p>
+
+      {/* Actions */}
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onAccept}
+          disabled={resolving}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resolving ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Adding…
+            </>
+          ) : (
+            <>
+              {suggestion.cross_gym ? (
+                <Send className="h-3.5 w-3.5" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" />
+              )}
+              {suggestion.cross_gym ? "Add bout & invite" : "Add bout"}
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          disabled={resolving}
+          className="rounded-lg border border-white/10 px-3 py-2 text-sm text-neutral-400 hover:bg-white/5 hover:text-neutral-200 disabled:opacity-50"
+        >
+          Skip
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SuggestionFighter({
+  fighter,
+  corner,
+}: {
+  fighter: MatchmakerFighter
+  corner: "red" | "blue"
+}) {
+  const tone =
+    corner === "red"
+      ? "ring-red-500/30 bg-red-500/[0.04]"
+      : "ring-blue-500/30 bg-blue-500/[0.04]"
+  const label =
+    corner === "red" ? "text-red-300" : "text-blue-300"
+
+  return (
+    <div className={`flex-1 rounded-lg ring-1 ${tone} p-3 min-w-0`}>
+      <p className={`text-[10px] font-semibold uppercase tracking-wider ${label}`}>
+        {corner === "red" ? "Red corner" : "Blue corner"}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-white">
+        {fighter.display_name}
+      </p>
+      <p className="text-[11px] tabular-nums text-neutral-400">{fighter.record}</p>
+      <p className="truncate text-[10px] text-neutral-500">
+        {fighter.gym_name ?? "Unaffiliated"}
+        {fighter.fighter_country ? ` · ${fighter.fighter_country}` : ""}
+      </p>
     </div>
   )
 }
