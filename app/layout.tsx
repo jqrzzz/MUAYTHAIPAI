@@ -101,6 +101,53 @@ export default function RootLayout({
         <link rel="preconnect" href="https://i.ytimg.com" />
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
 
+        {/* MUAYTHAIPAI Network — distinct from the Pai gym below. The
+            network is the certification authority + fight discovery
+            platform; the gym is a member. AI engines benefit from
+            seeing them as separate entities with sameAs links. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "@id": "https://muaythaipai.com/#organization",
+              name: "MUAYTHAIPAI",
+              alternateName: "MUAYTHAIPAI Network",
+              url: "https://muaythaipai.com",
+              logo: "https://muaythaipai.com/images/muay-thai-logo-og.png",
+              description:
+                "Thailand's verifiable cross-gym Muay Thai certification network. Five-level Naga-to-Garuda credentialing ladder, public fighter registry, and fight-event platform.",
+              foundingLocation: {
+                "@type": "Place",
+                address: {
+                  "@type": "PostalAddress",
+                  addressLocality: "Pai",
+                  addressRegion: "Mae Hong Son",
+                  addressCountry: "Thailand",
+                },
+              },
+              // Pointer to the founding gym so AI engines can connect
+              // the network to its origin without conflating them.
+              memberOf: {
+                "@type": "Organization",
+                "@id": "https://muaythaipai.com/#gym",
+              },
+              knowsAbout: [
+                "Muay Thai",
+                "Muay Thai certification",
+                "Traditional Thai martial arts",
+                "Naga-to-Garuda certification ladder",
+                "Naga", "Phayra Nak", "Singha", "Hanuman", "Garuda",
+              ],
+              areaServed: {
+                "@type": "Country",
+                name: "Thailand",
+              },
+            }),
+          }}
+        />
+
         {/* Organization Schema - Tells Google exactly who you are */}
         <script
           type="application/ld+json"
