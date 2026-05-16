@@ -226,7 +226,16 @@ function EventRow({ event }: { event: PromoterEvent }) {
   const status = STATUS_STYLES[event.status] || STATUS_STYLES.draft
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.05]">
+    <div className="relative flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.05] focus-within:ring-2 focus-within:ring-amber-500/40">
+      {/* Card-link overlay — makes the whole row click through to the
+          editor while keeping the icon buttons on the right separately
+          clickable (they sit at z-10 above this absolute link). */}
+      <Link
+        href={`/promoter/events/${event.id}`}
+        aria-label={`Edit ${event.name}`}
+        className="absolute inset-0 rounded-xl focus:outline-none"
+      />
+
       {/* Date */}
       <div className="hidden w-20 flex-shrink-0 text-center sm:block">
         <p className="text-sm font-semibold text-white">
@@ -271,10 +280,14 @@ function EventRow({ event }: { event: PromoterEvent }) {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2">
+      {/* Actions — relative + z-10 so they sit above the card-link
+          overlay and remain independently clickable. Each gets an
+          explicit aria-label so screen readers don't just announce
+          the bare URL. */}
+      <div className="relative z-10 flex items-center gap-2">
         <Link
           href={`/promoter/events/${event.id}`}
+          aria-label={`Edit ${event.name}`}
           className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
           title="Edit event"
         >
@@ -283,6 +296,7 @@ function EventRow({ event }: { event: PromoterEvent }) {
         {event.status === "published" && (
           <Link
             href={`/fights/${event.id}`}
+            aria-label={`View public page for ${event.name}`}
             className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
             title="View public page"
           >
@@ -292,6 +306,7 @@ function EventRow({ event }: { event: PromoterEvent }) {
         {event.status === "published" && (
           <Link
             href={`/promoter/events/${event.id}/door`}
+            aria-label={`Open door scan for ${event.name}`}
             className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-amber-300 transition-colors hover:bg-amber-500/15 hover:text-amber-200"
             title="Door scan tickets"
           >

@@ -152,10 +152,15 @@ export default function PricingClient() {
         <div className="grid gap-2">
           {FAQS.map((faq, i) => {
             const open = openFaq === i
+            const panelId = `faq-panel-${i}`
+            const buttonId = `faq-trigger-${i}`
             return (
               <Surface key={faq.q}>
                 <button
+                  id={buttonId}
                   onClick={() => setOpenFaq(open ? null : i)}
+                  aria-expanded={open}
+                  aria-controls={panelId}
                   className="flex w-full items-center justify-between gap-3 p-4 text-left"
                 >
                   <span className="text-[14px] font-medium text-zinc-100">
@@ -170,6 +175,9 @@ export default function PricingClient() {
                 <AnimatePresence initial={false}>
                   {open && (
                     <motion.div
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={buttonId}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}

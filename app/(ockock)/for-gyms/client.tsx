@@ -151,6 +151,9 @@ export default function ForGymsClient() {
           >
             <div
               ref={threadRef}
+              role="log"
+              aria-live="polite"
+              aria-label="Chat with OckOck"
               className="max-h-[44vh] space-y-3 overflow-y-auto rounded-2xl bg-zinc-900/40 p-4 text-left ring-1 ring-zinc-900"
             >
               {messages.map((m, i) => (

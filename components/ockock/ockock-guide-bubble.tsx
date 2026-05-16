@@ -118,7 +118,13 @@ export function OckOckGuideBubble() {
             </button>
           </header>
 
-          <div ref={threadRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+          <div
+            ref={threadRef}
+            role="log"
+            aria-live="polite"
+            aria-label="OckOck chat messages"
+            className="flex-1 space-y-3 overflow-y-auto p-4"
+          >
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2"}>
                 {m.role === "assistant" && (

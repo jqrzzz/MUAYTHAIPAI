@@ -30,9 +30,9 @@ export default async function TicketSuccessPage({ params, searchParams }: Props)
             Payment received. Your ticket is on its way.
           </p>
           {reference && (
-            <div className="mt-5 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-neutral-900 px-4 py-2 font-mono text-sm text-amber-300">
-              <Ticket className="h-4 w-4" />
-              {reference}
+            <div className="mt-5 inline-flex max-w-full items-center gap-2 rounded-lg border border-white/10 bg-neutral-900 px-4 py-2 font-mono text-sm text-amber-300">
+              <Ticket className="h-4 w-4 shrink-0" />
+              <span className="truncate">{reference}</span>
             </div>
           )}
           <div className="mt-6 flex items-start gap-2 rounded-lg bg-neutral-900/60 px-4 py-3 text-left">

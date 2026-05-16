@@ -17,7 +17,7 @@
  * tree; the address bar stays clean.
  */
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import { Menu, X, Swords, Users, Megaphone, Tag, LayoutDashboard } from "lucide-react"
 import { OckOckCta } from "./ockock-cta"
@@ -53,6 +53,13 @@ function isActive(pathname: string, link: NavLink): boolean {
 export function OckOckNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  // Refs so we can hand focus to the drawer's first link when it
+  // opens, and return focus to the hamburger when it closes. This
+  // is the minimum-viable focus management — not a full trap (tab
+  // can still escape) but matches the basic a11y expectation that
+  // keyboard users land inside the modal they just opened.
+  const drawerRef = useRef<HTMLDivElement | null>(null)
+  const hamburgerRef = useRef<HTMLButtonElement | null>(null)
 
   // Close drawer on Escape + lock body scroll while open.
   useEffect(() => {
@@ -63,9 +70,19 @@ export function OckOckNav() {
     document.addEventListener("keydown", onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = "hidden"
+    // Push focus into the drawer on open so screen-reader + keyboard
+    // users land in context. Run on the next tick so the drawer is
+    // mounted by the time we query for the first link.
+    const focusTimer = setTimeout(() => {
+      drawerRef.current?.querySelector<HTMLElement>("a, button")?.focus()
+    }, 0)
     return () => {
       document.removeEventListener("keydown", onKey)
       document.body.style.overflow = prev
+      clearTimeout(focusTimer)
+      // Return focus to the hamburger when the drawer closes so the
+      // keyboard user can immediately retoggle the menu.
+      hamburgerRef.current?.focus()
     }
   }, [open])
 
@@ -138,12 +155,13 @@ export function OckOckNav() {
           </OckOckCta>
           {/* Hamburger — mobile only */}
           <button
+            ref={hamburgerRef}
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             aria-controls="ockock-mobile-menu"
-            className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-900/70 hover:text-zinc-100 transition-colors"
+            className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-900/70 hover:text-zinc-100 transition-colors"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -153,7 +171,11 @@ export function OckOckNav() {
       {/* Mobile drawer */}
       {open && (
         <div
+          ref={drawerRef}
           id="ockock-mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site navigation"
           className="sm:hidden border-t border-zinc-900/80 bg-zinc-950"
         >
           <ul className="px-4 py-2">

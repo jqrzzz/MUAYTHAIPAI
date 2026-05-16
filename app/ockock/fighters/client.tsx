@@ -143,6 +143,8 @@ export default function FightersClient() {
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
+          aria-pressed={showFilters || activeFilterCount > 0}
+          aria-label={showFilters ? "Hide filters" : "Show filters"}
           className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
             showFilters || activeFilterCount > 0
               ? "border-amber-500/50 bg-amber-500/10 text-amber-400"

@@ -168,6 +168,15 @@ export default function FightDetailClient() {
           <img
             src={event.cover_image_url}
             alt={`${event.name} cover`}
+            loading="lazy"
+            // If the cover URL 404s (broken upload, deleted bucket
+            // object, etc.) collapse the wrapper instead of leaving
+            // a blank 16:9 ratio box. The hero text below still
+            // reads fine on its own.
+            onError={(e) => {
+              const wrapper = e.currentTarget.parentElement
+              if (wrapper) wrapper.style.display = "none"
+            }}
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
