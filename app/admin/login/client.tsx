@@ -9,12 +9,14 @@ import { AuthCard, SaasButton, SaasInput } from "@/components/saas"
 
 // Whitelist of post-login destinations we'll honor from ?redirect=.
 // Prevents open-redirect tomfoolery via crafted URLs while still letting
-// callers like /ockock/promoter punt users through login and back.
+// callers like /promoter (the OckOck promoter dashboard) and /ockock/*
+// (the legacy internal path, kept for safety) punt users through login
+// and back.
 function safeRedirect(raw: string | null): string {
   if (!raw) return "/admin"
   // Only same-origin paths starting with / and not //
   if (!raw.startsWith("/") || raw.startsWith("//")) return "/admin"
-  const allowed = ["/admin", "/trainer", "/ockock", "/platform-admin"]
+  const allowed = ["/admin", "/trainer", "/promoter", "/ockock", "/platform-admin"]
   if (allowed.some((p) => raw === p || raw.startsWith(`${p}/`) || raw.startsWith(`${p}?`))) {
     return raw
   }
