@@ -1,7 +1,27 @@
 import type { MetadataRoute } from "next"
 import { createClient } from "@supabase/supabase-js"
+import { OCKOCK_HOST } from "@/lib/ockock/url"
 
 const BASE_URL = "https://muaythaipai.com"
+
+// Routes that live on ockock.app — set in one place so each entry below
+// can pick the right host without sprinkling string concatenation around.
+// Keep these mutually exclusive with the Pai routes; a path showing up
+// on both domains confuses search engines about which one is canonical.
+const OCKOCK_PATHS = new Set<string>([
+  "/ockock",
+  "/fights",
+  "/fighters",
+  "/for-gyms",
+  "/pricing",
+  "/vision",
+  "/about",
+  "/terms",
+  "/privacy",
+])
+function urlFor(path: string): string {
+  return `${OCKOCK_PATHS.has(path) ? OCKOCK_HOST : BASE_URL}${path}`
+}
 
 // Service-role client — sitemap is generated server-side and only reads
 // columns we already expose on the public surfaces (certificate_number,
@@ -39,10 +59,10 @@ const staticRoutes: Route[] = [
   { path: "/instructors", changeFrequency: "weekly", priority: 0.7 },
   // OckOck product surfaces — public consumer routes that should be
   // crawlable so search engines and social can index fight nights +
-  // fighter directory entries.
+  // fighter directory entries. These resolve to ockock.app via urlFor().
   { path: "/ockock", changeFrequency: "weekly", priority: 0.8 },
-  { path: "/ockock/fights", changeFrequency: "daily", priority: 0.9 },
-  { path: "/ockock/fighters", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/fights", changeFrequency: "daily", priority: 0.9 },
+  { path: "/fighters", changeFrequency: "weekly", priority: 0.8 },
   { path: "/for-gyms", changeFrequency: "monthly", priority: 0.7 },
   { path: "/pricing", changeFrequency: "monthly", priority: 0.6 },
   { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3 },
@@ -146,7 +166,7 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
   for (const f of fightsRes.data ?? []) {
     if (!f.id) continue
     entries.push({
-      url: `${BASE_URL}/ockock/fights/${encodeURIComponent(f.id)}`,
+      url: `${OCKOCK_HOST}/fights/${encodeURIComponent(f.id)}`,
       lastModified: f.updated_at ? new Date(f.updated_at) : new Date(),
       // Daily until the event has passed — promoters often edit cards
       // up to and including the day of the show.
@@ -158,7 +178,7 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
   for (const fighter of fightersRes.data ?? []) {
     if (!fighter.id) continue
     entries.push({
-      url: `${BASE_URL}/ockock/fighters/${encodeURIComponent(fighter.id)}`,
+      url: `${OCKOCK_HOST}/fighters/${encodeURIComponent(fighter.id)}`,
       lastModified: fighter.updated_at ? new Date(fighter.updated_at) : new Date(),
       changeFrequency: "weekly",
       priority: 0.6,
@@ -172,7 +192,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map(
     ({ path, changeFrequency, priority }) => ({
-      url: `${BASE_URL}${path}`,
+      url: urlFor(path),
       lastModified: now,
       changeFrequency,
       priority,

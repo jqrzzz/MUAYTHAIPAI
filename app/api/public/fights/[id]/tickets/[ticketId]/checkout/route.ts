@@ -135,9 +135,12 @@ export async function POST(
     )
   }
 
+  // Stripe needs to return the buyer to the host they came from — using
+  // the request origin keeps preview deployments + ockock.app both working.
+  // Clean paths so the URL stays /fights/... in the address bar after return.
   const origin = new URL(request.url).origin
-  const successUrl = `${origin}/ockock/fights/${eventId}/success?ref=${orderReference}`
-  const cancelUrl = `${origin}/ockock/fights/${eventId}`
+  const successUrl = `${origin}/fights/${eventId}/success?ref=${orderReference}`
+  const cancelUrl = `${origin}/fights/${eventId}`
 
   try {
     const session = await stripe.checkout.sessions.create({

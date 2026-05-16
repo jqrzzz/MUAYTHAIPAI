@@ -223,7 +223,7 @@ export default function DoorScanClient({
       <header className="sticky top-0 z-40 border-b border-white/10 bg-neutral-950/80 backdrop-blur-md">
         <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
           <Link
-            href={`/ockock/promoter/events/${eventId}`}
+            href={`/promoter/events/${eventId}`}
             className="text-neutral-400 hover:text-white"
             aria-label="Back to event editor"
           >

@@ -115,7 +115,7 @@ export default function FightDetailClient() {
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">
         <p className="mb-4 text-lg text-neutral-400">Event not found</p>
         <Link
-          href="/ockock/fights"
+          href="/fights"
           className="text-amber-400 hover:text-amber-300"
         >
           Back to events
@@ -147,7 +147,7 @@ export default function FightDetailClient() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       {/* Back */}
       <Link
-        href="/ockock/fights"
+        href="/fights"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -300,7 +300,7 @@ function FighterCorner({
 
   return (
     <Link
-      href={`/ockock/fighters/${fighter.id}`}
+      href={`/fighters/${fighter.id}`}
       className="group flex flex-1 flex-col items-center text-center rounded-lg px-2 py-1 transition-colors hover:bg-white/5"
     >
       <div className="relative mb-2 h-14 w-14 overflow-hidden rounded-full bg-neutral-800 ring-1 ring-transparent group-hover:ring-white/20 transition">

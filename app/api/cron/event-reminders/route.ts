@@ -26,6 +26,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { EmailService } from "@/lib/email-service"
+import { ockockUrl } from "@/lib/ockock/url"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -65,7 +66,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events: 0, reminders_sent: 0 })
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
   const emailer = EmailService.getInstance()
   let totalSent = 0
   let totalFailed = 0
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
           tierName: tier?.tier_name || "Ticket",
           quantity: o.quantity ?? 1,
           orderReference: o.order_reference || o.id,
-          eventUrl: `${siteUrl}/ockock/fights/${event.id}`,
+          eventUrl: ockockUrl(`/fights/${event.id}`),
         })
       } catch (err) {
         console.warn("[event-reminders] send threw for", o.order_reference, err)

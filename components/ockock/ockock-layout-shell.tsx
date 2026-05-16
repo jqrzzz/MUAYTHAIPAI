@@ -1,7 +1,10 @@
 /**
  * OckOckLayoutShell — the shared chrome used by both OckOck route trees:
  *   - app/(ockock)/  : marketing surface (/for-gyms, /pricing, /about, /vision, /terms, /privacy)
- *   - app/ockock/    : consumer/product surface (/ockock, /ockock/fights, /ockock/fighters, /ockock/promoter)
+ *   - app/ockock/    : consumer/product surface — public URLs on ockock.app are
+ *                      /ockock, /fights, /fighters, /promoter (the internal
+ *                      route tree is /ockock/* and middleware rewrites the
+ *                      clean URLs onto it)
  *
  * Both trees render the same nav, footer, and floating guide so clicking
  * between marketing pages and product pages doesn't feel like switching

@@ -15,6 +15,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Calendar, MapPin, Swords, Loader2 } from "lucide-react"
+import { ockockUrl } from "@/lib/ockock/url"
 
 interface UpcomingBout {
   id: string
@@ -99,7 +100,7 @@ function BoutRow({ bout, primary }: { bout: UpcomingBout; primary: boolean }) {
 
   return (
     <Link
-      href={`/ockock/fights/${ev.id}`}
+      href={ockockUrl(`/fights/${ev.id}`)}
       className={`block px-4 py-3 transition-colors hover:bg-emerald-500/[0.04] ${
         primary ? "" : "py-2.5"
       }`}

@@ -32,6 +32,7 @@ import PayoutsTab from "@/components/admin/payouts-tab"
 import RetentionTab from "@/components/admin/retention-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import HelpButton from "@/components/admin/help-button"
+import { ockockUrl } from "@/lib/ockock/url"
 import Link from "next/link"
 import {
   Award,
@@ -539,8 +540,8 @@ export default function AdminDashboardClient({
           ))}
 
           {/* External: Promoter dashboard — gym staff who promote fight
-              events jump out to /ockock/promoter from here. Separate from
-              the tab buttons above because it's a route, not a tab. */}
+              events jump out to ockock.app/promoter from here. Absolute
+              URL because the admin sidebar runs on both hosts. */}
           <div className="mb-4">
             {!sidebarCollapsed && (
               <p className="px-3 py-2 text-[10px] font-medium text-zinc-500 uppercase tracking-[0.14em]">
@@ -548,7 +549,7 @@ export default function AdminDashboardClient({
               </p>
             )}
             <Link
-              href="/ockock/promoter"
+              href={ockockUrl("/promoter")}
               title={sidebarCollapsed ? "Promoter dashboard" : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-[13px] mb-0.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors ${
                 sidebarCollapsed ? "justify-center" : ""

@@ -13,7 +13,7 @@ export default async function PromoterDashboardPage() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect("/admin/login?redirect=/ockock/promoter")
+    redirect("/admin/login?redirect=/promoter")
   }
 
   const { data: membership } = await supabase

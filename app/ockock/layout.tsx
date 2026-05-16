@@ -1,6 +1,9 @@
 /**
- * Layout for the OckOck consumer/product surfaces: /ockock,
- * /ockock/fights, /ockock/fighters, /ockock/promoter, etc.
+ * Layout for the OckOck consumer/product surfaces. Internally the
+ * routes live at /ockock/* (the file paths below); on ockock.app the
+ * middleware rewrites the clean public URLs — /fights, /fighters,
+ * /promoter — onto the same files. /ockock (the consumer hub) is
+ * served at /ockock on both sides.
  *
  * Reuses OckOckLayoutShell so the chrome matches the marketing surface
  * at app/(ockock)/. Anything brand-level (nav, footer, guide bubble)

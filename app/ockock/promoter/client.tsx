@@ -84,7 +84,7 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
           <p className="mt-2 text-[15px] text-zinc-400">{orgName}</p>
         </div>
         <Link
-          href="/ockock/promoter/events/new"
+          href="/promoter/events/new"
           className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-amber-400"
         >
           <Plus className="h-4 w-4" />
@@ -132,7 +132,7 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
             Create your first fight event to get started
           </p>
           <Link
-            href="/ockock/promoter/events/new"
+            href="/promoter/events/new"
             className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-black hover:bg-amber-400"
           >
             <Plus className="h-4 w-4" />
@@ -257,7 +257,7 @@ function EventRow({ event }: { event: PromoterEvent }) {
       {/* Actions */}
       <div className="flex items-center gap-2">
         <Link
-          href={`/ockock/promoter/events/${event.id}`}
+          href={`/promoter/events/${event.id}`}
           className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
           title="Edit event"
         >
@@ -265,7 +265,7 @@ function EventRow({ event }: { event: PromoterEvent }) {
         </Link>
         {event.status === "published" && (
           <Link
-            href={`/ockock/fights/${event.id}`}
+            href={`/fights/${event.id}`}
             className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
             title="View public page"
           >
@@ -274,7 +274,7 @@ function EventRow({ event }: { event: PromoterEvent }) {
         )}
         {event.status === "published" && (
           <Link
-            href={`/ockock/promoter/events/${event.id}/door`}
+            href={`/promoter/events/${event.id}/door`}
             className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-amber-300 transition-colors hover:bg-amber-500/15 hover:text-amber-200"
             title="Door scan tickets"
           >

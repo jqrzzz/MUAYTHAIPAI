@@ -37,6 +37,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getPromoterAuth, verifyEventOwnership } from "@/lib/auth-helpers"
 import { EmailService } from "@/lib/email-service"
 import { notifyTicketSold } from "@/lib/notifications"
+import { ockockUrl } from "@/lib/ockock/url"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -215,7 +216,6 @@ export async function POST(
             .eq("id", ticketId)
             .maybeSingle(),
         ])
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
         await EmailService.getInstance().sendTicketConfirmationEmail({
           buyerEmail: guestEmail,
           buyerName: guestName,
@@ -230,7 +230,7 @@ export async function POST(
           quantity,
           totalThb,
           orderReference,
-          eventUrl: `${siteUrl}/ockock/fights/${eventId}`,
+          eventUrl: ockockUrl(`/fights/${eventId}`),
         })
       } catch (err) {
         console.warn("[orders.cash] confirmation email failed:", err)

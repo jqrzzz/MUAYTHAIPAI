@@ -4,13 +4,17 @@
  * OckOckNav — the unified top nav for every OckOck surface, used by
  * both layouts:
  *   - app/(ockock)/layout.tsx  (marketing: /for-gyms, /pricing, /about, /vision)
- *   - app/ockock/layout.tsx     (product: /ockock, /ockock/fights, /ockock/fighters, /ockock/promoter)
+ *   - app/ockock/layout.tsx     (product: /ockock, /fights, /fighters, /promoter on ockock.app)
  *
  * One component, one visual language. Active route gets an amber tint
  * matching the OckOck brand. Mobile collapses to a hamburger drawer.
  *
  * Auth CTAs (Log in / Start free trial) live here because they're
  * the primary conversion paths regardless of which side you're on.
+ *
+ * hrefs are bare paths (`/fights`, `/fighters`, `/promoter`). On
+ * ockock.app the middleware rewrites them onto the internal /ockock/*
+ * tree; the address bar stays clean.
  */
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -23,14 +27,13 @@ interface NavLink {
   label: string
   icon: React.ComponentType<{ className?: string }>
   // matchPrefix lets one nav item highlight for both the index and
-  // detail routes (e.g. /ockock/fights active for /ockock/fights AND
-  // /ockock/fights/[id]).
+  // detail routes (e.g. /fights active for /fights AND /fights/[id]).
   matchPrefix?: string
 }
 
 const PRIMARY: NavLink[] = [
-  { href: "/ockock/fights", label: "Fights", icon: Swords, matchPrefix: "/ockock/fights" },
-  { href: "/ockock/fighters", label: "Fighters", icon: Users, matchPrefix: "/ockock/fighters" },
+  { href: "/fights", label: "Fights", icon: Swords, matchPrefix: "/fights" },
+  { href: "/fighters", label: "Fighters", icon: Users, matchPrefix: "/fighters" },
   { href: "/for-gyms", label: "For Gyms", icon: Megaphone },
   { href: "/pricing", label: "Pricing", icon: Tag },
 ]
@@ -38,7 +41,7 @@ const PRIMARY: NavLink[] = [
 // Promoter dashboard — secondary because it's gated. Linked here so
 // gym owners who know they need it don't have to guess the URL.
 const SECONDARY: NavLink[] = [
-  { href: "/ockock/promoter", label: "Promoter", icon: LayoutDashboard, matchPrefix: "/ockock/promoter" },
+  { href: "/promoter", label: "Promoter", icon: LayoutDashboard, matchPrefix: "/promoter" },
 ]
 
 function isActive(pathname: string, link: NavLink): boolean {

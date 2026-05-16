@@ -234,7 +234,7 @@ export default function EventEditorClient({
           throw new Error(data.error || "Failed to create event")
         }
         const data = await res.json()
-        router.push(`/ockock/promoter/events/${data.event.id}`)
+        router.push(`/promoter/events/${data.event.id}`)
       } else {
         const res = await fetch(`/api/promoter/events/${eventId}`, {
           method: "PATCH",
@@ -519,7 +519,7 @@ export default function EventEditorClient({
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Back */}
       <Link
-        href="/ockock/promoter"
+        href="/promoter"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -535,7 +535,7 @@ export default function EventEditorClient({
           <div className="flex items-center gap-2">
             {eventStatus === "published" && (
               <Link
-                href={`/ockock/fights/${eventId}`}
+                href={`/fights/${eventId}`}
                 className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >
                 <Eye className="h-3.5 w-3.5" />
@@ -743,7 +743,7 @@ function DetailsTab({
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-zinc-500">
               Shows on the public fight page hero, the event card on
-              /ockock/fights, and the social preview when shared.
+              the fights list (ockock.app/fights), and the social preview when shared.
               JPEG / PNG / WebP / GIF, up to 8MB. Landscape works best.
             </p>
             {isCreate ? (
@@ -900,7 +900,7 @@ function DetailsTab({
           <p className="font-semibold">This event is cancelled.</p>
           <p className="mt-1 text-xs text-rose-200/80">
             Ticket sales are closed and any paid orders were refunded.
-            The event is hidden from /ockock/fights.
+            The event is hidden from the public fights list.
           </p>
         </div>
       )}

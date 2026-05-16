@@ -350,7 +350,7 @@ export default function FightersClient() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((fighter) => (
-            <Link href={`/ockock/fighters/${fighter.id}`} key={fighter.id}>
+            <Link href={`/fighters/${fighter.id}`} key={fighter.id}>
               <FighterCard fighter={fighter} />
             </Link>
           ))}

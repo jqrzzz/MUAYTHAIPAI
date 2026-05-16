@@ -45,13 +45,13 @@ export default async function TicketSuccessPage({ params, searchParams }: Props)
 
         <div className="mt-6 flex flex-col gap-2 text-center">
           <Link
-            href={`/ockock/fights/${eventId}`}
+            href={`/fights/${eventId}`}
             className="text-sm text-amber-300 hover:text-amber-200"
           >
             ← Back to the fight card
           </Link>
           <Link
-            href="/ockock/fights"
+            href="/fights"
             className="text-xs text-neutral-500 hover:text-neutral-300"
           >
             See other events

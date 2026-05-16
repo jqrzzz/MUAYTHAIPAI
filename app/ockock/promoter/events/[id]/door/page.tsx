@@ -25,10 +25,10 @@ export default async function DoorScanPage({ params }: Props) {
   const supabase = await createClient()
   const auth = await getPromoterAuth(supabase)
   if (!auth) {
-    redirect(`/login?next=/ockock/promoter/events/${eventId}/door`)
+    redirect(`/login?next=/promoter/events/${eventId}/door`)
   }
   if (!(await verifyEventOwnership(supabase, eventId, auth.orgId))) {
-    redirect("/ockock/promoter")
+    redirect("/promoter")
   }
 
   // Pull the event name + date so the page header makes it obvious

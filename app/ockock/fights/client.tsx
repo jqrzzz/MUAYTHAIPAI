@@ -98,14 +98,14 @@ export default function FightsClient() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Link
-              href="/ockock/promoter"
+              href="/promoter"
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400 transition-colors"
             >
               <Ticket className="h-4 w-4" />
               Promote an event
             </Link>
             <Link
-              href="/ockock/fighters"
+              href="/fighters"
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
             >
               Browse fighters instead
@@ -140,7 +140,7 @@ function EventCard({ event }: { event: FightEvent }) {
 
   return (
     <Link
-      href={`/ockock/fights/${event.id}`}
+      href={`/fights/${event.id}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition-all hover:border-amber-500/20 hover:bg-white/[0.05] sm:flex-row"
     >
       {/* Date Block */}

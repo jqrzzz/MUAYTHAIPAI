@@ -6,13 +6,12 @@
 import Link from "next/link"
 
 // Browse the consumer/public destinations — fights, fighters, etc.
-// These live under /ockock/* with their own layout but the marketing
-// footer should still surface them so a visitor can move between
-// "this is what I want as a fan" and "this is how I run my gym."
+// hrefs use the clean ockock.app URLs; on the wire they're served by
+// the internal /ockock/* tree via a middleware rewrite.
 const BROWSE_LINKS = [
-  { href: "/ockock/fights", label: "Fight events" },
-  { href: "/ockock/fighters", label: "Fighters" },
-  { href: "/ockock/promoter", label: "Promoter dashboard" },
+  { href: "/fights", label: "Fight events" },
+  { href: "/fighters", label: "Fighters" },
+  { href: "/promoter", label: "Promoter dashboard" },
 ] as const
 
 const PRODUCT_LINKS = [

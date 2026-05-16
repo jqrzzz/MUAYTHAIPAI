@@ -9,9 +9,12 @@ const BASE_URL = "https://muaythaipai.com"
 // passport) that we explicitly want AI engines + search engines to
 // surface for tourists searching "Muay Thai certification Thailand."
 //
-// /ockock/promoter/* is technically authenticated but the page itself
-// redirects to login for unauthed users, so leaving it crawlable just
-// means search engines see a login redirect — harmless.
+// Promoter dashboard paths are authenticated; the page redirects to
+// login for unauthed users, so leaving them crawlable just means search
+// engines see a login redirect — harmless. We list both /promoter/
+// (the clean URL on ockock.app) and /ockock/promoter/ (the legacy
+// muaythaipai.com URL that 301s away) so the disallow holds wherever
+// this robots.txt is served.
 const DISALLOWED = [
   "/admin/",
   "/api/",
@@ -19,7 +22,7 @@ const DISALLOWED = [
   "/trainer/",
   "/platform-admin/",
   "/onboarding/",
-  // Keep these dashboard-only sub-routes blocked too:
+  "/promoter/",
   "/ockock/promoter/",
 ]
 
