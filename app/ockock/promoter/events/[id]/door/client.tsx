@@ -218,7 +218,7 @@ export default function DoorScanClient({
     : null
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header — stays fixed so it's always visible while scanning. */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-neutral-950/80 backdrop-blur-md">
         <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">

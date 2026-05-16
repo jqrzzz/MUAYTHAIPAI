@@ -21,7 +21,7 @@ export default async function TicketSuccessPage({ params, searchParams }: Props)
   const reference = ref?.trim() || null
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div>
       <div className="mx-auto max-w-lg px-5 py-16">
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-8 text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
