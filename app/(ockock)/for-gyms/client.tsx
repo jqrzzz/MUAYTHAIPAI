@@ -224,7 +224,7 @@ export default function ForGymsClient() {
             type="submit"
             disabled={!input.trim() || loading}
             aria-label="Send"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white transition-colors hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-600"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white transition-colors hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-600"
           >
             <Send className="h-4 w-4" />
           </button>

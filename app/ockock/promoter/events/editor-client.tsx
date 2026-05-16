@@ -652,21 +652,33 @@ export default function EventEditorClient({
 
       {/* Tabs */}
       {TABS.length > 1 && (
-        <div className="mb-6 flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
-                tab === t.key
-                  ? "bg-white/10 text-white"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
+        <div
+          role="tablist"
+          aria-label="Event editor sections"
+          className="mb-6 flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1"
+        >
+          {TABS.map((t) => {
+            const selected = tab === t.key
+            return (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={selected}
+                aria-controls={`tab-panel-${t.key}`}
+                id={`tab-${t.key}`}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => setTab(t.key)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
+                  selected
+                    ? "bg-white/10 text-white"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                {t.icon}
+                {t.label}
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -1468,6 +1480,16 @@ function FighterPickerDialog({
   const [mode, setMode] = useState<"invite" | "assign">("invite")
   const [inviteMessage, setInviteMessage] = useState("")
 
+  // Escape closes the picker — matches the standard modal interaction
+  // and avoids forcing the promoter to aim for the backdrop on mobile.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
+
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -1970,6 +1992,10 @@ interface SalesTotals {
   revenue_thb: number
   scanned_at_door: number
   orders: number
+  // True if there are more orders than the API's aggregation cap, in
+  // which case the totals are computed from the first 10k and may
+  // under-count. Hint shown next to the numbers.
+  approximate?: boolean
 }
 
 interface SalesTier {
@@ -1999,11 +2025,29 @@ interface SalesOrder {
   payment_method?: string | null
 }
 
+// Default page size — matches the API default. Buttons walk the
+// promoter through larger pages on demand.
+const SALES_PAGE_SIZE = 200
+// Max page size the API will honor; surfaced as a "Load all" option
+// when the page-by-page cadence isn't fast enough.
+const SALES_MAX_PAGE = 1000
+
 function SalesTab({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true)
   const [totals, setTotals] = useState<SalesTotals | null>(null)
   const [tiers, setTiers] = useState<SalesTier[]>([])
   const [orders, setOrders] = useState<SalesOrder[]>([])
+  const [pagination, setPagination] = useState<{
+    limit: number
+    returned: number
+    total: number
+    has_more: boolean
+  } | null>(null)
+  // Promoter-controlled page size. Stepping up triggers a fresh load
+  // (we always fetch from the top with the new cap rather than
+  // accumulating client-side, so polling stays consistent).
+  const [pageSize, setPageSize] = useState(SALES_PAGE_SIZE)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const [refreshing, setRefreshing] = useState(false)
@@ -2055,11 +2099,13 @@ function SalesTab({ eventId }: { eventId: string }) {
     return () => clearInterval(t)
   }, [])
 
-  const load = async (opts?: { background?: boolean }) => {
+  const load = async (opts?: { background?: boolean; limit?: number }) => {
+    const limit = opts?.limit ?? pageSize
     try {
-      const res = await fetch(`/api/promoter/events/${eventId}/sales`, {
-        cache: "no-store",
-      })
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/sales?limit=${limit}`,
+        { cache: "no-store" },
+      )
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setError(data?.error || "Couldn't load sales data.")
@@ -2069,6 +2115,7 @@ function SalesTab({ eventId }: { eventId: string }) {
       setTotals(data.totals)
       setTiers(data.tiers ?? [])
       setOrders(data.orders ?? [])
+      setPagination(data.pagination ?? null)
       setError(null)
       setLastUpdated(new Date())
     } catch {
@@ -2078,7 +2125,19 @@ function SalesTab({ eventId }: { eventId: string }) {
     } finally {
       setLoading(false)
       setRefreshing(false)
+      setLoadingMore(false)
     }
+  }
+
+  // Step up the page size and reload from the top. Re-fetching (vs
+  // appending) keeps the data consistent with the polling cadence:
+  // every poll uses the current `pageSize`, so the user always sees
+  // the most recent N rows in order.
+  const loadMore = async () => {
+    const next = Math.min(pageSize + SALES_PAGE_SIZE, SALES_MAX_PAGE)
+    setPageSize(next)
+    setLoadingMore(true)
+    await load({ limit: next })
   }
 
   // Initial load on mount + when eventId changes.
@@ -2118,8 +2177,11 @@ function SalesTab({ eventId }: { eventId: string }) {
         document.removeEventListener("visibilitychange", onVis)
       }
     }
+    // pageSize is included so polling picks up the current page after
+    // the promoter clicks "Load more" — otherwise the closure-captured
+    // load() would keep fetching the smaller initial page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live, eventId])
+  }, [live, eventId, pageSize])
 
   if (loading) {
     return (
@@ -2168,13 +2230,13 @@ function SalesTab({ eventId }: { eventId: string }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           label="Revenue"
-          value={`฿${(totals?.revenue_thb ?? 0).toLocaleString()}`}
+          value={`${totals?.approximate ? "~" : ""}฿${(totals?.revenue_thb ?? 0).toLocaleString()}`}
           icon={<TrendingUp className="h-4 w-4 text-emerald-300" />}
           tone="emerald"
         />
         <StatCard
           label="Tickets sold"
-          value={(totals?.tickets_sold ?? 0).toLocaleString()}
+          value={`${totals?.approximate ? "~" : ""}${(totals?.tickets_sold ?? 0).toLocaleString()}`}
           icon={<Ticket className="h-4 w-4 text-amber-300" />}
           tone="amber"
         />
@@ -2194,6 +2256,11 @@ function SalesTab({ eventId }: { eventId: string }) {
           sub={totals && totals.tickets_sold > 0 ? `${scanProgress}% admitted` : undefined}
         />
       </div>
+      {totals?.approximate && (
+        <p className="-mt-3 text-[11px] text-amber-400/80">
+          Totals shown are approximate (first 10,000 orders). Export for exact numbers.
+        </p>
+      )}
 
       {/* Live status bar — shows freshness + toggle. Worth its own row
           because event-night promoters check this constantly. */}
@@ -2294,7 +2361,7 @@ function SalesTab({ eventId }: { eventId: string }) {
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
-            Buyers ({orders.length})
+            Buyers ({(pagination?.total ?? orders.length).toLocaleString()})
           </h3>
         </div>
         {refundError && (
@@ -2425,10 +2492,36 @@ function SalesTab({ eventId }: { eventId: string }) {
             })}
           </div>
         )}
-        {orders.length === 200 && (
-          <p className="mt-2 text-[11px] text-neutral-600">
-            Showing the most recent 200 orders. Older orders aren&apos;t loaded.
-          </p>
+        {pagination && pagination.total > 0 && (
+          <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+            <p className="text-[11px] text-neutral-600">
+              Showing {pagination.returned.toLocaleString()} of{" "}
+              {pagination.total.toLocaleString()} order
+              {pagination.total === 1 ? "" : "s"}
+              {pagination.has_more && " — most recent first"}
+            </p>
+            {pagination.has_more && pageSize < SALES_MAX_PAGE && (
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/10 disabled:opacity-60"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading…
+                  </>
+                ) : (
+                  <>Load more</>
+                )}
+              </button>
+            )}
+            {pagination.has_more && pageSize >= SALES_MAX_PAGE && (
+              <p className="text-[11px] text-neutral-600">
+                Hit the per-page max ({SALES_MAX_PAGE.toLocaleString()}). Export to see the full history.
+              </p>
+            )}
+          </div>
         )}
       </section>
     </div>

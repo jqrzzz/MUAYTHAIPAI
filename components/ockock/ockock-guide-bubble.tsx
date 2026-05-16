@@ -113,7 +113,11 @@ export function OckOckGuideBubble() {
               <p className="text-[13px] font-semibold">OckOck</p>
               <p className="text-[11px] text-zinc-500">Ask about the software · Thai or English</p>
             </div>
-            <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200">
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+            >
               <X className="h-4 w-4" />
             </button>
           </header>
