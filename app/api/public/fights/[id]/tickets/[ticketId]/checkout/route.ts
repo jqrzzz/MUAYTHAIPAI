@@ -20,6 +20,7 @@ import { randomBytes } from "crypto"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { stripe } from "@/lib/stripe"
 import { hasEnv } from "@/lib/env"
+import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -36,6 +37,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string; ticketId: string }> },
 ) {
   const { id: eventId, ticketId } = await params
+
+  // Per-IP rate limit. A flood here would (a) burn Stripe API
+  // requests and (b) leave a trail of pending ticket_orders rows
+  // polluting the promoter's analytics. 20/hr is generous for a
+  // real visitor who hesitates and retries.
+  const ip = ipFromRequest(request)
+  const gate = await checkLimit({
+    key: `checkout:${ip}`,
+    max: 20,
+    windowSeconds: 3600,
+  }).catch(() => ({ ok: true as const, remaining: 20, resetAt: new Date() }))
+  if (!gate.ok) {
+    return NextResponse.json(
+      { error: "Too many checkout attempts. Try again in a moment." },
+      { status: 429, headers: gate.headers },
+    )
+  }
 
   if (!hasEnv("STRIPE_SECRET_KEY")) {
     return NextResponse.json(

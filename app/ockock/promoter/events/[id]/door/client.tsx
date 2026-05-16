@@ -55,6 +55,7 @@ type ScanStatus =
   | "wrong_event"
   | "not_paid"
   | "cancelled"
+  | "event_cancelled"
   | "error"
   | "feature_disabled"
 
@@ -820,6 +821,14 @@ function toneFor(status: ScanStatus) {
         text: "text-red-300",
         icon: XCircle,
         headline: "Cancelled · Deny",
+      }
+    case "event_cancelled":
+      return {
+        bg: "bg-red-500/15",
+        border: "border-red-500/60",
+        text: "text-red-300",
+        icon: XCircle,
+        headline: "Event cancelled · Deny all",
       }
     case "wrong_event":
       return {

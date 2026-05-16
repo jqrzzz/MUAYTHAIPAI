@@ -56,10 +56,11 @@ interface TicketTier {
   description: string | null
   price_thb: number
   price_usd: number | null
-  quantity_total: number
-  quantity_sold: number
+  // Only `quantity_remaining` is exposed publicly — `quantity_total`
+  // and `quantity_sold` are hidden because they leak sell-through
+  // velocity to competitors. The buy-dialog uses `quantity_remaining`
+  // to enforce the per-order cap.
   quantity_remaining: number
-  is_active: boolean
 }
 
 interface FightEventDetail {
@@ -160,6 +161,27 @@ export default function FightDetailClient() {
         <ArrowLeft className="h-4 w-4" />
         All Events
       </Link>
+
+      {/* Cancelled banner — public API returns cancelled events so
+          buyers who bookmarked the URL don't hit a confusing 404.
+          Banner sits above everything so it's the first thing a
+          returning visitor sees. */}
+      {event.status === "cancelled" && (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl border border-rose-500/40 bg-rose-500/[0.08] p-5"
+        >
+          <p className="text-sm font-semibold uppercase tracking-wider text-rose-300">
+            This event has been cancelled
+          </p>
+          <p className="mt-2 text-sm text-rose-100/90">
+            Ticket sales are closed and paid orders are being refunded.
+            Refunds typically appear on your card within 5-10 business
+            days. If you don&apos;t see one, check the email tied to
+            your ticket order.
+          </p>
+        </div>
+      )}
 
       {/* Cover image — renders as a 16:9 hero above the event name
           when the promoter uploaded one. Soft gradient overlay so
@@ -452,7 +474,9 @@ function TicketCard({
         <div className="mb-4 text-xs text-neutral-500">
           {soldOut
             ? "Sold out"
-            : `${ticket.quantity_remaining} of ${ticket.quantity_total} remaining`}
+            : ticket.quantity_remaining <= 10
+              ? `Only ${ticket.quantity_remaining} left`
+              : `${ticket.quantity_remaining} available`}
         </div>
 
         <button

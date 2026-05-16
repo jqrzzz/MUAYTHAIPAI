@@ -30,6 +30,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getPromoterAuth, verifyEventOwnership } from "@/lib/auth-helpers"
 import { stripe } from "@/lib/stripe"
 import { hasEnv } from "@/lib/env"
+import { checkLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -52,6 +53,21 @@ export async function POST(
   }
   if (!(await verifyEventOwnership(supabase, eventId, auth.orgId))) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 })
+  }
+
+  // Tight rate limit — cancellation triggers bulk refunds which are
+  // real-money Stripe calls. A compromised session could not be used
+  // to bulk-drain refunds across many events in a tight loop.
+  const gate = await checkLimit({
+    key: `cancel-event:${auth.userId}`,
+    max: 3,
+    windowSeconds: 3600,
+  }).catch(() => ({ ok: true as const, remaining: 3, resetAt: new Date() }))
+  if (!gate.ok) {
+    return NextResponse.json(
+      { error: "Too many cancellation attempts. Try again in a moment." },
+      { status: 429, headers: gate.headers },
+    )
   }
 
   const body = await request.json().catch(() => ({}))

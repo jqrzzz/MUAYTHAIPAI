@@ -19,6 +19,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getPromoterAuth, verifyEventOwnership } from "@/lib/auth-helpers"
 import { stripe } from "@/lib/stripe"
 import { hasEnv } from "@/lib/env"
+import { checkLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -35,13 +36,6 @@ export async function POST(
 ) {
   const { id: eventId, orderId } = await params
 
-  if (!hasEnv("STRIPE_SECRET_KEY")) {
-    return NextResponse.json(
-      { error: "Stripe isn't configured — refund can't be issued from here." },
-      { status: 503 },
-    )
-  }
-
   const supabase = await createClient()
   const auth = await getPromoterAuth(supabase)
   if (!auth) {
@@ -49,6 +43,29 @@ export async function POST(
   }
   if (!(await verifyEventOwnership(supabase, eventId, auth.orgId))) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 })
+  }
+
+  // Stripe-config check moved AFTER auth so an unauthenticated
+  // attacker can't probe whether Stripe is configured.
+  if (!hasEnv("STRIPE_SECRET_KEY")) {
+    return NextResponse.json(
+      { error: "Stripe isn't configured — refund can't be issued from here." },
+      { status: 503 },
+    )
+  }
+
+  // Per-promoter rate limit on real-money calls. A compromised
+  // session could otherwise flood stripe.refunds.create.
+  const gate = await checkLimit({
+    key: `refund:${auth.userId}`,
+    max: 10,
+    windowSeconds: 3600,
+  }).catch(() => ({ ok: true as const, remaining: 10, resetAt: new Date() }))
+  if (!gate.ok) {
+    return NextResponse.json(
+      { error: "Too many refund attempts. Try again in a moment." },
+      { status: 429, headers: gate.headers },
+    )
   }
 
   const body = await request.json().catch(() => ({}))

@@ -44,6 +44,25 @@ export async function POST(
     return NextResponse.json({ status: "wrong_event" }, { status: 403 })
   }
 
+  // Refuse scans for cancelled events. Without this check, walkup
+  // sales recorded after the event was cancelled (or pre-existing
+  // orders not yet refunded by the bulk-cancel job) would still
+  // scan in as valid, letting voided buyers through the door.
+  const { data: ev } = await supabase
+    .from("fight_events")
+    .select("status")
+    .eq("id", eventId)
+    .single()
+  if (ev?.status === "cancelled") {
+    return NextResponse.json(
+      {
+        status: "event_cancelled",
+        message: "This event has been cancelled.",
+      },
+      { status: 410 },
+    )
+  }
+
   const body = await request.json().catch(() => ({}))
   const orderReference =
     typeof body?.order_reference === "string" ? body.order_reference.trim().toUpperCase() : ""
