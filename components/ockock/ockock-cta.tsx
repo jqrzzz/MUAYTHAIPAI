@@ -1,8 +1,8 @@
 /**
  * OckOckCta — a Link styled like the SaaS primary/subtle button. Used for
  * the call-to-action links on the OckOck marketing surface (nav, /for-gyms,
- * /pricing). Mirrors `SaasButton`'s indigo treatment so the product site and
- * the dashboards feel like one system.
+ * /pricing). Wears the OckOck amber so the product site and the dashboards
+ * feel like one system.
  */
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -31,14 +31,14 @@ export function OckOckCta({
 
   const variantCls =
     variant === "primary"
-      ? "bg-indigo-500 hover:bg-indigo-400 text-white shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_-1px_0_rgba(0,0,0,0.2)_inset]"
+      ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_-1px_0_rgba(0,0,0,0.2)_inset]"
       : "bg-zinc-800/80 hover:bg-zinc-700 text-zinc-100 ring-1 ring-white/5"
 
   return (
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
+        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
         sizeCls,
         variantCls,
         className,

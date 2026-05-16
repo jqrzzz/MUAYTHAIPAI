@@ -111,14 +111,14 @@ export default function ForGymsClient() {
       <section className="relative mx-auto flex max-w-3xl flex-col items-center pt-14 pb-16 text-center sm:pt-20">
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-2 -z-10 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-indigo-500/20 blur-[110px]"
+          className="pointer-events-none absolute left-1/2 top-2 -z-10 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-amber-500/20 blur-[110px]"
         />
 
         <motion.button
           type="button"
           onClick={startChat}
           aria-label="Chat with OckOck"
-          className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:ring-offset-4 focus-visible:ring-offset-zinc-950"
+          className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-4 focus-visible:ring-offset-zinc-950"
           animate={{ y: [0, -8, 0] }}
           transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
           whileTap={{ scale: 0.96 }}
@@ -134,7 +134,7 @@ export default function ForGymsClient() {
         </motion.button>
 
         <h1 className="mt-6 text-3xl font-semibold tracking-tight text-white sm:text-[40px] sm:leading-tight">
-          Run your Muay Thai gym with <span className="text-indigo-400">OckOck</span>
+          Run your Muay Thai gym with <span className="text-amber-400">OckOck</span>
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
           Bookings, the Naga–Garuda cert ladder, and an AI that answers your customers in Thai or English.
@@ -161,7 +161,7 @@ export default function ForGymsClient() {
                   <div
                     className={
                       m.role === "user"
-                        ? "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-indigo-500 px-3.5 py-2 text-[14px] leading-relaxed text-white"
+                        ? "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-amber-500 px-3.5 py-2 text-[14px] leading-relaxed text-white"
                         : "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-zinc-800/80 px-3.5 py-2 text-[14px] leading-relaxed text-zinc-100"
                     }
                   >
@@ -204,7 +204,7 @@ export default function ForGymsClient() {
             e.preventDefault()
             send(input)
           }}
-          className="mt-5 flex w-full max-w-xl items-center gap-2 rounded-2xl bg-zinc-900/60 p-2 ring-1 ring-zinc-800 transition-colors focus-within:ring-indigo-500/40"
+          className="mt-5 flex w-full max-w-xl items-center gap-2 rounded-2xl bg-zinc-900/60 p-2 ring-1 ring-zinc-800 transition-colors focus-within:ring-amber-500/40"
         >
           <input
             ref={inputRef}
@@ -221,7 +221,7 @@ export default function ForGymsClient() {
             type="submit"
             disabled={!input.trim() || loading}
             aria-label="Send"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white transition-colors hover:bg-indigo-400 disabled:bg-zinc-800 disabled:text-zinc-600"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white transition-colors hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-600"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -260,7 +260,7 @@ export default function ForGymsClient() {
               </p>
               <Link
                 href="/vision"
-                className="mt-4 inline-flex items-center gap-1.5 text-[13px] text-indigo-300 transition-colors hover:text-indigo-200"
+                className="mt-4 inline-flex items-center gap-1.5 text-[13px] text-amber-300 transition-colors hover:text-amber-200"
               >
                 Read the full story
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -269,7 +269,7 @@ export default function ForGymsClient() {
             <ul className="space-y-3">
               {BUILT_FOR.map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-[14px] text-zinc-300">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -298,8 +298,8 @@ export default function ForGymsClient() {
                 transition={{ delay: (i % 3) * 0.05, duration: 0.4 }}
               >
                 <Surface className="h-full p-5">
-                  <div className="mb-3 inline-flex rounded-lg bg-indigo-500/10 p-2.5">
-                    <Icon className="h-5 w-5 text-indigo-400" />
+                  <div className="mb-3 inline-flex rounded-lg bg-amber-500/10 p-2.5">
+                    <Icon className="h-5 w-5 text-amber-400" />
                   </div>
                   <h3 className="mb-1.5 text-[15px] font-semibold text-zinc-100">{feature.title}</h3>
                   <p className="text-[13px] leading-relaxed text-zinc-400">{feature.desc}</p>
@@ -328,7 +328,7 @@ export default function ForGymsClient() {
               viewport={{ once: true, margin: "-50px" }}
               transition={{ delay: i * 0.1, duration: 0.4 }}
             >
-              <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-500 text-[15px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(99,102,241,0.6)]">
+              <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-amber-500 text-[15px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(99,102,241,0.6)]">
                 {step.number}
               </div>
               <h3 className="mb-1.5 text-[15px] font-semibold text-zinc-100">{step.title}</h3>
@@ -343,7 +343,7 @@ export default function ForGymsClient() {
         <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Simple, friendly pricing</h2>
         <p className="mb-8 mt-2 text-[14px] text-zinc-500">One plan. Everything included. Free to start.</p>
         <Surface accent="indigo" className="mx-auto max-w-md p-8">
-          <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.14em] text-indigo-400">MUAYTHAIPAI network</p>
+          <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.14em] text-amber-400">MUAYTHAIPAI network</p>
           <div className="mb-1 flex items-baseline justify-center gap-1">
             <span className="text-5xl font-semibold tracking-tight text-white">฿{PLAN.priceTHB}</span>
             <span className="text-[16px] text-zinc-500">/month</span>
@@ -352,7 +352,7 @@ export default function ForGymsClient() {
           <OckOckCta href="/signup" className="w-full">
             Start free trial
           </OckOckCta>
-          <Link href="/pricing" className="mt-3 inline-block text-[13px] text-indigo-400 transition-colors hover:text-indigo-300">
+          <Link href="/pricing" className="mt-3 inline-block text-[13px] text-amber-400 transition-colors hover:text-amber-300">
             See what&apos;s included →
           </Link>
         </Surface>

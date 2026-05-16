@@ -56,42 +56,57 @@ export default function FightsClient() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-white">Fight Events</h1>
-        <p className="text-neutral-400">
-          Upcoming Muay Thai fight nights across Thailand
-        </p>
-      </div>
+    <div className="relative">
+      {/* Subtle amber hero glow — matches the consumer landing's
+          treatment so clicking between /ockock and /ockock/fights
+          doesn't feel jarring. Same effect as For Gyms / Vision but
+          in the OckOck amber rather than indigo. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[280px] bg-[radial-gradient(circle_at_50%_-10%,rgba(245,158,11,0.12),transparent_60%)]"
+      />
 
-      {/* Events List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
-          <span className="ml-3 text-neutral-400">Loading events...</span>
+      <div className="relative mx-auto max-w-5xl px-4 py-12 sm:py-16">
+        {/* Header */}
+        <div className="mb-10">
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-amber-300/80">
+            OckOck · Fight Nights
+          </p>
+          <h1 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Fight Events
+          </h1>
+          <p className="text-[15px] text-zinc-400">
+            Upcoming Muay Thai fight nights across Thailand
+          </p>
+        </div>
+
+        {/* Events List */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
+            <span className="ml-3 text-zinc-400">Loading events...</span>
         </div>
       ) : events.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] py-16 px-6 text-center">
-          <Swords className="mx-auto mb-3 h-10 w-10 text-neutral-600" />
-          <p className="mb-1 text-lg font-medium text-neutral-300">
+          <Swords className="mx-auto mb-3 h-10 w-10 text-zinc-600" />
+          <p className="mb-1 text-lg font-medium text-zinc-200">
             No upcoming events yet
           </p>
-          <p className="mx-auto mb-6 max-w-md text-sm text-neutral-500">
+          <p className="mx-auto mb-6 max-w-md text-sm text-zinc-500">
             Once gyms publish fight nights, they&apos;ll show up here. Pull
             up a chair — or list your own event below.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Link
               href="/ockock/promoter"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400 transition-colors"
             >
               <Ticket className="h-4 w-4" />
               Promote an event
             </Link>
             <Link
               href="/ockock/fighters"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/5"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
             >
               Browse fighters instead
             </Link>
@@ -104,6 +119,7 @@ export default function FightsClient() {
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }

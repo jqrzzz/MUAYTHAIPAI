@@ -23,8 +23,8 @@ export default function OckOckMarketingError({
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
-        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 ring-1 ring-indigo-500/30">
-          <AlertTriangle className="h-6 w-6 text-indigo-300" />
+        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 ring-1 ring-amber-500/30">
+          <AlertTriangle className="h-6 w-6 text-amber-300" />
         </div>
         <h1 className="text-lg font-semibold text-white">Something hiccuped</h1>
         <p className="mt-2 text-sm text-zinc-400">
@@ -39,7 +39,7 @@ export default function OckOckMarketingError({
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-400 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-amber-400 transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Try again

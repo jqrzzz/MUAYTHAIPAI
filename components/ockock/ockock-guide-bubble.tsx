@@ -80,7 +80,7 @@ export function OckOckGuideBubble() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Ask OckOck"
-          className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-indigo-500 py-2.5 pl-2.5 pr-4 text-[13px] font-medium text-white shadow-[0_8px_30px_-6px_rgba(99,102,241,0.55)] transition-transform hover:scale-[1.04]"
+          className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-amber-500 py-2.5 pl-2.5 pr-4 text-[13px] font-medium text-black shadow-[0_8px_30px_-6px_rgba(245,158,11,0.55)] transition-transform hover:scale-[1.04]"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={AVATAR} alt="" className="h-7 w-7 rounded-full bg-white/10 object-contain p-0.5" />
@@ -112,7 +112,7 @@ export function OckOckGuideBubble() {
                 <div
                   className={
                     m.role === "user"
-                      ? "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-indigo-500 px-3 py-2 text-[13px] leading-relaxed text-white"
+                      ? "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-amber-500 px-3 py-2 text-[13px] leading-relaxed text-black"
                       : "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-zinc-800/80 px-3 py-2 text-[13px] leading-relaxed text-zinc-100"
                   }
                 >
@@ -141,13 +141,13 @@ export function OckOckGuideBubble() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Talk to OckOck…"
                 aria-label="Message OckOck"
-                className="flex-1 rounded-xl bg-zinc-900 px-3 py-2 text-[14px] text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/40"
+                className="flex-1 rounded-xl bg-zinc-900 px-3 py-2 text-[14px] text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || loading}
                 aria-label="Send"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white transition-colors hover:bg-indigo-400 disabled:bg-zinc-800 disabled:text-zinc-600"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-black transition-colors hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-600"
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -155,7 +155,7 @@ export function OckOckGuideBubble() {
             <SocialSignupButtons compact label="Or start signup with" className="mt-3" />
             <p className="mt-2 text-center text-[11px] text-zinc-600">
               Or{" "}
-              <Link href="/signup" className="text-indigo-400 hover:text-indigo-300">
+              <Link href="/signup" className="text-amber-400 hover:text-amber-300">
                 use email →
               </Link>
             </p>

@@ -46,7 +46,7 @@ export default function AboutPage() {
         </p>
         <p>
           One plan, no upsells, a free month to try it. We&apos;re a small team, we answer
-          our own email (<a href="mailto:hello@muaythaipai.com" className="text-indigo-400 hover:text-indigo-300">hello@muaythaipai.com</a>),
+          our own email (<a href="mailto:hello@muaythaipai.com" className="text-amber-400 hover:text-amber-300">hello@muaythaipai.com</a>),
           and we&apos;re flexible for small family gyms in Thailand. If OckOck makes your gym
           easier to run, that&apos;s the whole point.
         </p>

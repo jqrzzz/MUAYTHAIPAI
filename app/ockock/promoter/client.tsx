@@ -71,16 +71,21 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
   const totalTicketsSold = events.reduce((sum, e) => sum + e.tickets_sold, 0)
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
       {/* Header */}
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-10 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Promoter Dashboard</h1>
-          <p className="mt-1 text-sm text-neutral-400">{orgName}</p>
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-amber-300/80">
+            OckOck · Promoter
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Promoter Dashboard
+          </h1>
+          <p className="mt-2 text-[15px] text-zinc-400">{orgName}</p>
         </div>
         <Link
           href="/ockock/promoter/events/new"
-          className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-amber-400"
+          className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-amber-400"
         >
           <Plus className="h-4 w-4" />
           New Event

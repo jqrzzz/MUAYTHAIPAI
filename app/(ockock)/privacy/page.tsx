@@ -89,7 +89,7 @@ const SECTIONS: { h: string; body: React.ReactNode }[] = [
       <>
         We&apos;ll update this policy as the product evolves and give reasonable notice of
         material changes. Questions, requests, or concerns:{" "}
-        <a href="mailto:hello@muaythaipai.com" className="text-indigo-400 hover:text-indigo-300">hello@muaythaipai.com</a>.
+        <a href="mailto:hello@muaythaipai.com" className="text-amber-400 hover:text-amber-300">hello@muaythaipai.com</a>.
       </>
     ),
   },

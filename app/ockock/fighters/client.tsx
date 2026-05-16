@@ -101,11 +101,23 @@ export default function FightersClient() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="relative">
+      {/* Subtle amber hero glow — same treatment as /ockock/fights */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[280px] bg-[radial-gradient(circle_at_50%_-10%,rgba(245,158,11,0.12),transparent_60%)]"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 py-12 sm:py-16">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="mb-1 text-3xl font-bold text-white">Fighters</h1>
-        <p className="text-neutral-400">
+      <div className="mb-10">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-amber-300/80">
+          OckOck · Network Roster
+        </p>
+        <h1 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          Fighters
+        </h1>
+        <p className="text-[15px] text-zinc-400">
           Discover Muay Thai fighters from gyms across Thailand
         </p>
       </div>
@@ -344,6 +356,7 @@ export default function FightersClient() {
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }

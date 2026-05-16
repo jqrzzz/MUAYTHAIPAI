@@ -64,7 +64,7 @@ const SECTIONS: { h: string; body: React.ReactNode }[] = [
         messages) through our AI to provide OckOck&apos;s features. You&apos;re responsible
         for having the right to collect and use your customers&apos; information, for telling
         them how it&apos;s used, and for not uploading anything you don&apos;t have the rights
-        to. See our <a href="/privacy" className="text-indigo-400 hover:text-indigo-300">Privacy Policy</a> for details on data handling.
+        to. See our <a href="/privacy" className="text-amber-400 hover:text-amber-300">Privacy Policy</a> for details on data handling.
       </>
     ),
   },
@@ -108,7 +108,7 @@ const SECTIONS: { h: string; body: React.ReactNode }[] = [
       <>
         We may update these terms; if we make a material change we&apos;ll give reasonable
         notice. Continuing to use OckOck after a change means you accept it. Questions about
-        these terms? Email <a href="mailto:hello@muaythaipai.com" className="text-indigo-400 hover:text-indigo-300">hello@muaythaipai.com</a>.
+        these terms? Email <a href="mailto:hello@muaythaipai.com" className="text-amber-400 hover:text-amber-300">hello@muaythaipai.com</a>.
       </>
     ),
   },

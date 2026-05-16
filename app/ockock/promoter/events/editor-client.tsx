@@ -1997,8 +1997,8 @@ function SalesTab({ eventId }: { eventId: string }) {
         <StatCard
           label="Orders"
           value={(totals?.orders ?? 0).toLocaleString()}
-          icon={<FileText className="h-4 w-4 text-indigo-300" />}
-          tone="indigo"
+          icon={<FileText className="h-4 w-4 text-sky-300" />}
+          tone="sky"
         />
         <StatCard
           label="Scanned at door"
@@ -2175,7 +2175,7 @@ function SalesTab({ eventId }: { eventId: string }) {
                           </span>
                         )}
                         {o.payment_method === "transfer" && (
-                          <span className="rounded bg-indigo-500/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-indigo-300">
+                          <span className="rounded bg-sky-500/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-sky-300">
                             Transfer
                           </span>
                         )}
@@ -2261,14 +2261,14 @@ function StatCard({
   label: string
   value: string
   icon: React.ReactNode
-  tone: "amber" | "emerald" | "indigo"
+  tone: "amber" | "emerald" | "sky"
   sub?: string
 }) {
   const toneRing =
     tone === "emerald"
       ? "ring-emerald-500/20"
-      : tone === "indigo"
-        ? "ring-indigo-500/20"
+      : tone === "sky"
+        ? "ring-sky-500/20"
         : "ring-amber-500/20"
   return (
     <div className={`rounded-xl bg-white/[0.03] ring-1 ${toneRing} p-3`}>

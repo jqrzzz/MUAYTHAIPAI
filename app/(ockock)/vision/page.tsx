@@ -48,14 +48,14 @@ function Section({
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-4 text-[11px] uppercase tracking-[0.22em] text-indigo-300/80">{children}</p>
+    <p className="mb-4 text-[11px] uppercase tracking-[0.22em] text-amber-300/80">{children}</p>
   )
 }
 
 function H2({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <h2
-      className={`font-display text-[32px] leading-[1.05] tracking-tight text-white sm:text-[48px] ${className}`}
+      className={`text-[32px] leading-[1.05] tracking-tight text-white sm:text-[48px] ${className}`}
     >
       {children}
     </h2>
@@ -83,10 +83,10 @@ export default function VisionPage() {
             priority
             className="mx-auto h-auto w-[170px] drop-shadow-[0_24px_60px_rgba(99,102,241,0.3)] sm:w-[230px]"
           />
-          <h1 className="mt-8 font-display text-[36px] leading-[1.06] tracking-tight text-white sm:text-[62px]">
+          <h1 className="mt-8 text-[36px] leading-[1.06] tracking-tight text-white sm:text-[62px]">
             Muay Thai isn&apos;t just a sport.
             <br />
-            It&apos;s Thailand&apos;s <span className="text-indigo-400">heritage</span>.
+            It&apos;s Thailand&apos;s <span className="text-amber-400">heritage</span>.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-[17px] leading-relaxed text-zinc-400 sm:text-[19px]">
             We&apos;re building the gentle, modern way to run the gyms preserving it. Built in a
@@ -95,7 +95,7 @@ export default function VisionPage() {
           <div className="mt-9 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-[12px] text-zinc-300">
             <Newspaper className="h-3.5 w-3.5 text-amber-300" />
             <span className="text-zinc-500">As featured in</span>
-            <span className="font-display tracking-[0.1em] text-zinc-100">National Geographic</span>
+            <span className="tracking-[0.1em] text-zinc-100">National Geographic</span>
           </div>
         </div>
       </section>
@@ -117,7 +117,7 @@ export default function VisionPage() {
       </Section>
 
       {/* ═════════════════ 3. THE EVERYDAY ═════════════════ */}
-      <Section className="bg-gradient-to-b from-transparent via-indigo-500/[0.025] to-transparent">
+      <Section className="bg-gradient-to-b from-transparent via-amber-500/[0.025] to-transparent">
         <Eyebrow>What you live every day</Eyebrow>
         <H2>You&apos;re a kru, not a customer-service agent.</H2>
         <Lead>
@@ -171,8 +171,8 @@ export default function VisionPage() {
             },
           ].map((f) => (
             <div key={f.title} className="rounded-2xl bg-zinc-900/40 p-5 ring-1 ring-zinc-900">
-              <div className="mb-3 inline-flex rounded-lg bg-indigo-500/10 p-2.5">
-                <f.icon className="h-5 w-5 text-indigo-300" />
+              <div className="mb-3 inline-flex rounded-lg bg-amber-500/10 p-2.5">
+                <f.icon className="h-5 w-5 text-amber-300" />
               </div>
               <p className="text-[15px] font-semibold text-zinc-100">{f.title}</p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">{f.body}</p>
@@ -182,7 +182,7 @@ export default function VisionPage() {
       </Section>
 
       {/* ═════════════════ 5. THE LADDER ═════════════════ */}
-      <Section className="bg-gradient-to-b from-transparent via-indigo-500/[0.025] to-transparent">
+      <Section className="bg-gradient-to-b from-transparent via-amber-500/[0.025] to-transparent">
         <Eyebrow>The Naga–Garuda ladder</Eyebrow>
         <H2>Your students earn a credential that travels with them.</H2>
         <Lead>
@@ -199,7 +199,7 @@ export default function VisionPage() {
               className="rounded-2xl bg-zinc-900/40 p-4 text-center ring-1 ring-zinc-900"
             >
               <div className="text-3xl">{lvl.icon}</div>
-              <p className={`mt-2 font-display text-[15px] ${lvl.color}`}>{lvl.name}</p>
+              <p className={`mt-2 text-[15px] ${lvl.color}`}>{lvl.name}</p>
               <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-zinc-600">
                 Rank {lvl.number}
               </p>
@@ -235,7 +235,7 @@ export default function VisionPage() {
             },
           ].map((b) => (
             <div key={b.title} className="rounded-2xl bg-zinc-900/40 p-5 ring-1 ring-zinc-900">
-              <p className="font-display text-[16px] text-white">{b.title}</p>
+              <p className="text-[16px] text-white">{b.title}</p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">{b.body}</p>
             </div>
           ))}
@@ -243,7 +243,7 @@ export default function VisionPage() {
       </Section>
 
       {/* ═════════════════ 7. BUILT IN PAI ═════════════════ */}
-      <Section className="bg-gradient-to-b from-transparent via-indigo-500/[0.025] to-transparent">
+      <Section className="bg-gradient-to-b from-transparent via-amber-500/[0.025] to-transparent">
         <Eyebrow>Built where it matters</Eyebrow>
         <H2>Pai. The Wisarut family. Three generations.</H2>
         <Lead>
@@ -259,7 +259,7 @@ export default function VisionPage() {
               <Newspaper className="h-4 w-4 text-amber-300" />
             </div>
             <p className="text-[13px] text-zinc-300">
-              <span className="font-display tracking-[0.08em] text-zinc-100">National Geographic</span>{" "}
+              <span className="tracking-[0.08em] text-zinc-100">National Geographic</span>{" "}
               <span className="text-zinc-500">·</span> the Wisarut Family Gym and the work to
               preserve traditional Muay Thai.
             </p>
@@ -272,13 +272,13 @@ export default function VisionPage() {
         <Eyebrow>Simple pricing</Eyebrow>
         <H2>One plan. Free for {PLAN.trialDays} days.</H2>
 
-        <div className="mt-12 rounded-3xl bg-gradient-to-b from-indigo-500/[0.08] to-zinc-900/40 p-8 ring-1 ring-indigo-500/25 sm:p-10">
+        <div className="mt-12 rounded-3xl bg-gradient-to-b from-amber-500/[0.08] to-zinc-900/40 p-8 ring-1 ring-amber-500/25 sm:p-10">
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-indigo-300/80">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-amber-300/80">
                 Everything, one price
               </p>
-              <p className="mt-1 font-display text-[40px] tracking-tight text-white sm:text-[52px]">
+              <p className="mt-1 text-[40px] tracking-tight text-white sm:text-[52px]">
                 ฿{PLAN.priceTHB}
                 <span className="ml-1 text-[18px] text-zinc-500">/month</span>
               </p>
@@ -296,7 +296,7 @@ export default function VisionPage() {
                 "Cancel anytime, no questions",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -306,7 +306,7 @@ export default function VisionPage() {
       </Section>
 
       {/* ═════════════════ 9. THREE STEPS ═════════════════ */}
-      <Section className="bg-gradient-to-b from-transparent via-indigo-500/[0.025] to-transparent">
+      <Section className="bg-gradient-to-b from-transparent via-amber-500/[0.025] to-transparent">
         <Eyebrow>Getting started</Eyebrow>
         <H2>Three steps. Most gyms take their first booking the same day.</H2>
 
@@ -332,11 +332,11 @@ export default function VisionPage() {
               key={step.n}
               className="flex items-start gap-4 rounded-2xl bg-zinc-900/40 p-5 ring-1 ring-zinc-900"
             >
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-[14px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(99,102,241,0.6)]">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[14px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(99,102,241,0.6)]">
                 {step.n}
               </span>
               <div>
-                <p className="font-display text-[18px] text-white">{step.t}</p>
+                <p className="text-[18px] text-white">{step.t}</p>
                 <p className="mt-1 text-[14px] leading-relaxed text-zinc-400">{step.b}</p>
               </div>
             </li>
@@ -346,7 +346,7 @@ export default function VisionPage() {
 
       {/* ═════════════════ 10. CLOSE / CTA ═════════════════ */}
       <Section tight>
-        <div className="rounded-3xl bg-gradient-to-b from-indigo-500/[0.1] to-zinc-900/40 p-10 text-center ring-1 ring-indigo-500/25 sm:p-14">
+        <div className="rounded-3xl bg-gradient-to-b from-amber-500/[0.1] to-zinc-900/40 p-10 text-center ring-1 ring-amber-500/25 sm:p-14">
           <div className="mb-5 text-5xl">🐃</div>
           <H2 className="text-[26px] sm:text-[40px]">Run your gym the way it should be.</H2>
           <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-zinc-400">
