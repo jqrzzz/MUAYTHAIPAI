@@ -1,18 +1,14 @@
 /**
- * Layout for the OckOck consumer/product surfaces (/ockock, /ockock/fights,
- * /ockock/fighters, /ockock/promoter, etc.). Uses the SAME chrome as the
- * marketing layout (app/(ockock)/layout.tsx) so visitors see a consistent
- * brand whether they're on /for-gyms or /ockock/fights — no jumping
- * between two visually distinct headers when clicking around.
+ * Layout for the OckOck consumer/product surfaces: /ockock,
+ * /ockock/fights, /ockock/fighters, /ockock/promoter, etc.
  *
- * Owns: dark zinc base + Inter font (overrides root Cinzel) + the
- * unified OckOckNav, OckOckFooter, and OckOckGuideBubble. Dark-only.
+ * Reuses OckOckLayoutShell so the chrome matches the marketing surface
+ * at app/(ockock)/. Anything brand-level (nav, footer, guide bubble)
+ * belongs in the shell, not here.
  */
 import type React from "react"
 import type { Metadata } from "next"
-import { OckOckNav } from "@/components/ockock/ockock-nav"
-import { OckOckFooter } from "@/components/ockock/ockock-footer"
-import { OckOckGuideBubble } from "@/components/ockock/ockock-guide-bubble"
+import { OckOckLayoutShell } from "@/components/ockock/ockock-layout-shell"
 
 export const metadata: Metadata = {
   title: {
@@ -24,12 +20,5 @@ export const metadata: Metadata = {
 }
 
 export default function OckLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen flex-col bg-zinc-950 font-inter text-zinc-100 antialiased">
-      <OckOckNav />
-      <main className="flex-1">{children}</main>
-      <OckOckFooter />
-      <OckOckGuideBubble />
-    </div>
-  )
+  return <OckOckLayoutShell>{children}</OckOckLayoutShell>
 }
