@@ -42,6 +42,8 @@ interface Student {
   phone: string | null
   credits?: StudentCredit[]
   cert_progress?: CertProgress
+  public_passport_enabled?: boolean
+  public_passport_handle?: string | null
 }
 
 export interface CreditTransaction {
@@ -472,6 +474,17 @@ export default function StudentsTab({
                   <ExternalLink className="h-3 w-3" />
                   Open full profile — bookings, LTV, attendance, notes
                 </Link>
+                {student.public_passport_enabled && student.public_passport_handle && (
+                  <Link
+                    href={`/p/${student.public_passport_handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-neutral-800 py-1.5 text-xs text-neutral-400 hover:border-neutral-700 hover:text-neutral-200 transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View public passport · /p/{student.public_passport_handle}
+                  </Link>
+                )}
               </CardContent>
             </Card>
           ))}

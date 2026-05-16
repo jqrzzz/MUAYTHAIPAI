@@ -36,6 +36,7 @@ import {
   SaasTextarea,
   SegmentedControl,
 } from "@/components/saas"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 import {
   PLATFORM_LIST,
   PLATFORMS,
@@ -516,7 +517,7 @@ function PostEditor({
   }
 
   const remove = async () => {
-    if (!confirm("Delete this post?")) return
+    // InlineConfirm handles the confirmation step inline.
     setSaving(true)
     try {
       await fetch(`/api/admin/social/posts/${post.id}`, { method: "DELETE" })
@@ -716,10 +717,15 @@ function PostEditor({
               Mark published
             </SaasButton>
             <div className="ml-auto">
-              <SaasButton onClick={remove} variant="ghost" size="sm" disabled={saving}>
+              <InlineConfirm
+                onConfirm={remove}
+                disabled={saving}
+                title="Delete post"
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] text-zinc-400 hover:bg-zinc-800/60 hover:text-red-300 disabled:opacity-50"
+              >
                 <Trash2 className="h-3 w-3" />
                 Delete
-              </SaasButton>
+              </InlineConfirm>
             </div>
           </div>
         </div>

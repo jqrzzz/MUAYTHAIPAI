@@ -4,6 +4,7 @@ import Stripe from "stripe"
 import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
+import { notifyTicketSold } from "@/lib/notifications"
 
 // Stripe SDK 18.x typed for the 2025-04-30.basil API. We're pinned to
 // 2024-06-20 (some fields stay at the root level there). Cast the
@@ -309,7 +310,11 @@ export async function POST(request: NextRequest) {
           break
         }
         const fullyRefunded = charge.amount_refunded >= charge.amount
-        const { error: refundErr } = await supabase
+
+        // Try bookings first (the older flow). Use .select() so we know
+        // whether any rows actually matched — if not, this might be a
+        // ticket refund and we fall through to that branch.
+        const { data: updatedBookings } = await supabase
           .from("bookings")
           .update({
             payment_status: fullyRefunded ? "refunded" : "paid",
@@ -317,14 +322,72 @@ export async function POST(request: NextRequest) {
             refunded_at: new Date().toISOString(),
           })
           .eq("stripe_payment_intent_id", piId)
-        if (refundErr) {
-          console.error("[webhook] Failed to mark booking refunded:", refundErr)
-        } else {
+          .select("id")
+
+        if (updatedBookings && updatedBookings.length > 0) {
           console.log(
-            `Refund recorded for PI ${piId}: $${(charge.amount_refunded / 100).toFixed(2)}`,
+            `Booking refund recorded for PI ${piId}: $${(charge.amount_refunded / 100).toFixed(2)}`,
             fullyRefunded ? "(full)" : "(partial)",
           )
+          break
         }
+
+        // No booking matched — try ticket_orders. Full refund flips the
+        // order to refunded and decrements quantity_sold so the seat is
+        // released back into inventory. Partial refunds leave the seat
+        // counted (we don't model partial-seat refunds yet) but still
+        // record the refunded amount for the books.
+        const { data: ticketOrder } = await supabase
+          .from("ticket_orders")
+          .select("id, ticket_id, quantity, event_id, order_reference, payment_status")
+          .eq("stripe_payment_intent_id", piId)
+          .maybeSingle()
+
+        if (!ticketOrder) {
+          console.warn(`[webhook] charge.refunded for unknown PI ${piId}`)
+          break
+        }
+
+        // Idempotency: if we already marked this refunded, don't decrement
+        // quantity_sold a second time on a Stripe webhook retry.
+        if (ticketOrder.payment_status === "refunded") {
+          console.log(`[webhook] ticket ${ticketOrder.order_reference} already refunded — skipping`)
+          break
+        }
+
+        const { error: ticketRefundErr } = await supabase
+          .from("ticket_orders")
+          .update({
+            payment_status: fullyRefunded ? "refunded" : "paid",
+            status: fullyRefunded ? "refunded" : "confirmed",
+          })
+          .eq("id", ticketOrder.id)
+        if (ticketRefundErr) {
+          console.error("[webhook] Failed to mark ticket refunded:", ticketRefundErr)
+          break
+        }
+
+        if (fullyRefunded) {
+          // Release the seat. Read-then-write — same trade-off as the
+          // initial purchase increment in handleTicketCheckoutCompleted.
+          const { data: tier } = await supabase
+            .from("event_tickets")
+            .select("quantity_sold")
+            .eq("id", ticketOrder.ticket_id)
+            .maybeSingle()
+          if (tier) {
+            const next = Math.max(0, (tier.quantity_sold ?? 0) - ticketOrder.quantity)
+            await supabase
+              .from("event_tickets")
+              .update({ quantity_sold: next })
+              .eq("id", ticketOrder.ticket_id)
+          }
+        }
+
+        console.log(
+          `Ticket refund recorded for ${ticketOrder.order_reference}: ฿${(charge.amount_refunded).toLocaleString()}`,
+          fullyRefunded ? "(full)" : "(partial)",
+        )
         break
       }
 
@@ -376,6 +439,15 @@ export async function GET() {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     const metadata = session.metadata || {}
+
+    // Ticket purchase path — kind=ticket sessions originate from
+    // /api/public/fights/[eventId]/tickets/[ticketId]/checkout. They
+    // never carry the booking metadata so we route + return early.
+    if (metadata.kind === "ticket" && metadata.ticket_order_id) {
+      await handleTicketCheckoutCompleted(session, metadata)
+      return
+    }
+
     const customerEmail = session.customer_details?.email || metadata.customer_email
     const service = metadata.service_type || metadata.service_name
 
@@ -416,5 +488,124 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   } catch (error) {
     console.error("Error handling checkout completion:", error)
+  }
+}
+
+// Ticket-purchase branch of checkout.session.completed. Pulled out so
+// the main handler stays focused on the booking path.
+//
+// Source of truth: this is where the ticket becomes valid. Until this
+// function runs, the ticket_orders row is payment_status='pending' and
+// quantity_sold on the tier hasn't moved. We rely on the webhook so
+// the success page redirect can fail/lag without anyone losing a ticket.
+async function handleTicketCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  metadata: Stripe.Metadata,
+) {
+  const orderId = metadata.ticket_order_id
+  if (!orderId) return
+
+  // Idempotency — Stripe can retry the webhook; if we already paid this
+  // order, don't double-count quantity_sold or re-email.
+  const { data: existing } = await supabase
+    .from("ticket_orders")
+    .select("id, event_id, ticket_id, quantity, payment_status, guest_email, guest_name, total_price_thb, order_reference")
+    .eq("id", orderId)
+    .maybeSingle()
+  if (!existing) {
+    console.warn("[ticket.webhook] order not found:", orderId)
+    return
+  }
+  if (existing.payment_status === "paid") {
+    return
+  }
+
+  const stripePiId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id || null
+
+  // Flip the order to paid first — that's the contract for "ticket valid".
+  const { error: orderErr } = await supabase
+    .from("ticket_orders")
+    .update({
+      payment_status: "paid",
+      stripe_payment_intent_id: stripePiId,
+    })
+    .eq("id", existing.id)
+  if (orderErr) {
+    console.error("[ticket.webhook] order update failed:", orderErr)
+    return
+  }
+
+  // Increment quantity_sold on the tier. RPC would be safer (atomic) but
+  // for MVP volume a read-then-write is fine — the pending-row check at
+  // checkout-create already gates the obvious overbook.
+  const { data: tier } = await supabase
+    .from("event_tickets")
+    .select("quantity_sold")
+    .eq("id", existing.ticket_id)
+    .maybeSingle()
+  if (tier) {
+    await supabase
+      .from("event_tickets")
+      .update({ quantity_sold: (tier.quantity_sold ?? 0) + existing.quantity })
+      .eq("id", existing.ticket_id)
+  }
+
+  // Hydrate event + tier for the confirmation email + the gym
+  // notification. Pull org_id on the event so the bell ping lands in
+  // the right gym's inbox.
+  const [{ data: event }, { data: ticketTier }] = await Promise.all([
+    supabase
+      .from("fight_events")
+      .select("name, event_date, event_time, venue_name, venue_city, org_id")
+      .eq("id", existing.event_id)
+      .maybeSingle(),
+    supabase
+      .from("event_tickets")
+      .select("tier_name, description")
+      .eq("id", existing.ticket_id)
+      .maybeSingle(),
+  ])
+
+  // Ping the promoting gym so the bell icon surfaces the sale in
+  // real time. Fire-and-forget — failures here don't block the
+  // confirmation email below.
+  if (event?.org_id) {
+    notifyTicketSold({
+      orgId: event.org_id as string,
+      eventId: existing.event_id,
+      eventName: event.name || "Fight event",
+      buyerName: existing.guest_name || "Guest",
+      tierName: ticketTier?.tier_name || "Ticket",
+      quantity: existing.quantity,
+      totalThb: existing.total_price_thb,
+      orderReference: existing.order_reference || existing.id,
+    }).catch((err) => {
+      console.warn("[ticket.webhook] notification failed:", err)
+    })
+  }
+
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+    await EmailService.getInstance().sendTicketConfirmationEmail({
+      buyerEmail: existing.guest_email || "",
+      buyerName: existing.guest_name || "Guest",
+      eventName: event?.name || "Fight event",
+      eventDate: event?.event_date ?? null,
+      eventTime: event?.event_time ?? null,
+      venue:
+        [event?.venue_name, event?.venue_city].filter(Boolean).join(", ") ||
+        null,
+      tierName: ticketTier?.tier_name || "Ticket",
+      tierDescription: ticketTier?.description ?? null,
+      quantity: existing.quantity,
+      totalThb: existing.total_price_thb,
+      orderReference: existing.order_reference || existing.id,
+      eventUrl: `${siteUrl}/ockock/fights/${existing.event_id}`,
+    })
+  } catch (err) {
+    console.error("[ticket.webhook] confirmation email failed:", err)
   }
 }

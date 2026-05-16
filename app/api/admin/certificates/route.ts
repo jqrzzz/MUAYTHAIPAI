@@ -5,6 +5,7 @@ import { LEVEL_IDS, getLevelById, getLevelIndex } from "@/lib/certification-leve
 import { notifyStudentCertificateIssued } from "@/lib/student-notifications"
 import { notifyCertificateIssued } from "@/lib/notifications"
 import { EmailService } from "@/lib/email-service"
+import { logAudit } from "@/lib/audit-log"
 
 // GET - List certificates issued by this gym
 export async function GET() {
@@ -165,15 +166,22 @@ export async function POST(request: Request) {
   const signedCount = signoffs?.length ?? 0
   const requiredCount = levelConfig.skills.length
   if (signedCount < requiredCount) {
-    const skip = body.skip_skills_check === true
-    if (!skip) {
+    // Only owners + admins can override the skill-signoff requirement —
+    // trainers shouldn't be able to issue certs to students who haven't
+    // demonstrated the required skills. This protects the integrity of
+    // the cert ladder (the L3 moat).
+    const skipRequested = body.skip_skills_check === true
+    const canOverride = membership.role === "owner" || membership.role === "admin"
+    if (!skipRequested || !canOverride) {
       return NextResponse.json(
         {
-          error: `${signedCount}/${requiredCount} skills signed off. Complete all skill requirements or pass skip_skills_check: true to override.`,
+          error: skipRequested && !canOverride
+            ? `Only gym owners or admins can override the skill requirement. Have a senior trainer review and issue this cert, or complete the remaining ${requiredCount - signedCount} skill signoff${requiredCount - signedCount === 1 ? "" : "s"} first.`
+            : `${signedCount}/${requiredCount} skills signed off. Complete all skill requirements before issuing.`,
           signedOff: signedCount,
           required: requiredCount,
         },
-        { status: 400 }
+        { status: skipRequested && !canOverride ? 403 : 400 }
       )
     }
   }
@@ -224,6 +232,35 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Audit log — fire-and-forget, never blocks the response. Captures
+  // who, when, what was issued, whether the skill requirement was
+  // overridden, and the actor's role for post-hoc compliance review.
+  if (certificate) {
+    const overrodeSkillCheck =
+      signedCount < requiredCount && body.skip_skills_check === true
+    logAudit(supabase, {
+      action: "cert.issue",
+      actorUserId: user.id,
+      actorEmail: user.email ?? null,
+      targetType: "certificate",
+      targetId: certificate.id,
+      targetLabel: `${levelConfig.name} → ${student_email}`,
+      metadata: {
+        org_id: membership.org_id,
+        student_id: student.id,
+        student_email,
+        level: normalizedLevel,
+        level_number: levelConfig.number,
+        certificate_number: certNumber,
+        actor_role: membership.role,
+        skill_signoffs_at_issue: signedCount,
+        skill_signoffs_required: requiredCount,
+        skill_check_overridden: overrodeSkillCheck,
+      },
+      request,
+    }).catch(() => {})
   }
 
   // Notify student (email) and gym (in-app)
@@ -363,6 +400,14 @@ export async function PATCH(request: Request) {
     )
   }
 
+  // Snapshot the previous status so the audit log captures the transition.
+  const { data: before } = await supabase
+    .from("certificates")
+    .select("status, level, certificate_number, user_id")
+    .eq("id", certificate_id)
+    .eq("org_id", membership.org_id)
+    .maybeSingle()
+
   const { data: updated, error } = await supabase
     .from("certificates")
     .update({ status })
@@ -377,6 +422,25 @@ export async function PATCH(request: Request) {
   if (!updated) {
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
   }
+
+  // Audit: revoke or reinstate is rare + consequential — always log.
+  logAudit(supabase, {
+    action: status === "revoked" ? "cert.revoke" : "cert.reinstate",
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    targetType: "certificate",
+    targetId: certificate_id,
+    targetLabel: before?.certificate_number ?? null,
+    metadata: {
+      org_id: membership.org_id,
+      previous_status: before?.status ?? null,
+      new_status: status,
+      level: before?.level ?? null,
+      student_id: before?.user_id ?? null,
+      actor_role: membership.role,
+    },
+    request,
+  }).catch(() => {})
 
   return NextResponse.json({ certificate: updated })
 }

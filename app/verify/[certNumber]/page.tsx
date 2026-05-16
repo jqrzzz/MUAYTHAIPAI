@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Metadata } from "next"
 import { BadgeCheck, XCircle, MapPin, Calendar, Share2, ExternalLink, ScrollText, ChevronRight, Video } from "lucide-react"
+import QRCode from "qrcode"
 import { getLevelById } from "@/lib/certification-levels"
 
 const supabase = createClient(
@@ -110,6 +111,23 @@ export default async function VerifyCertificatePage({ params }: Props) {
   const isActive = cert.status === "active"
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
   const verifyUrl = `${siteUrl}/verify/${certNumber}`
+
+  // Generate the QR server-side as an SVG data URI so the page is
+  // self-contained — no dependency on an external CDN like qrserver.com
+  // that could disappear or rate-limit us. Falls back to no QR (page
+  // shows the cert number as text below either way) if generation fails.
+  let qrDataUrl: string | null = null
+  try {
+    qrDataUrl = await QRCode.toString(verifyUrl, {
+      type: "svg",
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 240,
+      color: { dark: "#ffffff", light: "#0a0a0a" },
+    }).then((svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`)
+  } catch {
+    // best-effort — keep the page rendering even if QR fails
+  }
   const studentName = student?.full_name || "Student"
   const levelName = levelConfig?.name || cert.level
 
@@ -342,15 +360,34 @@ export default async function VerifyCertificatePage({ params }: Props) {
           {/* SKILLS ATTESTED — the credential substance */}
           {levelConfig && levelConfig.skills.length > 0 && (
             <div className="mt-6 pt-6 border-t border-white/10">
-              <div className="flex items-baseline justify-between mb-4">
+              <div className="flex items-baseline justify-between mb-2">
                 <p className="font-display text-[10px] uppercase tracking-[0.22em] text-neutral-500 inline-flex items-center gap-1.5">
                   <ScrollText className="h-3 w-3" />
                   Skills Attested
                 </p>
                 <p className="text-[11px] text-neutral-600 tabular-nums">
                   {signoffs.length}/{levelConfig.skills.length} signed off
+                  {videoByIndex.size > 0 && (
+                    <>
+                      {" · "}
+                      <span className="text-emerald-400/80">{videoByIndex.size} video-verified</span>
+                    </>
+                  )}
                 </p>
               </div>
+              {/* Two kinds of attestation surface on this page — making
+                  the difference explicit so a viewer knows what each
+                  signal means. */}
+              <p className="text-[11px] text-neutral-500 mb-4 leading-relaxed">
+                Each skill is attested by a named trainer (their signature is on file).{" "}
+                {videoByIndex.size > 0 ? (
+                  <>
+                    Skills with a <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px]"><Video className="h-2 w-2" />Video-verified</span> badge also have a recorded demonstration that the trainer reviewed.
+                  </>
+                ) : (
+                  <>Video demonstrations are optional — when present they appear with a <span className="text-emerald-300">Video-verified</span> badge.</>
+                )}
+              </p>
               <ol className="space-y-2">
                 {levelConfig.skills.map((skill, i) => {
                   const signoff = signoffByIndex.get(i)
@@ -507,27 +544,40 @@ export default async function VerifyCertificatePage({ params }: Props) {
           </div>
         )}
 
-        {/* QR Code */}
-        <div className="mt-8 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verifyUrl)}&bgcolor=0a0a0a&color=ffffff&format=svg`}
-            alt={`QR code for certificate ${certNumber}`}
-            width={120}
-            height={120}
-            className="mx-auto rounded-lg"
-          />
-          <p className="mt-2 text-[10px] text-neutral-600">Scan to verify</p>
-        </div>
+        {/* QR Code — generated server-side as SVG so we don't depend on
+            an external CDN. If generation failed (rare), the cert
+            number + verify URL below still convey the same info. */}
+        {qrDataUrl && (
+          <div className="mt-8 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrDataUrl}
+              alt={`QR code for certificate ${certNumber}`}
+              width={120}
+              height={120}
+              className="mx-auto rounded-lg"
+            />
+            <p className="mt-2 text-[10px] text-neutral-600">Scan to verify</p>
+          </div>
+        )}
 
         {/* Network footer */}
-        <div className="mt-8 text-center space-y-2">
+        <div className="mt-8 space-y-2 text-center">
           <p className="font-display text-[10px] uppercase tracking-[0.18em] text-neutral-600">
             MUAYTHAIPAI Network · Naga-to-Garuda Certification System
           </p>
+          {org.slug && (
+            <a
+              href={`/gyms/${org.slug}`}
+              className="inline-flex items-center gap-1 text-xs text-neutral-400 transition-colors hover:text-white"
+            >
+              Visit {org.name}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
           <a
             href="/certificate-programs"
-            className="inline-flex items-center gap-1 text-xs text-orange-500/70 hover:text-orange-400 transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-orange-500/70 transition-colors hover:text-orange-400"
           >
             Learn about our certification programs
             <ExternalLink className="h-3 w-3" />

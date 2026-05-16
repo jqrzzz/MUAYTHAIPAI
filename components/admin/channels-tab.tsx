@@ -43,6 +43,7 @@ import {
   Trash2,
   AlertCircle,
 } from "lucide-react"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 type Channel = "line" | "telegram" | "whatsapp" | "ig" | "fb" | "web" | "test"
 
@@ -386,9 +387,7 @@ function GroupPanel({
   }
 
   async function handleDelete(row: ChannelRow) {
-    if (!confirm(`Remove ${row.channel} connection "${row.display_label || row.external_account_id}"?`)) {
-      return
-    }
+    // InlineConfirm handles the confirmation step inline.
     setBusyId(row.id)
     try {
       const res = await fetch(
@@ -492,15 +491,14 @@ function GroupPanel({
                           "Paused"
                         )}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                      <InlineConfirm
+                        onConfirm={() => handleDelete(c)}
                         disabled={busyId === c.id}
-                        onClick={() => handleDelete(c)}
-                        className="text-red-400 hover:text-red-300 h-7"
+                        title={`Remove ${c.channel} connection`}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-md text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
                       >
                         <Trash2 className="w-3 h-3" />
-                      </Button>
+                      </InlineConfirm>
                     </div>
                   )}
                 </li>

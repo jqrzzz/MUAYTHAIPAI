@@ -72,14 +72,30 @@ export default function FightsClient() {
           <span className="ml-3 text-neutral-400">Loading events...</span>
         </div>
       ) : events.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] py-20 text-center">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] py-16 px-6 text-center">
           <Swords className="mx-auto mb-3 h-10 w-10 text-neutral-600" />
           <p className="mb-1 text-lg font-medium text-neutral-300">
-            No upcoming events
+            No upcoming events yet
           </p>
-          <p className="text-sm text-neutral-500">
-            Check back soon for new fight nights
+          <p className="mx-auto mb-6 max-w-md text-sm text-neutral-500">
+            Once gyms publish fight nights, they&apos;ll show up here. Pull
+            up a chair — or list your own event below.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Link
+              href="/ockock/promoter"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400"
+            >
+              <Ticket className="h-4 w-4" />
+              Promote an event
+            </Link>
+            <Link
+              href="/ockock/fighters"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/5"
+            >
+              Browse fighters instead
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">

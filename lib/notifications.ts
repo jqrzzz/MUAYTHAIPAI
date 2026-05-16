@@ -282,3 +282,73 @@ export async function notifyCourseCompleted(data: {
     },
   })
 }
+
+/**
+ * Notify the promoting gym that someone bought a ticket. Fires from
+ * the Stripe webhook after payment_status flips to paid. The bell
+ * icon in the gym dashboard picks this up; clicking through links to
+ * the event's Sales tab so the promoter can see the full order.
+ */
+export async function notifyTicketSold(data: {
+  orgId: string
+  eventId: string
+  eventName: string
+  buyerName: string
+  tierName: string
+  quantity: number
+  totalThb: number
+  orderReference: string
+}) {
+  const ticketsLabel = data.quantity === 1 ? "ticket" : "tickets"
+  await insertNotification({
+    orgId: data.orgId,
+    type: "ticket_sold",
+    title: `🎟️ ${data.quantity} ${ticketsLabel} sold — ${data.eventName}`,
+    body: `${data.buyerName} bought ${data.quantity}× ${data.tierName} (฿${data.totalThb.toLocaleString()}) · ${data.orderReference}`,
+    metadata: {
+      event_id: data.eventId,
+      event_name: data.eventName,
+      buyer_name: data.buyerName,
+      tier_name: data.tierName,
+      quantity: data.quantity,
+      total_thb: data.totalThb,
+      order_reference: data.orderReference,
+    },
+  })
+}
+
+/**
+ * Notify the promoter that a fighter responded to their bout
+ * invitation. Fires alongside the email from Batch Q so the dashboard
+ * bell shows the response too. Deep-links via metadata.event_id (the
+ * notification bell's getNotificationHref switch handles the route).
+ */
+export async function notifyInvitationResponded(data: {
+  orgId: string
+  eventId: string
+  eventName: string
+  fighterName: string
+  action: "accepted" | "declined"
+  declineReason?: string | null
+}) {
+  const emoji = data.action === "accepted" ? "✅" : "✋"
+  const verb = data.action === "accepted" ? "accepted" : "declined"
+  await insertNotification({
+    orgId: data.orgId,
+    type: data.action === "accepted" ? "invitation_accepted" : "invitation_declined",
+    title: `${emoji} ${data.fighterName} ${verb} — ${data.eventName}`,
+    body:
+      data.action === "declined" && data.declineReason
+        ? `Reason: ${data.declineReason}`
+        : data.action === "accepted"
+          ? "The bout card is updated. The public fight page now shows them as confirmed."
+          : "The corner is open again — invite someone else from the bout editor.",
+    metadata: {
+      event_id: data.eventId,
+      event_name: data.eventName,
+      fighter_name: data.fighterName,
+      action: data.action,
+      decline_reason: data.declineReason ?? null,
+    },
+  })
+}

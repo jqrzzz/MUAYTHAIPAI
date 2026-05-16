@@ -7,6 +7,34 @@ import { createClient } from "@/lib/supabase/client"
 import { Loader2, Mail, CheckCircle2 } from "lucide-react"
 import { AuthCard, SaasButton, SaasInput } from "@/components/saas"
 
+// Whitelist of post-login destinations we'll honor from ?redirect=.
+// Prevents open-redirect tomfoolery via crafted URLs while still letting
+// callers like /ockock/promoter punt users through login and back.
+function safeRedirect(raw: string | null): string {
+  if (!raw) return "/admin"
+  // Only same-origin paths starting with / and not //
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/admin"
+  const allowed = ["/admin", "/trainer", "/ockock", "/platform-admin"]
+  if (allowed.some((p) => raw === p || raw.startsWith(`${p}/`) || raw.startsWith(`${p}?`))) {
+    return raw
+  }
+  return "/admin"
+}
+
+// Map ?error= codes from the redirector to short, human-readable banners.
+function errorMessageFor(code: string | null): string | null {
+  switch (code) {
+    case "no_promoter_access":
+      return "You need to be a gym owner, admin, or promoter to access fight events. Sign in with a staff account or ask your gym owner for access."
+    case "no_admin_access":
+      return "You need gym owner or admin access to view this page."
+    case "session_expired":
+      return "Your session expired. Sign in again to continue."
+    default:
+      return null
+  }
+}
+
 function AdminLoginInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -14,6 +42,8 @@ function AdminLoginInner() {
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState<"email" | "sent">("email")
   const [error, setError] = useState<string | null>(null)
+  const redirectTo = safeRedirect(searchParams.get("redirect"))
+  const contextMessage = errorMessageFor(searchParams.get("error"))
 
   useEffect(() => {
     const checkSession = async () => {
@@ -21,10 +51,10 @@ function AdminLoginInner() {
       const {
         data: { session },
       } = await supabase.auth.getSession()
-      if (session) router.push("/admin")
+      if (session) router.push(redirectTo)
     }
     checkSession()
-  }, [router])
+  }, [router, redirectTo])
 
   const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,9 +67,13 @@ function AdminLoginInner() {
         email,
         options: {
           shouldCreateUser: false,
+          // After the user clicks the magic link, /auth/callback finishes
+          // auth and forwards them to ?next= — pass our safe redirectTo
+          // so they end up on /ockock/promoter (or wherever) and not the
+          // generic /admin dashboard.
           emailRedirectTo:
             process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/auth/callback?next=/admin`,
+            `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
         },
       })
       if (error) throw error
@@ -91,6 +125,11 @@ function AdminLoginInner() {
       subtitle="Magic-link sign-in for owners, admins, and trainers."
       footnote="For gym staff, trainers, and platform admins"
     >
+      {contextMessage && (
+        <div className="mb-4 rounded-lg ring-1 ring-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-[12px] text-amber-200">
+          {contextMessage}
+        </div>
+      )}
       <form onSubmit={handleSendMagicLink} className="space-y-4">
         <div className="space-y-1.5">
           <label

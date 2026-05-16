@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Bell, Check, CheckCheck, Calendar, XCircle, Banknote, MessageSquare, Award, GraduationCap } from "lucide-react"
+import { Bell, Check, CheckCheck, Calendar, XCircle, Banknote, MessageSquare, Award, GraduationCap, Ticket, Swords } from "lucide-react"
 
 interface Notification {
   id: string
@@ -27,8 +27,31 @@ function getNotificationIcon(type: string) {
       return <Award className="w-4 h-4 text-amber-400" />
     case "course_completed":
       return <GraduationCap className="w-4 h-4 text-purple-400" />
+    case "ticket_sold":
+      return <Ticket className="w-4 h-4 text-amber-400" />
+    case "invitation_accepted":
+      return <Swords className="w-4 h-4 text-emerald-400" />
+    case "invitation_declined":
+      return <Swords className="w-4 h-4 text-rose-400" />
     default:
       return <Bell className="w-4 h-4 text-zinc-400" />
+  }
+}
+
+// Per-type deeplink target. Returns null if there's no useful place to
+// send the user (just marks read on click). Pull keys from metadata so
+// callers can be lazy and just pass IDs without crafting URLs.
+function getNotificationHref(n: Notification): string | null {
+  const m = n.metadata || {}
+  switch (n.type) {
+    case "ticket_sold":
+    case "invitation_accepted":
+    case "invitation_declined": {
+      const eventId = (m.event_id as string | undefined) ?? null
+      return eventId ? `/ockock/promoter/events/${eventId}` : null
+    }
+    default:
+      return null
   }
 }
 
@@ -170,6 +193,14 @@ export default function NotificationBell() {
                   }`}
                   onClick={() => {
                     if (!notification.is_read) markOneRead(notification.id)
+                    // Navigate to the per-notification deeplink target
+                    // if there is one. Mark-read fires first so the row
+                    // shows the read state immediately even if the page
+                    // hasn't navigated yet.
+                    const href = getNotificationHref(notification)
+                    if (href && typeof window !== "undefined") {
+                      window.location.href = href
+                    }
                   }}
                 >
                   <div className="mt-0.5 shrink-0">

@@ -32,6 +32,7 @@ import PayoutsTab from "@/components/admin/payouts-tab"
 import RetentionTab from "@/components/admin/retention-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import HelpButton from "@/components/admin/help-button"
+import Link from "next/link"
 import {
   Award,
   Calendar,
@@ -58,6 +59,8 @@ import {
   Sparkles,
   DollarSign,
   TrendingDown,
+  Swords,
+  ExternalLink,
 } from "lucide-react"
 import Image from "next/image"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -534,6 +537,32 @@ export default function AdminDashboardClient({
               })}
             </div>
           ))}
+
+          {/* External: Promoter dashboard — gym staff who promote fight
+              events jump out to /ockock/promoter from here. Separate from
+              the tab buttons above because it's a route, not a tab. */}
+          <div className="mb-4">
+            {!sidebarCollapsed && (
+              <p className="px-3 py-2 text-[10px] font-medium text-zinc-500 uppercase tracking-[0.14em]">
+                More
+              </p>
+            )}
+            <Link
+              href="/ockock/promoter"
+              title={sidebarCollapsed ? "Promoter dashboard" : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-[13px] mb-0.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors ${
+                sidebarCollapsed ? "justify-center" : ""
+              }`}
+            >
+              <Swords className="w-4 h-4 shrink-0" />
+              {!sidebarCollapsed && (
+                <>
+                  <span className="truncate">Fight events</span>
+                  <ExternalLink className="ml-auto w-3 h-3 text-zinc-600" />
+                </>
+              )}
+            </Link>
+          </div>
         </nav>
 
         {/* Sidebar footer */}
@@ -782,7 +811,7 @@ export default function AdminDashboardClient({
 
           {activeTab === "payouts" && <PayoutsTab />}
 
-          {activeTab === "retention" && <RetentionTab />}
+          {activeTab === "retention" && <RetentionTab onNavigateToTab={setActiveTab} />}
         </div>
       </main>
       <HelpButton />

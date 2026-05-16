@@ -31,6 +31,7 @@ import {
   Check,
 } from "lucide-react"
 import CourseLessonEditor from "./course-lesson-editor"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface SuggestedLesson {
   title: string
@@ -274,7 +275,7 @@ export default function CourseModulesView({
   }
 
   const handleDeleteModule = async (id: string) => {
-    if (!confirm("Delete this module and all its lessons?")) return
+    // InlineConfirm handles the confirmation step inline.
     await fetch(`${apiBase}/modules?id=${id}`, { method: "DELETE" })
     fetchModules()
   }
@@ -310,7 +311,7 @@ export default function CourseModulesView({
   }
 
   const handleDeleteLesson = async (lessonId: string) => {
-    if (!confirm("Delete this lesson?")) return
+    // InlineConfirm handles the confirmation step inline.
     await fetch(`${apiBase}/lessons?id=${lessonId}`, { method: "DELETE" })
     fetchModules()
   }
@@ -393,9 +394,13 @@ export default function CourseModulesView({
                     <Button size="sm" variant="ghost" onClick={() => openEditModule(mod)} className="text-neutral-400 hover:text-white h-8 w-8 p-0">
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDeleteModule(mod.id)} className="text-red-400 hover:text-red-300 h-8 w-8 p-0">
+                    <InlineConfirm
+                      onConfirm={() => handleDeleteModule(mod.id)}
+                      title="Delete module and all its lessons"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-md text-red-400 hover:bg-red-900/20 hover:text-red-300"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    </InlineConfirm>
                   </div>
                 </div>
 
@@ -437,13 +442,13 @@ export default function CourseModulesView({
                                   </Badge>
                                 )}
                                 <span className="text-xs text-neutral-500">{lesson.estimated_minutes}m</span>
-                                <Button
-                                  size="sm" variant="ghost"
-                                  className="text-red-400 hover:text-red-300 h-7 w-7 p-0 opacity-0 group-hover:opacity-100"
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteLesson(lesson.id) }}
+                                <InlineConfirm
+                                  onConfirm={() => handleDeleteLesson(lesson.id)}
+                                  title="Delete lesson"
+                                  className="inline-flex items-center justify-center h-7 w-7 rounded-md text-red-400 hover:bg-red-900/20 hover:text-red-300 opacity-0 group-hover:opacity-100"
                                 >
                                   <Trash2 className="h-3 w-3" />
-                                </Button>
+                                </InlineConfirm>
                               </div>
                             )
                           })}
@@ -511,7 +516,7 @@ export default function CourseModulesView({
             </div>
             <div className="space-y-2">
               <Label className="text-neutral-200">Type</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { value: "video", label: "Video", icon: Video },
                   { value: "text", label: "Text", icon: FileText },

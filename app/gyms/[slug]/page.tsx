@@ -90,7 +90,7 @@ export default async function GymPage({ params, searchParams }: GymPageProps) {
       .order("display_order"),
     supabase
       .from("trainer_profiles")
-      .select("*")
+      .select("*, users:user_id (public_instructor_enabled, public_instructor_handle)")
       .eq("org_id", gym.id)
       .eq("is_available", true)
       .order("display_order"),

@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { Surface } from "@/components/saas"
 import { OckOckCta } from "@/components/ockock/ockock-cta"
+import { SocialSignupButtons } from "@/components/ockock/social-signup-buttons"
 import { PLAN, FEATURES } from "@/lib/ockock/product"
 
 const AVATAR = "/images/ockock-avatar.png"
@@ -227,11 +228,12 @@ export default function ForGymsClient() {
         </form>
 
         {/* always-visible conversion path */}
-        <div className="mt-5 flex flex-col items-center gap-2">
+        <div className="mt-5 flex flex-col items-center gap-3">
           <OckOckCta href="/signup" size="lg">
             Start free {PLAN.trialDays}-day trial
             <ArrowRight className="h-4 w-4" />
           </OckOckCta>
+          <SocialSignupButtons label="Or jump straight in with" className="w-full max-w-xs" />
           <p className="text-[12px] text-zinc-600">
             No credit card · Cancel anytime · This is the same OckOck that runs in your gym
           </p>
@@ -256,6 +258,13 @@ export default function ForGymsClient() {
                 OckOck (อ๊อกอ๊อก) speaks your customers&apos; language — Thai and English — and answers like
                 a Thai trainer would, not like a chatbot.
               </p>
+              <Link
+                href="/vision"
+                className="mt-4 inline-flex items-center gap-1.5 text-[13px] text-indigo-300 transition-colors hover:text-indigo-200"
+              >
+                Read the full story
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
             <ul className="space-y-3">
               {BUILT_FOR.map((item) => (

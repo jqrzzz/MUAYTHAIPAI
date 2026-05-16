@@ -46,6 +46,8 @@ import {
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import NavButton from "@/components/ui/nav-button"
 import { Switch } from "@/components/ui/switch"
+import FightInvitationsCard from "@/components/trainer/fight-invitations-card"
+import UpcomingFightsCard from "@/components/trainer/upcoming-fights-card"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
 
@@ -361,13 +363,17 @@ export default function TrainerDashboardClient({
     setIsIssuingCert(true)
     setCertSuccess(null)
     try {
+      // Trainers can't override the skill requirement (only owner/admin
+      // can — that's enforced server-side). We never send skip:true from
+      // the trainer dashboard so the API can return a clean "complete
+      // the skills first" error instead of a 403 about role.
       const res = await fetch("/api/admin/certificates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           student_email: selectedStudent.email,
           level: certLevel,
-          skip_skills_check: !skillSignoffs?.allComplete,
+          skip_skills_check: false,
         }),
       })
       const data = await res.json()
@@ -792,6 +798,10 @@ export default function TrainerDashboardClient({
         {/* Today View */}
         {activeView === "today" && (
           <div className="space-y-4">
+            {/* Fight invitations — self-hides when nothing is pending */}
+            <FightInvitationsCard />
+            {/* Confirmed upcoming bouts — self-hides for non-fighters */}
+            <UpcomingFightsCard />
             {/* Welcome strip — indigo accent, restrained */}
             <div className="rounded-xl ring-1 ring-indigo-500/20 bg-gradient-to-b from-indigo-500/[0.06] to-zinc-900/40 backdrop-blur-sm px-4 py-3">
               <p className="text-[13px] text-white">

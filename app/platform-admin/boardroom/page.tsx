@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ArrowUpRight } from "lucide-react"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { SaasShell, SaasHeader, StatusDot } from "@/components/saas"
@@ -131,6 +131,27 @@ export default async function BoardroomPage() {
         }
       />
       <main className="mx-auto max-w-3xl px-5 py-8">
+        {/* Partner deck — the pitch / vision doc, viewable in-app */}
+        <Link href="/platform-admin/boardroom/pitch" className="mb-6 block group">
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/[0.12] via-indigo-500/[0.04] to-zinc-900/40 p-5 ring-1 ring-indigo-500/30 transition-all hover:ring-indigo-500/50">
+            <div className="flex items-center gap-4">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 ring-1 ring-indigo-500/30 text-xl">
+                🐃
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-indigo-300/80">Partner deck · v0.1</p>
+                <p className="mt-0.5 font-display text-[18px] text-white">
+                  The operating system for traditional Muay Thai
+                </p>
+                <p className="mt-1 text-[12px] text-zinc-500 truncate">
+                  Vision · wedge · moat · roadmap · the ask — viewable in-app
+                </p>
+              </div>
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-zinc-600 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-indigo-300" />
+            </div>
+          </div>
+        </Link>
+
         <BoardroomClient
           initialFiles={signedFiles}
           initialNotes={notes}

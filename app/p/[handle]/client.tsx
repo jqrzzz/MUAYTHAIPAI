@@ -13,6 +13,7 @@
  *   Certifications grid — each cert links to /verify/[number]
  *   Skills tally + gym affiliations + footer with platform credit
  */
+import { useState } from "react"
 import Link from "next/link"
 import { ArrowUpRight, BadgeCheck, MapPin, Calendar, Share2 } from "lucide-react"
 
@@ -66,11 +67,45 @@ export default function PassportClient({
   const primaryGym = gyms[0]
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="passport-root min-h-screen bg-neutral-950 text-neutral-100 print:bg-white print:text-black">
+      {/* Print stylesheet — strips dark theme + decorative gradients so
+          the passport prints as a clean credential sheet on white paper.
+          Lives inline (rather than globals.css) so it's scoped to this
+          page only via .passport-root. */}
+      <style>{`
+        @media print {
+          .passport-root {
+            background: #ffffff !important;
+            color: #111111 !important;
+          }
+          .passport-root section > div[class*="absolute"][class*="gradient"],
+          .passport-root section > div[class*="absolute"][class*="radial"] {
+            display: none !important;
+          }
+          .passport-root [class*="text-neutral-"],
+          .passport-root [class*="text-zinc-"],
+          .passport-root [class*="text-white"] {
+            color: #1f2937 !important;
+          }
+          .passport-root [class*="ring-white"],
+          .passport-root [class*="border-white"] {
+            border-color: #d1d5db !important;
+            box-shadow: none !important;
+          }
+          .passport-root section,
+          .passport-root footer {
+            page-break-inside: avoid;
+          }
+          .passport-root a {
+            text-decoration: none !important;
+            color: #1f2937 !important;
+          }
+        }
+      `}</style>
       {/* Cover band */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.12),transparent_60%)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 print:hidden" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.12),transparent_60%)] print:hidden" />
         <div className="relative mx-auto max-w-4xl px-5 pt-20 pb-12 sm:pt-28 sm:pb-16 text-center">
           <p className="font-display text-[11px] uppercase tracking-[0.28em] text-neutral-500 mb-4 inline-flex items-center gap-1.5">
             <BadgeCheck className="h-3 w-3 text-emerald-400" />
@@ -312,31 +347,39 @@ export default function PassportClient({
 }
 
 function ShareButton({ handle, name }: { handle: string; name: string }) {
+  const [copied, setCopied] = useState(false)
+  const [errored, setErrored] = useState(false)
   const handleClick = async () => {
+    setErrored(false)
     const url = `${typeof window !== "undefined" ? window.location.origin : ""}/p/${handle}`
     const text = `${name}'s Muay Thai certification passport`
     if (typeof navigator !== "undefined" && (navigator as Navigator & { share?: (data: { title: string; url: string }) => Promise<void> }).share) {
       try {
         await (navigator as Navigator & { share: (data: { title: string; url: string }) => Promise<void> }).share({ title: text, url })
       } catch {
-        // user cancelled
+        // user cancelled — silent
       }
-    } else if (typeof navigator !== "undefined") {
+      return
+    }
+    if (typeof navigator !== "undefined") {
       try {
         await navigator.clipboard.writeText(url)
-        alert("Passport link copied")
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2500)
       } catch {
-        // ignore
+        setErrored(true)
+        setTimeout(() => setErrored(false), 3000)
       }
     }
   }
   return (
     <button
       onClick={handleClick}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-1.5 text-[12px] text-neutral-300 transition-colors"
+      aria-label={`Share ${name}'s Muay Thai passport`}
+      className="print:hidden inline-flex items-center gap-1.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-1.5 text-[12px] text-neutral-300 transition-colors"
     >
       <Share2 className="h-3 w-3" />
-      Share passport
+      {copied ? "Link copied" : errored ? "Couldn't copy" : "Share passport"}
     </button>
   )
 }

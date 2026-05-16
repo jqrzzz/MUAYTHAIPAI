@@ -60,6 +60,12 @@ interface GymPageClientProps {
     photo_url: string | null
     specialties: string[] | null
     years_experience: number | null
+    // Joined from users via trainer_profiles.user_id — present when the
+    // instructor has opted into their public /i/[handle] profile.
+    users?: {
+      public_instructor_enabled: boolean | null
+      public_instructor_handle: string | null
+    } | null
   }[]
   settings: {
     operating_hours: Record<string, { open: string; close: string }> | null
@@ -376,6 +382,14 @@ export default function GymPageClient({
                               </Badge>
                             ))}
                           </div>
+                        )}
+                        {trainer.users?.public_instructor_enabled && trainer.users?.public_instructor_handle && (
+                          <Link
+                            href={`/i/${trainer.users.public_instructor_handle}`}
+                            className="mt-2 inline-flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors"
+                          >
+                            View instructor profile →
+                          </Link>
                         )}
                       </div>
                     </div>

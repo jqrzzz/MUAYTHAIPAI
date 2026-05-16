@@ -10,7 +10,7 @@
  * The step-by-step form is still available at /onboarding/form for owners
  * who'd rather click through fields.
  */
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Loader2, Plus, Trash2 } from "lucide-react"
@@ -89,6 +89,51 @@ export default function OnboardingConversation({
   const [hours, setHours] = useState<Record<Day, DayHours>>(defaultHours())
   const [notes, setNotes] = useState("")
 
+  // Draft persistence — survive a tab close or accidental refresh. Scoped
+  // per gym so a different gym in the same browser doesn't bleed in.
+  const draftKey = `ockock-onboarding-draft-${orgId}`
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (raw) {
+        const draft = JSON.parse(raw) as Partial<{
+          phase: Phase
+          blurb: string
+          description: string
+          services: ServiceRow[]
+          hours: Record<Day, DayHours>
+          notes: string
+        }>
+        if (typeof draft.blurb === "string") setBlurb(draft.blurb)
+        if (typeof draft.description === "string") setDescription(draft.description)
+        if (Array.isArray(draft.services) && draft.services.length > 0) setServices(draft.services)
+        if (draft.hours) setHours(draft.hours)
+        if (typeof draft.notes === "string") setNotes(draft.notes)
+        // Only restore the review phase — never resume mid-extract / mid-apply.
+        if (draft.phase === "review") setPhase("review")
+      }
+    } catch {
+      // Corrupt or unreadable draft — ignore.
+    }
+    setHydrated(true)
+  }, [draftKey])
+
+  useEffect(() => {
+    if (!hydrated) return
+    // Persist only the editable user state, never transient phases.
+    if (phase === "thinking" || phase === "applying" || phase === "done") return
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ phase, blurb, description, services, hours, notes }),
+      )
+    } catch {
+      // Quota / serialize errors — fail silently.
+    }
+  }, [draftKey, hydrated, phase, blurb, description, services, hours, notes])
+
   const runExtract = useCallback(async () => {
     const text = blurb.trim()
     if (!text) return
@@ -100,6 +145,17 @@ export default function OnboardingConversation({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       })
+      // Even when the API errors out we keep the user moving — drop them
+      // into the editable review with sensible defaults rather than a
+      // dead-end. But we surface a friendly message so they know
+      // something didn't go to plan and to double-check their fields.
+      if (!res.ok) {
+        setServices([{ ...BLANK_SERVICE }])
+        setHours(defaultHours())
+        setPhase("review")
+        setError("OckOck couldn't read that fully — fill in what's missing below and you're good.")
+        return
+      }
       const data = (await res.json().catch(() => ({}))) as Partial<{
         description: string
         services: { name: string; description: string; duration_minutes: number; price_thb: number }[]
@@ -164,8 +220,11 @@ export default function OnboardingConversation({
         body: JSON.stringify({ org_id: orgId, settings: { operating_hours } }),
       })
 
-      // 3. Services — one at a time, like the step-form
+      // 3. Services — one at a time, like the step-form. Track per-row
+      // success so we can give a precise error if some saved and some
+      // didn't (rather than silently landing in "done" with partial data).
       let saved = 0
+      const failedNames: string[] = []
       for (const s of valid) {
         const res = await fetch("/api/admin/services", {
           method: "POST",
@@ -180,14 +239,33 @@ export default function OnboardingConversation({
           }),
         })
         if (res.ok) saved++
-        else if (saved === 0) throw new Error(`OckOck couldn't save "${s.name}". Try again?`)
+        else failedNames.push(s.name)
+      }
+      if (saved === 0) {
+        throw new Error(
+          `OckOck couldn't save any services (${failedNames.join(", ")}). Try again?`,
+        )
+      }
+      if (failedNames.length > 0) {
+        // Partial success — surface the bad rows but let the gym go live.
+        // The owner can re-add the missing ones from the services tab.
+        setError(
+          `Saved ${saved} of ${valid.length} services. Couldn't save: ${failedNames.join(", ")}. Add them from the Services tab.`,
+        )
+      }
+      // Onboarding complete — clear the saved draft so a refresh doesn't
+      // dredge it back.
+      try {
+        localStorage.removeItem(draftKey)
+      } catch {
+        /* ignore */
       }
       setPhase("done")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong saving your gym. Try again?")
       setPhase("review")
     }
-  }, [services, hours, description, orgId, organization])
+  }, [services, hours, description, orgId, organization, draftKey])
 
   // ---- shared chrome ----
   const shell = (children: React.ReactNode) => (
@@ -222,14 +300,22 @@ export default function OnboardingConversation({
             I got and you can fix anything.
           </>,
         )}
+        <label htmlFor="gym-blurb" className="sr-only">
+          Tell OckOck about your gym
+        </label>
         <textarea
+          id="gym-blurb"
           value={blurb}
           onChange={(e) => setBlurb(e.target.value)}
           rows={7}
           autoFocus
+          aria-describedby="gym-blurb-hint"
           placeholder="e.g. We're a family gym in Chiang Mai. Drop-in 400 baht, week pass 2,500, privates 1,500/hour. Open 7am–6pm weekdays, half day Saturday, closed Sunday. We do kids classes too, and Kru Lek leads the morning pads."
           className="w-full resize-y rounded-2xl bg-zinc-900/60 px-4 py-3 text-[15px] leading-relaxed text-zinc-100 placeholder:text-zinc-600 ring-1 ring-zinc-800 focus:outline-none focus:ring-indigo-500/40"
         />
+        <p id="gym-blurb-hint" className="sr-only">
+          Describe your gym in your own words. Include what you offer, prices, and hours. OckOck will turn this into your settings.
+        </p>
         {error && <p className="text-[13px] text-red-400">{error}</p>}
         <div className="flex flex-col items-center gap-3">
           <button
@@ -273,6 +359,13 @@ export default function OnboardingConversation({
         <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
           {gymName} is set up!
         </h1>
+        {/* Surface partial-save warnings (some services failed to save)
+            so the owner doesn't discover the gap by surprise later. */}
+        {error && (
+          <div className="mx-auto max-w-md rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-left">
+            <p className="text-[13px] text-amber-200">{error}</p>
+          </div>
+        )}
         <p className="mx-auto max-w-md text-[15px] leading-relaxed text-zinc-400">
           OckOck is ready to answer your customers — in your gym&apos;s voice, in Thai or English. You can tweak anything
           from your dashboard.

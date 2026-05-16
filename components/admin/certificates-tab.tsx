@@ -643,18 +643,25 @@ export default function CertificatesTab({ role }: { role: string }) {
                 ))}
               </select>
             </div>
-            <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={issueCertForm.skip_skills_check}
-                onChange={(e) => setIssueCertForm((f: typeof issueCertForm) => ({ ...f, skip_skills_check: e.target.checked }))}
-                className="rounded border-neutral-600 bg-neutral-800 text-indigo-300 focus:ring-indigo-500"
-              />
-              Skip skill requirements check
-            </label>
-            <p className="text-[11px] text-neutral-500 -mt-2">
-              The API enforces level progression and minimum wait times. Enable the checkbox to bypass skill signoff requirements.
-            </p>
+            {/* Skip-check is owner/admin only — protects the cert ladder
+                from trainer-issued bypasses. Trainers see no checkbox, so
+                they can't try to override and hit a 403. */}
+            {(role === "owner" || role === "admin") && (
+              <>
+                <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={issueCertForm.skip_skills_check}
+                    onChange={(e) => setIssueCertForm((f: typeof issueCertForm) => ({ ...f, skip_skills_check: e.target.checked }))}
+                    className="rounded border-neutral-600 bg-neutral-800 text-indigo-300 focus:ring-indigo-500"
+                  />
+                  Skip skill requirements check
+                </label>
+                <p className="text-[11px] text-neutral-500 -mt-2">
+                  The API enforces level progression and minimum wait times. Enable the checkbox to bypass skill signoff requirements. Logged for audit.
+                </p>
+              </>
+            )}
             <button
               onClick={handleIssueCert}
               disabled={issuingCert || !issueCertForm.student_email}

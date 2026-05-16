@@ -72,6 +72,11 @@ export default function BoardroomClient({
   const [files, setFiles] = useState(initialFiles)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  // Pending-delete state: when set, the matching file row swaps its
+  // delete button for "Confirm" + "Cancel" affordances. Replaces a
+  // browser-native confirm() with inline UI so the destructive action
+  // doesn't break flow.
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,8 +102,14 @@ export default function BoardroomClient({
     }
   }
 
+  // Two-step delete: first click sets pendingDeleteId, surfaces the
+  // inline Confirm/Cancel chip in the row. Second click (with the same
+  // id matched) actually deletes. Replaces the jarring browser confirm()
+  // popup with in-flow UI that doesn't yank focus or scroll.
+  const requestDelete = (id: string) => setPendingDeleteId(id)
+  const cancelDelete = () => setPendingDeleteId(null)
   const deleteFile = async (id: string) => {
-    if (!confirm("Remove this file?")) return
+    setPendingDeleteId(null)
     const prev = files
     setFiles((fs) => fs.filter((f) => f.id !== id))
     const res = await fetch(`/api/platform-admin/boardroom/files/${id}`, { method: "DELETE" })
@@ -222,14 +233,34 @@ export default function BoardroomClient({
                     <Download className="h-3.5 w-3.5" />
                   </a>
                 )}
-                <button
-                  type="button"
-                  onClick={() => deleteFile(f.id)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-zinc-800 hover:text-red-300"
-                  aria-label="Delete"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {pendingDeleteId === f.id ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-red-500/10 ring-1 ring-red-500/30 px-1">
+                    <button
+                      type="button"
+                      onClick={() => deleteFile(f.id)}
+                      className="rounded px-2 py-0.5 text-[11px] font-medium text-red-300 hover:bg-red-500/20"
+                    >
+                      Confirm
+                    </button>
+                    <span className="text-zinc-700">·</span>
+                    <button
+                      type="button"
+                      onClick={cancelDelete}
+                      className="rounded px-2 py-0.5 text-[11px] text-zinc-400 hover:bg-zinc-800"
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => requestDelete(f.id)}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-zinc-800 hover:text-red-300"
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </li>
             ))}
           </ul>

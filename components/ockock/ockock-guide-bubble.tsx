@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Send, X } from "lucide-react"
+import { SocialSignupButtons } from "./social-signup-buttons"
 
 const AVATAR = "/images/ockock-avatar.png"
 const GREETING =
@@ -74,7 +75,7 @@ export function OckOckGuideBubble() {
   if (HIDE_ON_PREFIXES.some((p) => pathname.startsWith(p))) return null
 
   return (
-    <>
+    <div className="print:hidden">
       {!open && (
         <button
           onClick={() => setOpen(true)}
@@ -151,15 +152,16 @@ export function OckOckGuideBubble() {
                 <Send className="h-4 w-4" />
               </button>
             </form>
+            <SocialSignupButtons compact label="Or start signup with" className="mt-3" />
             <p className="mt-2 text-center text-[11px] text-zinc-600">
-              Ready?{" "}
+              Or{" "}
               <Link href="/signup" className="text-indigo-400 hover:text-indigo-300">
-                Start free 30-day trial →
+                use email →
               </Link>
             </p>
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

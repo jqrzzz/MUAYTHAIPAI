@@ -13,6 +13,7 @@ import {
   Pencil,
   MoreVertical,
   DollarSign,
+  ScanLine,
 } from "lucide-react"
 
 interface PromoterEvent {
@@ -264,6 +265,15 @@ function EventRow({ event }: { event: PromoterEvent }) {
             title="View public page"
           >
             <Eye className="h-4 w-4" />
+          </Link>
+        )}
+        {event.status === "published" && (
+          <Link
+            href={`/ockock/promoter/events/${event.id}/door`}
+            className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-amber-300 transition-colors hover:bg-amber-500/15 hover:text-amber-200"
+            title="Door scan tickets"
+          >
+            <ScanLine className="h-4 w-4" />
           </Link>
         )}
       </div>

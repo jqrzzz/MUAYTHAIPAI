@@ -25,17 +25,52 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = await params
-  const { data: user } = await supabase
-    .from("users")
-    .select("full_name, public_passport_enabled")
-    .eq("public_passport_handle", handle.toLowerCase())
-    .maybeSingle()
+  const slug = handle.toLowerCase()
+
+  // Defensive try/catch — if Supabase is briefly down, we don't want
+  // the whole page render to fail with a metadata-generation crash.
+  // Fall back to a safe noindex'd "not found" stub.
+  let user: { full_name: string | null; public_passport_enabled: boolean } | null = null
+  try {
+    const { data } = await supabase
+      .from("users")
+      .select("full_name, public_passport_enabled")
+      .eq("public_passport_handle", slug)
+      .maybeSingle()
+    user = data
+  } catch {
+    return { title: "Passport | MUAYTHAIPAI", robots: "noindex" }
+  }
+
   if (!user?.public_passport_enabled) {
     return { title: "Passport not found | MUAYTHAIPAI", robots: "noindex" }
   }
+
+  const name = user.full_name ?? handle
+  const title = `${name} — Muay Thai Passport | MUAYTHAIPAI`
+  const description = `Public Muay Thai certification passport for ${name}. Verifiable credentials, training journey, and gym lineage.`
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+  const pageUrl = `${siteUrl}/p/${slug}`
+
+  // Next 14 auto-attaches the dynamic opengraph-image.tsx output to og:image.
+  // Explicit blocks ensure consistent titles/descriptions across Twitter,
+  // Facebook, LinkedIn, iMessage etc. and let us pin the canonical URL.
   return {
-    title: `${user.full_name ?? handle} — Muay Thai Passport | MUAYTHAIPAI`,
-    description: `Public Muay Thai certification passport for ${user.full_name ?? handle}.`,
+    title,
+    description,
+    alternates: { canonical: pageUrl },
+    openGraph: {
+      type: "profile",
+      url: pageUrl,
+      title,
+      description,
+      siteName: "MUAYTHAIPAI",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   }
 }
 

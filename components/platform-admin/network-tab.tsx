@@ -34,6 +34,7 @@ import {
   Download,
 } from "lucide-react"
 import Link from "next/link"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 type DiscoveryStatus =
   | "pending"
@@ -835,7 +836,7 @@ function DetailPanel({
   }
 
   const remove = async () => {
-    if (!confirm(`Delete "${gym.name}" from discovered gyms?`)) return
+    // InlineConfirm handles the confirmation step inline.
     setBusy("delete")
     try {
       const res = await fetch(`/api/platform-admin/discovery/${gym.id}`, {
@@ -1071,15 +1072,14 @@ function DetailPanel({
         )}
 
         <div className="border-t border-zinc-800 pt-3">
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-red-900 text-red-300 w-full"
-            onClick={remove}
+          <InlineConfirm
+            onConfirm={remove}
             disabled={busy !== null}
+            title={`Delete ${gym.name} from discovered gyms`}
+            className="inline-flex w-full items-center justify-center rounded-md border border-red-900 px-3 py-1.5 text-sm text-red-300 hover:bg-red-900/20 disabled:opacity-50"
           >
             <Trash2 className="h-3 w-3 mr-1" /> Delete
-          </Button>
+          </InlineConfirm>
         </div>
       </CardContent>
     </Card>

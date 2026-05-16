@@ -144,12 +144,14 @@ export default function CertificateProgramsClient() {
   })
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
 
   const toggleSection = (sectionId: string) => setExpandedSection(expandedSection === sectionId ? null : sectionId)
 
   const toggleBooking = (certId: string) => {
     setExpandedBooking(expandedBooking === certId ? null : certId)
     setPaymentSuccess(null)
+    setPaymentError(null)
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -175,9 +177,12 @@ export default function CertificateProgramsClient() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Enrollment failed")
       setPaymentSuccess(certId)
+      setPaymentError(null)
       setBookingData({ name: "", email: "", cardNumber: "", expiry: "", cvc: "" })
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Something went wrong. Please try again or contact us directly.")
+      setPaymentError(
+        err instanceof Error ? err.message : "Something went wrong. Please try again or contact us directly.",
+      )
     } finally {
       setIsProcessingPayment(false)
     }
@@ -446,6 +451,15 @@ export default function CertificateProgramsClient() {
                                           />
                                         </div>
 
+                                        {paymentError && (
+                                          <div
+                                            role="alert"
+                                            aria-live="polite"
+                                            className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-300"
+                                          >
+                                            {paymentError}
+                                          </div>
+                                        )}
                                         <div className="grid grid-cols-1 gap-3 mt-6">
                                           <motion.button
                                             onClick={(e) => {

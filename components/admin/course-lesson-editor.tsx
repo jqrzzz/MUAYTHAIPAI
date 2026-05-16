@@ -36,6 +36,7 @@ import {
   GalleryHorizontal,
 } from "lucide-react"
 import MediaUploader from "./media-uploader"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface GalleryItem {
   url: string
@@ -426,7 +427,7 @@ export default function CourseLessonEditor({
   }
 
   const handleDeleteQuestion = async (id: string) => {
-    if (!confirm("Delete this question?")) return
+    // InlineConfirm handles the confirmation step inline.
     await fetch(`${apiBase}/quiz-questions?id=${id}`, { method: "DELETE" })
     fetchQuestions()
   }
@@ -768,9 +769,13 @@ export default function CourseLessonEditor({
                             <Button size="sm" variant="ghost" onClick={() => openEditQuestion(q)} className="text-neutral-400 hover:text-white h-7 w-7 p-0">
                               <Pencil className="h-3 w-3" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteQuestion(q.id)} className="text-red-400 hover:text-red-300 h-7 w-7 p-0">
+                            <InlineConfirm
+                              onConfirm={() => handleDeleteQuestion(q.id)}
+                              title="Delete question"
+                              className="inline-flex items-center justify-center h-7 w-7 rounded-md text-red-400 hover:bg-red-900/20 hover:text-red-300"
+                            >
                               <Trash2 className="h-3 w-3" />
-                            </Button>
+                            </InlineConfirm>
                           </div>
                         </div>
                       </div>

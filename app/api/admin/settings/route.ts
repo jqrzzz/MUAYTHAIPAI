@@ -80,6 +80,10 @@ export async function POST(request: Request) {
         instagram: orgUpdates.instagram,
         facebook: orgUpdates.facebook,
         website: orgUpdates.website,
+        // logo_url is normally written by /api/admin/gym-logo on upload,
+        // but we allow it here too in case the form bundles it on save.
+        ...(orgUpdates.logo_url !== undefined ? { logo_url: orgUpdates.logo_url } : {}),
+        ...(orgUpdates.timezone !== undefined ? { timezone: orgUpdates.timezone } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq("id", membership.org_id)

@@ -138,13 +138,10 @@ export default function FighterDetailClient() {
             </div>
           </div>
 
-          {/* Share button */}
-          <button
-            aria-label="Share fighter profile"
-            className="absolute right-3 top-3 rounded-full bg-black/30 p-2 text-white/70 backdrop-blur-sm hover:text-white"
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
+          {/* Share button — copies a deep link to the fighter detail
+              page. Web Share API on mobile (native share sheet), clipboard
+              everywhere else with a transient "Copied" state. */}
+          <ShareFighterButton fighterId={fighter.id} fighterName={fighter.name} />
         </div>
 
         {/* Name & status */}
@@ -322,5 +319,54 @@ export default function FighterDetailClient() {
         </div>
       </div>
     </div>
+  )
+}
+
+function ShareFighterButton({
+  fighterId,
+  fighterName,
+}: {
+  fighterId: string
+  fighterName: string
+}) {
+  const [copied, setCopied] = useState(false)
+  const [errored, setErrored] = useState(false)
+
+  async function handleShare() {
+    setErrored(false)
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/ockock/fighters/${fighterId}`
+        : ""
+    const text = `Check out ${fighterName} on OckOck`
+    if (typeof navigator !== "undefined" && (navigator as Navigator & { share?: (data: { title: string; url: string }) => Promise<void> }).share) {
+      try {
+        await (navigator as Navigator & { share: (data: { title: string; url: string }) => Promise<void> }).share({ title: text, url })
+      } catch {
+        // user cancelled — silent
+      }
+      return
+    }
+    if (typeof navigator !== "undefined") {
+      try {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2500)
+      } catch {
+        setErrored(true)
+        setTimeout(() => setErrored(false), 3000)
+      }
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      aria-label={`Share ${fighterName}'s profile`}
+      className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1.5 text-[11px] text-white/70 backdrop-blur-sm hover:bg-black/50 hover:text-white transition-colors"
+    >
+      <Share2 className="h-3.5 w-3.5" />
+      {copied ? "Copied" : errored ? "Error" : "Share"}
+    </button>
   )
 }

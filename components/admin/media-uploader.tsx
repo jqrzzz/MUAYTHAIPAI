@@ -31,6 +31,7 @@ import {
   Plus,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 export type UploadKind = "image" | "video"
 
@@ -191,7 +192,7 @@ export default function MediaUploader(props: Props) {
   const removeSingle = async () => {
     if (props.mode === "gallery") return
     if (!props.value) return
-    if (!confirm("Remove this file?")) return
+    // InlineConfirm handles the confirmation step inline.
     try {
       await deleteFromUrl(props.value, kind)
     } catch {
@@ -242,14 +243,14 @@ export default function MediaUploader(props: Props) {
           )}
           <div className="px-3 py-2 flex items-center justify-between text-[11px] text-zinc-400 border-t border-zinc-900">
             <span className="truncate">{value.split("/").pop()}</span>
-            <button
-              onClick={removeSingle}
+            <InlineConfirm
+              onConfirm={removeSingle}
               disabled={props.disabled}
-              className="text-zinc-500 hover:text-red-400 transition-colors p-1 -mr-1"
-              title="Remove"
+              title="Remove file"
+              className="text-zinc-500 hover:text-red-400 transition-colors p-1 -mr-1 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            </InlineConfirm>
           </div>
         </div>
       )

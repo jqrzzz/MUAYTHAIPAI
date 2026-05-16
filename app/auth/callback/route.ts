@@ -1,10 +1,24 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
+// Whitelist of post-auth destinations. Same logic as the login
+// client so neither path can be tricked into an open-redirect via a
+// crafted ?next= (e.g. //evil.com would otherwise produce a
+// protocol-relative URL after string concatenation).
+function safeNext(raw: string | null): string {
+  if (!raw) return "/admin"
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/admin"
+  const allowed = ["/admin", "/trainer", "/ockock", "/platform-admin", "/student"]
+  if (allowed.some((p) => raw === p || raw.startsWith(`${p}/`) || raw.startsWith(`${p}?`))) {
+    return raw
+  }
+  return "/admin"
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
-  const next = searchParams.get("next") ?? "/admin"
+  const next = safeNext(searchParams.get("next"))
 
   if (code) {
     const supabase = await createClient()

@@ -37,6 +37,14 @@ const staticRoutes: Route[] = [
   { path: "/careers", changeFrequency: "monthly", priority: 0.5 },
   { path: "/practitioners", changeFrequency: "weekly", priority: 0.7 },
   { path: "/instructors", changeFrequency: "weekly", priority: 0.7 },
+  // OckOck product surfaces — public consumer routes that should be
+  // crawlable so search engines and social can index fight nights +
+  // fighter directory entries.
+  { path: "/ockock", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/ockock/fights", changeFrequency: "daily", priority: 0.9 },
+  { path: "/ockock/fighters", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/for-gyms", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/pricing", changeFrequency: "monthly", priority: 0.6 },
   { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/terms-conditions", changeFrequency: "yearly", priority: 0.3 },
 ]
@@ -47,9 +55,11 @@ const staticRoutes: Route[] = [
 const MAX_CERTS = 10000
 const MAX_PROFILES = 5000
 const MAX_GYMS = 5000
+const MAX_FIGHTS = 5000
+const MAX_FIGHTERS = 5000
 
 async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
-  const [certsRes, instructorsRes, passportsRes, gymsRes] = await Promise.all([
+  const [certsRes, instructorsRes, passportsRes, gymsRes, fightsRes, fightersRes] = await Promise.all([
     sb
       .from("certificates")
       .select("certificate_number, issued_at")
@@ -75,6 +85,20 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
       .eq("status", "active")
       .not("slug", "is", null)
       .limit(MAX_GYMS),
+    // Published fight events — public detail page + buy ticket flow.
+    sb
+      .from("fight_events")
+      .select("id, updated_at, event_date")
+      .eq("status", "published")
+      .order("event_date", { ascending: false })
+      .limit(MAX_FIGHTS),
+    // Opted-in fighters — public detail page on /ockock/fighters/[id].
+    sb
+      .from("trainer_profiles")
+      .select("id, updated_at")
+      .eq("is_available", true)
+      .eq("open_to_fights", true)
+      .limit(MAX_FIGHTERS),
   ])
 
   const entries: MetadataRoute.Sitemap = []
@@ -116,6 +140,28 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
       lastModified: g.updated_at ? new Date(g.updated_at) : new Date(),
       changeFrequency: "weekly",
       priority: 0.7,
+    })
+  }
+
+  for (const f of fightsRes.data ?? []) {
+    if (!f.id) continue
+    entries.push({
+      url: `${BASE_URL}/ockock/fights/${encodeURIComponent(f.id)}`,
+      lastModified: f.updated_at ? new Date(f.updated_at) : new Date(),
+      // Daily until the event has passed — promoters often edit cards
+      // up to and including the day of the show.
+      changeFrequency: "daily",
+      priority: 0.8,
+    })
+  }
+
+  for (const fighter of fightersRes.data ?? []) {
+    if (!fighter.id) continue
+    entries.push({
+      url: `${BASE_URL}/ockock/fighters/${encodeURIComponent(fighter.id)}`,
+      lastModified: fighter.updated_at ? new Date(fighter.updated_at) : new Date(),
+      changeFrequency: "weekly",
+      priority: 0.6,
     })
   }
 

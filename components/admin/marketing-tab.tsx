@@ -19,6 +19,8 @@ import {
   Video,
   Camera,
   Zap,
+  Megaphone,
+  AlertTriangle,
 } from "lucide-react"
 
 const OCKOCK_AVATAR = "/images/ockock-avatar.png"
@@ -66,9 +68,56 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
   const [generatingReply, setGeneratingReply] = useState(false)
   const [copiedReply, setCopiedReply] = useState(false)
 
+  // Broadcast announcement state
+  const [bcSubject, setBcSubject] = useState("")
+  const [bcBody, setBcBody] = useState("")
+  const [bcRecipientCount, setBcRecipientCount] = useState<number | null>(null)
+  const [bcConfirmOpen, setBcConfirmOpen] = useState(false)
+  const [bcSending, setBcSending] = useState(false)
+  const [bcResult, setBcResult] = useState<{ sent: number; failed: number } | null>(null)
+  const [bcError, setBcError] = useState<string | null>(null)
+
   useEffect(() => {
     fetchData()
+    fetchBroadcastPreview()
   }, [])
+
+  async function fetchBroadcastPreview() {
+    try {
+      const res = await fetch("/api/admin/announcements", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setBcRecipientCount(data.recipient_count ?? 0)
+      }
+    } catch { /* non-critical */ }
+  }
+
+  async function sendBroadcast() {
+    setBcSending(true)
+    setBcError(null)
+    setBcResult(null)
+    try {
+      const res = await fetch("/api/admin/announcements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: bcSubject, body: bcBody }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setBcError(data.error || "Failed to send")
+        return
+      }
+      setBcResult({ sent: data.sent ?? 0, failed: data.failed ?? 0 })
+      // Drop the draft after a successful send so the next broadcast
+      // starts fresh. Keep the dialog open so the owner sees the result.
+      setBcSubject("")
+      setBcBody("")
+    } catch (err) {
+      setBcError(err instanceof Error ? err.message : "Network error")
+    } finally {
+      setBcSending(false)
+    }
+  }
 
   async function fetchData() {
     setLoading(true)
@@ -226,6 +275,131 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
           </div>
         </div>
       )}
+
+      {/* === SECTION 0: Broadcast === */}
+      <Card className="bg-neutral-900/50 border-neutral-800">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Megaphone className="w-4 h-4 text-indigo-300" />
+            <h3 className="font-semibold text-white text-sm">Broadcast to all students</h3>
+            {bcRecipientCount !== null && (
+              <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 text-[10px]">
+                {bcRecipientCount} {bcRecipientCount === 1 ? "recipient" : "recipients"}
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-neutral-500 mb-3">
+            For one-off notices — cancelled class, schedule change, seminar. Goes by email to every student who has booked with you.
+          </p>
+
+          <div className="space-y-2">
+            <Input
+              value={bcSubject}
+              onChange={(e) => setBcSubject(e.target.value)}
+              maxLength={150}
+              placeholder="Subject (e.g. Tomorrow's 7am class is cancelled)"
+              className="bg-neutral-800 border-neutral-700 text-white"
+            />
+            <textarea
+              value={bcBody}
+              onChange={(e) => setBcBody(e.target.value)}
+              maxLength={4000}
+              rows={4}
+              placeholder="Write your message — students will see this in plain email with your gym name as the signature."
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-indigo-500/50 resize-none"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-neutral-500">
+                {bcBody.length}/4000 chars
+              </p>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setBcResult(null)
+                  setBcError(null)
+                  setBcConfirmOpen(true)
+                }}
+                disabled={!bcSubject.trim() || !bcBody.trim() || (bcRecipientCount ?? 0) === 0}
+                className="bg-indigo-500 hover:bg-indigo-400"
+              >
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+                Send to {bcRecipientCount ?? 0}
+              </Button>
+            </div>
+          </div>
+
+          {/* Inline confirm — keeps the focus on the input so the owner
+              can edit if they spot a typo at the last second. */}
+          {bcConfirmOpen && (
+            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] p-3">
+              {bcResult ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <p className="text-sm text-emerald-200">
+                      Sent to {bcResult.sent} {bcResult.sent === 1 ? "student" : "students"}
+                      {bcResult.failed > 0 && (
+                        <span className="text-amber-300"> · {bcResult.failed} failed</span>
+                      )}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setBcConfirmOpen(false)
+                      setBcResult(null)
+                    }}
+                    className="border-neutral-700 text-xs"
+                  >
+                    Close
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-300 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm text-amber-200">
+                        Confirm: send this to {bcRecipientCount} {bcRecipientCount === 1 ? "student" : "students"}?
+                      </p>
+                      <p className="text-[11px] text-amber-200/70 mt-0.5">
+                        Each will get an email. You can&apos;t undo a send. Rate-limited to 3 per hour per gym.
+                      </p>
+                    </div>
+                  </div>
+                  {bcError && (
+                    <p className="text-xs text-red-400">{bcError}</p>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      onClick={sendBroadcast}
+                      disabled={bcSending}
+                      className="bg-amber-500 hover:bg-amber-400 text-amber-950"
+                    >
+                      {bcSending ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Sending...</>
+                      ) : (
+                        <><Send className="w-3.5 h-3.5 mr-1.5" />Yes, send now</>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setBcConfirmOpen(false)}
+                      disabled={bcSending}
+                      className="border-neutral-700 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* === SECTION 1: Lead Inbox === */}
       <Card className="bg-neutral-900/50 border-neutral-800">

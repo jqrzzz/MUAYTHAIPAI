@@ -35,9 +35,14 @@ export default async function PractitionersPage({ searchParams }: Props) {
   const { q, level } = await searchParams
   const search = (q ?? "").trim().toLowerCase()
 
-  // Pull all opted-in users + their certs + first gym affiliation.
-  // Capped at 200 to keep the page fast; pagination later if needed.
-  const { data: users } = await supabase
+  // Pull opted-in users + their certs + first gym affiliation. We push
+  // the name search into the DB query so we paginate against filtered
+  // results (the level filter is computed from the certs join and stays
+  // client-side; that's fine since it just narrows what's already in
+  // the page result). Cap is sized so a typical registry view fits but
+  // a hint surfaces when we hit it so the user knows to refine.
+  const PAGE_CAP = 500
+  let usersQuery = supabase
     .from("users")
     .select(`
       id, full_name, public_passport_handle, is_verified_examiner,
@@ -48,7 +53,14 @@ export default async function PractitionersPage({ searchParams }: Props) {
     .eq("public_passport_enabled", true)
     .not("public_passport_handle", "is", null)
     .order("full_name")
-    .limit(200)
+    .limit(PAGE_CAP)
+  if (search) {
+    usersQuery = usersQuery.or(
+      `full_name.ilike.%${search}%,public_passport_handle.ilike.%${search}%`,
+    )
+  }
+  const { data: users } = await usersQuery
+  const hitCap = (users?.length ?? 0) >= PAGE_CAP
 
   // Pull gym affiliations for these users
   const userIds = (users ?? []).map((u) => u.id)
@@ -174,6 +186,11 @@ export default async function PractitionersPage({ searchParams }: Props) {
           {search && ` matching "${q}"`}
           {level && ` at ${CERTIFICATION_LEVELS.find((l) => l.id === level)?.name}`}
         </p>
+        {hitCap && (
+          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-[12px] text-amber-200">
+            Showing the first {PAGE_CAP}. Use the search above to narrow the registry.
+          </div>
+        )}
         {rows.length === 0 ? (
           <div className="text-center py-16">
             <Users className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
