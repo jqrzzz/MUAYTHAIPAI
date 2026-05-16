@@ -137,19 +137,40 @@ export async function middleware(request: NextRequest) {
   // (admin, signup, pricing, ...) is shared and works under either host. This is
   // a rewrite, not a redirect: the URL stays ockock.app/.
   const host = request.headers.get("host") ?? ""
-  if (host.endsWith("ockock.app") && pathname === "/") {
+  const onOckOckApp = host.endsWith("ockock.app")
+  if (onOckOckApp && pathname === "/") {
     const url = request.nextUrl.clone()
     url.pathname = "/for-gyms"
     return NextResponse.rewrite(url)
   }
 
+  // Paths owned by the OckOck product. On ockock.app these always
+  // serve the OckOck route; we skip the legacy Pai gym redirects
+  // below (e.g. /pricing → /classes was a legacy redirect from Wix
+  // when "pricing" meant class rates; now it's the OckOck SaaS
+  // pricing page and the redirect would hijack it).
+  const ockockOwnedPaths = new Set([
+    "/pricing",
+    "/for-gyms",
+    "/vision",
+    "/about",
+  ])
+  const isOckOckOwned =
+    onOckOckApp ||
+    ockockOwnedPaths.has(pathname) ||
+    pathname.startsWith("/ockock/")
+
   // Handle redirects first. Skip self-redirects so a stale entry can't
-  // create an infinite 301 loop that takes the page down.
-  const target = redirects[pathname]
-  if (target && target !== pathname) {
-    const url = request.nextUrl.clone()
-    url.pathname = target
-    return NextResponse.redirect(url, 301)
+  // create an infinite 301 loop that takes the page down. Also skip
+  // redirects for OckOck-owned paths so the legacy Wix map can't
+  // hijack the new product pages.
+  if (!isOckOckOwned) {
+    const target = redirects[pathname]
+    if (target && target !== pathname) {
+      const url = request.nextUrl.clone()
+      url.pathname = target
+      return NextResponse.redirect(url, 301)
+    }
   }
 
   return await updateSession(request)
