@@ -95,7 +95,7 @@ interface TicketTier {
   is_active: boolean
 }
 
-type Tab = "details" | "bouts" | "tickets" | "sales"
+type Tab = "details" | "bouts" | "tickets" | "sales" | "marketing"
 
 const EMPTY_FORM: EventForm = {
   name: "",
@@ -627,6 +627,7 @@ export default function EventEditorClient({
           { key: "bouts" as Tab, label: "Fight Card", icon: <Swords className="h-4 w-4" /> },
           { key: "tickets" as Tab, label: "Tickets", icon: <Ticket className="h-4 w-4" /> },
           { key: "sales" as Tab, label: "Sales", icon: <TrendingUp className="h-4 w-4" /> },
+          { key: "marketing" as Tab, label: "Marketing", icon: <Send className="h-4 w-4" /> },
         ]
       : []),
   ]
@@ -764,6 +765,9 @@ export default function EventEditorClient({
       )}
       {tab === "sales" && eventId && (
         <SalesTab eventId={eventId} />
+      )}
+      {tab === "marketing" && eventId && (
+        <MarketingTab eventId={eventId} eventName={form.name || "this event"} />
       )}
     </div>
   )
@@ -3241,6 +3245,449 @@ interface PricingComparable {
   price_thb: number
   sold: number
   sold_percent: number
+}
+
+// ============================================
+// AI Auto-Marketer tab — generates copy-ready social posts in
+// Thai + English for the platforms a Thai promoter actually uses
+// (Facebook, Instagram, LINE OA, Twitter/X). Each draft is logged
+// with a 'used' / 'dismissed' decision for the learning loop.
+// ============================================
+
+interface MarketingDraft {
+  id: string
+  platform: "facebook" | "instagram" | "line" | "twitter"
+  language: "en" | "th"
+  caption: string
+  hashtags: string[] | null
+  status: "draft" | "used" | "dismissed"
+  created_at: string
+  used_at: string | null
+}
+
+const MARKETING_PLATFORMS = [
+  { key: "facebook" as const, label: "Facebook" },
+  { key: "instagram" as const, label: "Instagram" },
+  { key: "line" as const, label: "LINE OA" },
+  { key: "twitter" as const, label: "Twitter / X" },
+]
+const MARKETING_LANGUAGES = [
+  { key: "en" as const, label: "English" },
+  { key: "th" as const, label: "ไทย" },
+]
+
+function MarketingTab({
+  eventId,
+  eventName,
+}: {
+  eventId: string
+  eventName: string
+}) {
+  const [drafts, setDrafts] = useState<MarketingDraft[]>([])
+  const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [notes, setNotes] = useState("")
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [selectedPlatforms, setSelectedPlatforms] = useState<
+    Set<MarketingDraft["platform"]>
+  >(new Set(["facebook", "instagram", "line"]))
+  const [selectedLanguages, setSelectedLanguages] = useState<
+    Set<MarketingDraft["language"]>
+  >(new Set(["en", "th"]))
+
+  // Load existing drafts on mount.
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/promoter/events/${eventId}/marketing`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setDrafts(data.drafts ?? [])
+      } catch {
+        // Silent — tab still renders with the generate CTA.
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId])
+
+  async function generate() {
+    if (selectedPlatforms.size === 0) {
+      setError("Pick at least one platform.")
+      return
+    }
+    if (selectedLanguages.size === 0) {
+      setError("Pick at least one language.")
+      return
+    }
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/marketing/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            platforms: Array.from(selectedPlatforms),
+            languages: Array.from(selectedLanguages),
+            notes: notes.trim() || undefined,
+          }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Couldn't generate drafts.")
+        return
+      }
+      // Merge new drafts on top of existing; drop any older drafts
+      // for the same (platform, language) since the new one
+      // supersedes.
+      const newest = new Map<string, MarketingDraft>()
+      for (const d of data.drafts as MarketingDraft[]) {
+        newest.set(`${d.platform}|${d.language}`, {
+          ...d,
+          status: "draft",
+          created_at: new Date().toISOString(),
+          used_at: null,
+        })
+      }
+      for (const d of drafts) {
+        const key = `${d.platform}|${d.language}`
+        if (!newest.has(key)) newest.set(key, d)
+      }
+      setDrafts(Array.from(newest.values()))
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function markUsed(draftId: string) {
+    // Optimistic: flip status locally, then PATCH server. Keeps
+    // the UI responsive.
+    setDrafts((d) =>
+      d.map((x) =>
+        x.id === draftId ? { ...x, status: "used", used_at: new Date().toISOString() } : x,
+      ),
+    )
+    try {
+      await fetch(`/api/promoter/events/${eventId}/marketing/${draftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "used" }),
+      })
+    } catch {
+      // No-op — local optimistic update keeps the UI consistent
+      // even if the API call fails; user can retry on the next copy.
+    }
+  }
+
+  async function dismiss(draftId: string) {
+    setDrafts((d) => d.filter((x) => x.id !== draftId))
+    try {
+      await fetch(`/api/promoter/events/${eventId}/marketing/${draftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dismissed" }),
+      })
+    } catch {
+      // Best-effort.
+    }
+  }
+
+  function togglePlatform(p: MarketingDraft["platform"]) {
+    setSelectedPlatforms((s) => {
+      const next = new Set(s)
+      if (next.has(p)) next.delete(p)
+      else next.add(p)
+      return next
+    })
+  }
+
+  function toggleLanguage(l: MarketingDraft["language"]) {
+    setSelectedLanguages((s) => {
+      const next = new Set(s)
+      if (next.has(l)) next.delete(l)
+      else next.add(l)
+      return next
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-neutral-500" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Generate panel — collapses to a one-line "generate more"
+          row once drafts exist, so the page leads with the actual
+          copy. */}
+      <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-amber-500/[0.02] p-5">
+        <div className="mb-3 flex items-start gap-3">
+          <div className="rounded-lg bg-amber-500/15 p-2">
+            <Send className="h-5 w-5 text-amber-300" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-100">
+              AI Auto-Marketer
+            </p>
+            <p className="mt-0.5 text-[12px] text-amber-200/70">
+              Ready-to-paste copy for {eventName} in Thai or English. Coach voice — not corporate.
+            </p>
+          </div>
+        </div>
+
+        {/* Platform selector */}
+        <div className="mb-3">
+          <p className="mb-1.5 text-[10px] uppercase tracking-wider text-amber-300/70">
+            Platforms
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {MARKETING_PLATFORMS.map((p) => {
+              const on = selectedPlatforms.has(p.key)
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => togglePlatform(p.key)}
+                  aria-pressed={on}
+                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                    on
+                      ? "bg-amber-500 text-black"
+                      : "bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Language selector */}
+        <div className="mb-3">
+          <p className="mb-1.5 text-[10px] uppercase tracking-wider text-amber-300/70">
+            Languages
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {MARKETING_LANGUAGES.map((l) => {
+              const on = selectedLanguages.has(l.key)
+              return (
+                <button
+                  key={l.key}
+                  type="button"
+                  onClick={() => toggleLanguage(l.key)}
+                  aria-pressed={on}
+                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                    on
+                      ? "bg-amber-500 text-black"
+                      : "bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {l.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Notes toggle */}
+        <button
+          type="button"
+          onClick={() => setNotesOpen((v) => !v)}
+          aria-expanded={notesOpen}
+          className="inline-flex items-center gap-1 text-[11px] text-amber-300/70 hover:text-amber-200"
+        >
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${notesOpen ? "rotate-180" : ""}`}
+          />
+          {notesOpen ? "Hide notes" : "Add steering notes (optional)"}
+        </button>
+        {notesOpen && (
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. emphasize the headliner, mention parking is free, tourist-focused, no emojis"
+            rows={2}
+            maxLength={500}
+            className="mt-2 w-full resize-none rounded-md border border-amber-500/20 bg-zinc-950 px-3 py-2 text-xs text-amber-100 placeholder-amber-200/30 outline-none focus:border-amber-400/50"
+          />
+        )}
+
+        {error && (
+          <p role="alert" className="mt-3 text-xs text-rose-300">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={generate}
+          disabled={generating}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Writing copy…
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-3.5 w-3.5" />
+              {drafts.length === 0 ? "Generate copy" : "Regenerate selected"}
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Drafts grouped by platform */}
+      {drafts.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-white/10 py-12 text-center">
+          <p className="text-sm text-neutral-500">
+            No drafts yet. Pick your platforms + languages and click Generate.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {drafts.map((d) => (
+            <MarketingDraftCard
+              key={d.id}
+              draft={d}
+              onMarkUsed={() => markUsed(d.id)}
+              onDismiss={() => dismiss(d.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MarketingDraftCard({
+  draft,
+  onMarkUsed,
+  onDismiss,
+}: {
+  draft: MarketingDraft
+  onMarkUsed: () => void
+  onDismiss: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState<string | null>(null)
+
+  // Compose the final copy: caption + hashtag block at the bottom
+  // for platforms that want it grouped, inline for twitter (already
+  // baked into the caption by the model), nothing for LINE.
+  const finalCopy = (() => {
+    const lines = [draft.caption.trim()]
+    if (draft.platform !== "twitter" && draft.platform !== "line") {
+      const tags = (draft.hashtags ?? []).filter(Boolean)
+      if (tags.length > 0) {
+        lines.push("")
+        lines.push(tags.map((h) => `#${h}`).join(" "))
+      }
+    }
+    return lines.join("\n")
+  })()
+
+  async function copy() {
+    setCopyError(null)
+    try {
+      await navigator.clipboard.writeText(finalCopy)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+      onMarkUsed()
+    } catch {
+      setCopyError("Couldn't copy to clipboard. Select the text manually.")
+    }
+  }
+
+  const platformLabel = {
+    facebook: "Facebook",
+    instagram: "Instagram",
+    line: "LINE OA",
+    twitter: "Twitter / X",
+  }[draft.platform]
+
+  const platformTone = {
+    facebook: "bg-blue-500/15 text-blue-300",
+    instagram: "bg-pink-500/15 text-pink-300",
+    line: "bg-emerald-500/15 text-emerald-300",
+    twitter: "bg-sky-500/15 text-sky-300",
+  }[draft.platform]
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${platformTone}`}
+          >
+            {platformLabel}
+          </span>
+          <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
+            {draft.language === "th" ? "ไทย" : "English"}
+          </span>
+          {draft.status === "used" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-300">
+              <CheckCircle2 className="h-2.5 w-2.5" />
+              Used
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss draft"
+          className="rounded p-1 text-neutral-500 hover:bg-white/5 hover:text-neutral-300"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <pre className="mb-3 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-zinc-950/40 p-3 text-[12px] leading-relaxed text-neutral-200 font-sans">
+        {finalCopy}
+      </pre>
+
+      {copyError && (
+        <p role="alert" className="mb-2 text-xs text-rose-300">
+          {copyError}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={copy}
+        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+          copied
+            ? "bg-emerald-500 text-black"
+            : "bg-amber-500 text-black hover:bg-amber-400"
+        }`}
+      >
+        {copied ? (
+          <>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Copied
+          </>
+        ) : (
+          <>Copy</>
+        )}
+      </button>
+    </div>
+  )
 }
 
 function PricingOraclePanel({
