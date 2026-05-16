@@ -104,6 +104,19 @@ export interface TicketConfirmationEmailData {
   eventUrl: string
 }
 
+export interface TicketReminderEmailData {
+  buyerEmail: string
+  buyerName: string
+  eventName: string
+  eventDate: string | null
+  eventTime: string | null
+  venue: string | null
+  tierName: string
+  quantity: number
+  orderReference: string
+  eventUrl: string
+}
+
 export interface BoutInvitationResponseEmailData {
   // Recipient (promoter who sent the invite)
   promoterEmail: string
@@ -1277,6 +1290,121 @@ Fight card: ${data.eventUrl}
       return true
     } catch (error) {
       console.error("[email] Failed to send ticket confirmation:", error instanceof Error ? error.message : String(error))
+      return false
+    }
+  }
+
+  // 24h-before reminder email for ticket buyers. Fired from the
+  // /api/cron/event-reminders job. Includes a QR code (same lib as
+  // the confirmation email) so the buyer doesn't have to dig through
+  // their inbox at the door.
+  async sendTicketReminderEmail(
+    data: TicketReminderEmailData,
+  ): Promise<boolean> {
+    try {
+      if (!this.resend) {
+        console.log("[email] Ticket reminder (no Resend):", data.buyerEmail, data.orderReference)
+        return false
+      }
+      if (!data.buyerEmail) return false
+
+      let qrPngBuffer: Buffer | null = null
+      try {
+        qrPngBuffer = await QRCode.toBuffer(data.orderReference, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 320,
+          color: { dark: "#000000", light: "#FFFFFF" },
+        })
+      } catch (err) {
+        console.warn("[email] QR generation failed for reminder:", err)
+      }
+
+      const firstName = data.buyerName.split(" ")[0] || data.buyerName
+      const eventDateLabel = data.eventDate
+        ? new Date(data.eventDate).toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })
+        : "Tomorrow"
+      const timeLabel = data.eventTime ? ` · ${data.eventTime.slice(0, 5)}` : ""
+      const venueLabel = data.venue || "Venue TBD"
+      const subject = `🥊 Tomorrow: ${data.eventName}`
+
+      const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;font-family:Inter,-apple-system,sans-serif;background:#09090b;color:#fafafa;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#09090b;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;background:#18181b;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:32px 32px 8px 32px;">
+          <p style="margin:0 0 16px 0;font-size:11px;letter-spacing:3px;color:#fbbf24;text-transform:uppercase;">MUAYTHAIPAI · Tomorrow</p>
+          <h1 style="margin:0 0 16px 0;font-size:26px;line-height:1.25;color:#fafafa;font-weight:700;">${escapeHtml(data.eventName)}</h1>
+          <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#d4d4d8;">Hey ${escapeHtml(firstName)} — fight night is ${eventDateLabel.toLowerCase()}${timeLabel ? ` at ${escapeHtml(data.eventTime?.slice(0, 5) ?? "")}` : ""}. Quick reminder so nothing slips.</p>
+        </td></tr>
+        <tr><td style="padding:0 32px 16px 32px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#0a0a0a;border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+            <tr><td>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Order reference</p>
+              <p style="margin:0 0 14px 0;font-size:18px;color:#fbbf24;font-family:ui-monospace,monospace;font-weight:600;">${escapeHtml(data.orderReference)}</p>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Tier · Quantity</p>
+              <p style="margin:0 0 14px 0;font-size:14px;color:#fafafa;">${escapeHtml(data.tierName)} × ${data.quantity}</p>
+              <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Where</p>
+              <p style="margin:0;font-size:14px;color:#d4d4d8;">${escapeHtml(venueLabel)}</p>
+            </td></tr>
+          </table>
+        </td></tr>
+        ${qrPngBuffer ? `<tr><td style="padding:8px 32px 16px 32px;" align="center">
+          <p style="margin:0 0 8px 0;font-size:11px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Scan at the door</p>
+          <img src="cid:ticket-qr" alt="Ticket QR code: ${escapeHtml(data.orderReference)}" width="160" height="160" style="display:block;border:8px solid #fff;border-radius:8px;background:#fff;" />
+        </td></tr>` : ""}
+        <tr><td style="padding:8px 32px 32px 32px;">
+          <p style="margin:0 0 16px 0;font-size:13px;line-height:1.55;color:#a1a1aa;"><strong style="color:#fff">Get there 30 minutes early</strong> — the main event always runs faster than the undercard suggests. Show the QR above or your order reference at the door.</p>
+          <a href="${data.eventUrl}" style="display:inline-block;background:#fbbf24;color:#000;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">View fight card →</a>
+          <p style="margin:24px 0 0 0;font-size:12px;color:#71717a;">— The MUAYTHAIPAI team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+
+      const text = `Hey ${firstName},
+
+Fight night is ${eventDateLabel.toLowerCase()}${timeLabel}. Quick reminder.
+
+Event: ${data.eventName}
+Order: ${data.orderReference}
+Tier: ${data.tierName} × ${data.quantity}
+Where: ${venueLabel}
+
+Show the QR or your order reference at the door. Arrive 30 minutes early.
+
+Fight card: ${data.eventUrl}
+
+— The MUAYTHAIPAI team`
+
+      const result = await this.resend.emails.send({
+        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        to: data.buyerEmail,
+        subject,
+        html,
+        text,
+        attachments: qrPngBuffer
+          ? [{
+              filename: `${data.orderReference}.png`,
+              content: qrPngBuffer,
+              contentId: "ticket-qr",
+              contentType: "image/png",
+            }]
+          : undefined,
+      })
+      if (result.error) {
+        console.error("[email] Ticket reminder failed:", result.error)
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error("[email] Failed to send ticket reminder:", error instanceof Error ? error.message : String(error))
       return false
     }
   }
