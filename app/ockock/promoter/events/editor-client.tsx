@@ -133,6 +133,10 @@ export default function EventEditorClient({
   const [saving, setSaving] = useState(false)
   const [togglingSales, setTogglingSales] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Distinct from `error` — if the initial event-data load fails we
+  // can't safely show the form (saves would PATCH the wrong record
+  // against stale/empty state). Renders a full-page error UI instead.
+  const [loadFailed, setLoadFailed] = useState(false)
   // Transient "Saved" confirmation after a successful PATCH so the user
   // knows the round-trip worked. Cleared by a timer below.
   const [savedFlash, setSavedFlash] = useState(false)
@@ -199,6 +203,12 @@ export default function EventEditorClient({
           setInvitationsByBout(Object.fromEntries(invs))
         }
       } catch (err) {
+        // Set the hard-fail flag so the render below shows a retry UI
+        // instead of an empty form against a stale event ID. The error
+        // string is only used to surface details if we ever decide to
+        // show them — for now the UI is generic.
+        console.error("[event-editor] load failed:", err)
+        setLoadFailed(true)
         setError("Failed to load event")
       } finally {
         setLoading(false)
@@ -209,12 +219,29 @@ export default function EventEditorClient({
 
   // Save event details
   async function saveEvent() {
-    setSaving(true)
     setError(null)
+
+    // Client-side validation. The server validates too, but failing
+    // here gives an immediate inline error instead of a round-trip.
+    if (!form.name.trim()) {
+      setError("Event name is required.")
+      return
+    }
+    if (!form.event_date) {
+      setError("Event date is required.")
+      return
+    }
+    const capacityNum = form.max_capacity ? Number(form.max_capacity) : null
+    if (capacityNum !== null && (!Number.isInteger(capacityNum) || capacityNum < 0)) {
+      setError("Capacity must be a whole number 0 or greater.")
+      return
+    }
+
+    setSaving(true)
 
     try {
       const body = {
-        name: form.name,
+        name: form.name.trim(),
         description: form.description || null,
         event_date: form.event_date,
         event_time: form.event_time || null,
@@ -223,7 +250,7 @@ export default function EventEditorClient({
         venue_city: form.venue_city || null,
         venue_province: form.venue_province || null,
         venue_country: form.venue_country || "Thailand",
-        max_capacity: form.max_capacity ? parseInt(form.max_capacity) : null,
+        max_capacity: capacityNum,
         cover_image_url: form.cover_image_url || null,
       }
 
@@ -518,6 +545,35 @@ export default function EventEditorClient({
     return (
       <div className="flex items-center justify-center py-32">
         <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+      </div>
+    )
+  }
+
+  // Hard load failure (only possible in edit mode). Showing the empty
+  // form here would let the user PATCH the wrong record once they
+  // typed anything, so we block the editor entirely and offer a retry.
+  if (loadFailed) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <Link
+          href="/promoter"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] px-6 py-12 text-center">
+          <p className="mb-2 text-lg font-medium text-red-300">Couldn&apos;t load this event</p>
+          <p className="mb-6 text-sm text-neutral-400">
+            The event data didn&apos;t come back. Don&apos;t edit blind — try again.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
@@ -893,6 +949,8 @@ function DetailsTab({
         <Field label="Capacity">
           <input
             type="number"
+            min={0}
+            step={1}
             value={form.max_capacity}
             onChange={(e) => update("max_capacity", e.target.value)}
             placeholder="e.g. 500"
@@ -920,7 +978,10 @@ function DetailsTab({
           in create mode) and never re-render once the event is
           already cancelled. */}
       {!isCreate && eventId && eventStatus !== "cancelled" && (
-        <DangerZone eventId={eventId} />
+        <DangerZone
+          eventId={eventId}
+          onCancelled={() => setEventStatus("cancelled")}
+        />
       )}
       {!isCreate && eventStatus === "cancelled" && (
         <div className="mt-10 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-4 text-sm text-rose-200">
@@ -940,7 +1001,16 @@ function DetailsTab({
 // with an optional reason textarea that gets stamped on each
 // Stripe refund (so the receipt to the buyer references the
 // cancellation, not a generic refund).
-function DangerZone({ eventId }: { eventId: string }) {
+const REASON_MAX = 500
+
+function DangerZone({
+  eventId,
+  onCancelled,
+}: {
+  eventId: string
+  onCancelled: () => void
+}) {
+  const router = useRouter()
   const [reason, setReason] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [summary, setSummary] = useState<{
@@ -967,9 +1037,15 @@ function DangerZone({ eventId }: { eventId: string }) {
         return
       }
       setSummary(data.summary)
-      // Soft refresh — the parent reload will reflect the new status
-      // and swap the Danger Zone for the "already cancelled" panel.
-      setTimeout(() => window.location.reload(), 2000)
+      // Soft swap to the "already cancelled" panel — parent flips
+      // eventStatus, we ask Next to revalidate any server data, no
+      // full page reload, scroll position preserved. The summary
+      // stays visible for 2s before the panel swaps out so the
+      // promoter has time to read the refund counts.
+      setTimeout(() => {
+        onCancelled()
+        router.refresh()
+      }, 2000)
     } catch {
       setError("Network error — try again.")
     } finally {
@@ -1021,14 +1097,27 @@ function DangerZone({ eventId }: { eventId: string }) {
       </p>
 
       <div className="mt-3">
-        <label htmlFor="cancel-reason" className="block text-xs font-medium text-rose-200 mb-1">
-          Reason <span className="text-rose-200/60">(optional — stamped on every refund)</span>
-        </label>
+        <div className="mb-1 flex items-center justify-between">
+          <label htmlFor="cancel-reason" className="block text-xs font-medium text-rose-200">
+            Reason <span className="text-rose-200/60">(optional — stamped on every refund)</span>
+          </label>
+          {/* Visible counter so the silent truncation at 500 isn't a
+              surprise. Only shown past 80% to avoid clutter. */}
+          {reason.length > REASON_MAX * 0.8 && (
+            <span
+              className={`text-[10px] tabular-nums ${
+                reason.length >= REASON_MAX ? "text-rose-300" : "text-rose-200/60"
+              }`}
+            >
+              {reason.length}/{REASON_MAX}
+            </span>
+          )}
+        </div>
         <textarea
           id="cancel-reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          maxLength={500}
+          maxLength={REASON_MAX}
           rows={2}
           placeholder="e.g. Severe weather — venue closed. Refund processing now."
           className="w-full resize-none rounded-md border border-rose-500/20 bg-zinc-950 px-3 py-2 text-xs text-white placeholder-rose-200/40 outline-none focus:border-rose-400/50"
@@ -1705,12 +1794,40 @@ function TicketTierCard({
   const [name, setName] = useState(tier.tier_name)
   const [price, setPrice] = useState(tier.price_thb.toString())
   const [qty, setQty] = useState(tier.quantity_total.toString())
+  // Surface the specific reason a save was rejected rather than
+  // silently coercing bad input back to the old value. Cleared on
+  // each edit attempt + every keystroke.
+  const [editError, setEditError] = useState<string | null>(null)
 
   function save() {
+    setEditError(null)
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      setEditError("Tier name is required.")
+      return
+    }
+    const priceNum = Number(price)
+    if (!Number.isFinite(priceNum) || priceNum <= 0 || !Number.isInteger(priceNum)) {
+      setEditError("Price must be a whole positive number (THB).")
+      return
+    }
+    const qtyNum = Number(qty)
+    if (!Number.isFinite(qtyNum) || qtyNum < 0 || !Number.isInteger(qtyNum)) {
+      setEditError("Quantity must be a whole number 0 or greater.")
+      return
+    }
+    // Don't let the promoter set total below what's already sold —
+    // the API would reject this, but failing here is friendlier.
+    if (qtyNum < tier.quantity_sold) {
+      setEditError(
+        `Can't set total below ${tier.quantity_sold} — that many are already sold.`,
+      )
+      return
+    }
     onUpdate({
-      tier_name: name,
-      price_thb: parseInt(price) || tier.price_thb,
-      quantity_total: parseInt(qty) || tier.quantity_total,
+      tier_name: trimmedName,
+      price_thb: priceNum,
+      quantity_total: qtyNum,
     })
     setEditing(false)
   }
@@ -1733,6 +1850,8 @@ function TicketTierCard({
             <Field label="Price (THB)">
               <input
                 type="number"
+                min={1}
+                step={1}
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-amber-500/50"
@@ -1741,12 +1860,17 @@ function TicketTierCard({
             <Field label="Total Quantity">
               <input
                 type="number"
+                min={tier.quantity_sold}
+                step={1}
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-amber-500/50"
               />
             </Field>
           </div>
+          {editError && (
+            <p role="alert" className="text-xs text-red-400">{editError}</p>
+          )}
           <div className="flex gap-2">
             <button
               onClick={save}
@@ -1755,7 +1879,15 @@ function TicketTierCard({
               Save
             </button>
             <button
-              onClick={() => setEditing(false)}
+              onClick={() => {
+                setEditError(null)
+                // Reset local state so the next "Edit" starts clean
+                // from the canonical tier values, not abandoned input.
+                setName(tier.tier_name)
+                setPrice(tier.price_thb.toString())
+                setQty(tier.quantity_total.toString())
+                setEditing(false)
+              }}
               className="rounded-lg px-4 py-1.5 text-sm text-neutral-400 hover:text-white"
             >
               Cancel
@@ -1999,8 +2131,18 @@ function SalesTab({ eventId }: { eventId: string }) {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
-        {error}
+      <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+        <p className="mb-3">{error}</p>
+        <button
+          onClick={() => {
+            setError(null)
+            setLoading(true)
+            load()
+          }}
+          className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-200 hover:bg-red-500/20"
+        >
+          Retry
+        </button>
       </div>
     )
   }
