@@ -14,7 +14,14 @@ import {
   Ticket,
   Trophy,
   Star,
+  X,
+  Bell,
+  CheckCircle2,
 } from "lucide-react"
+
+// Mirrors HTML5 input type="email" — good enough to catch the common
+// typos (`a@`, `@b`, `joe@gmail`) that `.includes("@")` waves through.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface FighterInfo {
   id: string
@@ -49,10 +56,11 @@ interface TicketTier {
   description: string | null
   price_thb: number
   price_usd: number | null
-  quantity_total: number
-  quantity_sold: number
+  // Only `quantity_remaining` is exposed publicly — `quantity_total`
+  // and `quantity_sold` are hidden because they leak sell-through
+  // velocity to competitors. The buy-dialog uses `quantity_remaining`
+  // to enforce the per-order cap.
   quantity_remaining: number
-  is_active: boolean
 }
 
 interface FightEventDetail {
@@ -115,7 +123,7 @@ export default function FightDetailClient() {
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">
         <p className="mb-4 text-lg text-neutral-400">Event not found</p>
         <Link
-          href="/ockock/fights"
+          href="/fights"
           className="text-amber-400 hover:text-amber-300"
         >
           Back to events
@@ -147,12 +155,33 @@ export default function FightDetailClient() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       {/* Back */}
       <Link
-        href="/ockock/fights"
+        href="/fights"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
         All Events
       </Link>
+
+      {/* Cancelled banner — public API returns cancelled events so
+          buyers who bookmarked the URL don't hit a confusing 404.
+          Banner sits above everything so it's the first thing a
+          returning visitor sees. */}
+      {event.status === "cancelled" && (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl border border-rose-500/40 bg-rose-500/[0.08] p-5"
+        >
+          <p className="text-sm font-semibold uppercase tracking-wider text-rose-300">
+            This event has been cancelled
+          </p>
+          <p className="mt-2 text-sm text-rose-100/90">
+            Ticket sales are closed and paid orders are being refunded.
+            Refunds typically appear on your card within 5-10 business
+            days. If you don&apos;t see one, check the email tied to
+            your ticket order.
+          </p>
+        </div>
+      )}
 
       {/* Cover image — renders as a 16:9 hero above the event name
           when the promoter uploaded one. Soft gradient overlay so
@@ -163,6 +192,15 @@ export default function FightDetailClient() {
           <img
             src={event.cover_image_url}
             alt={`${event.name} cover`}
+            loading="lazy"
+            // If the cover URL 404s (broken upload, deleted bucket
+            // object, etc.) collapse the wrapper instead of leaving
+            // a blank 16:9 ratio box. The hero text below still
+            // reads fine on its own.
+            onError={(e) => {
+              const wrapper = e.currentTarget.parentElement
+              if (wrapper) wrapper.style.display = "none"
+            }}
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
@@ -255,9 +293,7 @@ export default function FightDetailClient() {
         </h2>
 
         {!event.ticket_sales_open ? (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] py-12 text-center">
-            <p className="text-neutral-500">Tickets coming soon</p>
-          </div>
+          <NotifyMeForm eventId={String(params.id)} eventName={event.name} />
         ) : tickets.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] py-12 text-center">
             <p className="text-neutral-500">No tickets available</p>
@@ -300,7 +336,7 @@ function FighterCorner({
 
   return (
     <Link
-      href={`/ockock/fighters/${fighter.id}`}
+      href={`/fighters/${fighter.id}`}
       className="group flex flex-1 flex-col items-center text-center rounded-lg px-2 py-1 transition-colors hover:bg-white/5"
     >
       <div className="relative mb-2 h-14 w-14 overflow-hidden rounded-full bg-neutral-800 ring-1 ring-transparent group-hover:ring-white/20 transition">
@@ -438,7 +474,9 @@ function TicketCard({
         <div className="mb-4 text-xs text-neutral-500">
           {soldOut
             ? "Sold out"
-            : `${ticket.quantity_remaining} of ${ticket.quantity_total} remaining`}
+            : ticket.quantity_remaining <= 10
+              ? `Only ${ticket.quantity_remaining} left`
+              : `${ticket.quantity_remaining} available`}
         </div>
 
         <button
@@ -489,10 +527,24 @@ function BuyTicketDialog({
   const maxQty = Math.min(ticket.quantity_remaining, 10)
   const totalThb = ticket.price_thb * quantity
 
+  // Escape-to-close. Backdrop click already works; this matches the
+  // expected modal interaction for keyboard users.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !submitting) onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose, submitting])
+
   async function submit() {
     setError(null)
-    if (!name.trim() || !email.trim() || !email.includes("@")) {
-      setError("Name and a valid email are required.")
+    if (!name.trim()) {
+      setError("Your full name is required.")
+      return
+    }
+    if (!EMAIL_REGEX.test(email.trim())) {
+      setError("Enter a valid email — your ticket is sent here.")
       return
     }
     setSubmitting(true)
@@ -533,15 +585,32 @@ function BuyTicketDialog({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 p-5 shadow-2xl">
-        <div className="mb-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
-            {ticket.tier_name}
-          </p>
-          <h3 className="mt-1 text-lg font-semibold text-white">{eventName}</h3>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            ฿{ticket.price_thb.toLocaleString()} per ticket
-          </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+        className="w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 p-5 shadow-2xl"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+              {ticket.tier_name}
+            </p>
+            <h3 className="mt-1 text-lg font-semibold text-white">{eventName}</h3>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              ฿{ticket.price_thb.toLocaleString()} per ticket
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            aria-label="Close"
+            className="-mr-1 -mt-1 rounded-lg p-1.5 text-neutral-500 hover:bg-white/5 hover:text-white disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="space-y-3">
@@ -555,6 +624,7 @@ function BuyTicketDialog({
               onChange={(e) => setName(e.target.value)}
               autoComplete="name"
               autoFocus
+              required
               className="w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none focus:border-white/30"
             />
           </div>
@@ -565,9 +635,11 @@ function BuyTicketDialog({
             <input
               id="ticket-buyer-email"
               type="email"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              required
               className="w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none focus:border-white/30"
             />
           </div>
@@ -577,6 +649,8 @@ function BuyTicketDialog({
             </label>
             <input
               id="ticket-buyer-phone"
+              type="tel"
+              inputMode="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               autoComplete="tel"
@@ -613,7 +687,7 @@ function BuyTicketDialog({
 
         <div className="mt-4 flex gap-2">
           <button
-            onClick={submit}
+            type="submit"
             disabled={submitting}
             className="flex-1 rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
           >
@@ -627,6 +701,7 @@ function BuyTicketDialog({
             )}
           </button>
           <button
+            type="button"
             onClick={onClose}
             disabled={submitting}
             className="rounded-lg border border-white/10 px-4 py-2.5 text-sm text-neutral-300 hover:bg-white/5 disabled:opacity-50"
@@ -638,7 +713,117 @@ function BuyTicketDialog({
         <p className="mt-3 text-[10px] text-neutral-600 text-center">
           You&apos;ll be redirected to Stripe to complete payment securely. Confirmation email goes to the address above.
         </p>
-      </div>
+      </form>
     </div>
+  )
+}
+
+// "Notify me when tickets go on sale" form. Replaces the previous
+// dead-end "Tickets coming soon" panel on events that have a public
+// page but haven't opened ticket sales yet. POSTs to the public
+// notify endpoint, which is rate-limited and dedups per email so a
+// double-tap doesn't double-register.
+function NotifyMeForm({ eventId, eventName }: { eventId: string; eventName: string }) {
+  const [email, setEmail] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!EMAIL_REGEX.test(email.trim())) {
+      setError("Enter a valid email so we know where to ping you.")
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/public/fights/${eventId}/notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // `company` is the honeypot — kept as an empty string so a
+        // bot that auto-fills every field gets caught server-side.
+        body: JSON.stringify({ email: email.trim(), company: "" }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        setError(
+          data.error ||
+            (res.status === 429
+              ? "Too many requests. Try again in an hour."
+              : "Couldn't register — try again."),
+        )
+        return
+      }
+      setDone(true)
+    } catch {
+      setError("Network error — try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] py-10 px-6 text-center">
+        <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
+        <p className="text-base font-medium text-emerald-200">
+          You&apos;re on the list.
+        </p>
+        <p className="mt-1 text-xs text-neutral-400">
+          We&apos;ll email you the moment tickets for {eventName} open.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="rounded-xl border border-white/10 bg-white/[0.03] py-8 px-6 text-center"
+    >
+      <Bell className="mx-auto mb-2 h-7 w-7 text-amber-400/70" />
+      <p className="mb-1 text-base font-medium text-neutral-200">
+        Tickets coming soon
+      </p>
+      <p className="mb-5 text-xs text-neutral-500">
+        Drop your email — we&apos;ll ping you when sales open.
+      </p>
+      <div className="mx-auto flex max-w-sm flex-col gap-2 sm:flex-row">
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          aria-label="Email address"
+          className="flex-1 rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none focus:border-white/30"
+        />
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>Notify me</>
+          )}
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-3 text-xs text-red-400">
+          {error}
+        </p>
+      )}
+      <p className="mt-3 text-[10px] text-neutral-600">
+        One email when tickets open. No newsletter, no spam.
+      </p>
+    </form>
   )
 }

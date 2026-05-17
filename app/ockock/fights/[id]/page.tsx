@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createClient } from "@supabase/supabase-js"
+import { ockockUrl } from "@/lib/ockock/url"
 import FightDetailClient from "./client"
 
 const supabase = createClient(
@@ -39,8 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
-  const pageUrl = `${siteUrl}/ockock/fights/${id}`
+  const pageUrl = ockockUrl(`/fights/${id}`)
   const dateLabel = event.event_date
     ? new Date(event.event_date + "T00:00:00").toLocaleDateString("en-US", {
         weekday: "long",
@@ -126,6 +126,7 @@ export default async function FightDetailPage({ params }: Props) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         : (event as any).organizations
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
+      const eventUrl = ockockUrl(`/fights/${event.id}`)
       const startIso = event.event_date
         ? `${event.event_date}T${event.event_time || "19:00:00"}+07:00`
         : null
@@ -150,10 +151,10 @@ export default async function FightDetailPage({ params }: Props) {
       jsonLd = {
         "@context": "https://schema.org",
         "@type": "SportsEvent",
-        "@id": `${siteUrl}/ockock/fights/${event.id}`,
+        "@id": eventUrl,
         name: event.name,
         description: event.description || `Muay Thai fight night${event.venue_city ? ` in ${event.venue_city}` : ""}.`,
-        url: `${siteUrl}/ockock/fights/${event.id}`,
+        url: eventUrl,
         sport: "Muay Thai",
         ...(event.cover_image_url ? { image: event.cover_image_url } : {}),
         ...(startIso ? { startDate: startIso } : {}),
@@ -183,7 +184,7 @@ export default async function FightDetailPage({ params }: Props) {
           ? {
               offers: {
                 "@type": "Offer",
-                url: `${siteUrl}/ockock/fights/${event.id}`,
+                url: eventUrl,
                 price: lowestPrice,
                 priceCurrency: "THB",
                 availability:

@@ -42,16 +42,19 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }>
 export default function PromoterDashboardClient({ orgName }: { orgName: string }) {
   const [events, setEvents] = useState<PromoterEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchEvents() {
       try {
+        setLoadError(null)
         const response = await fetch("/api/promoter/events")
         if (!response.ok) throw new Error("Failed to fetch")
         const data = await response.json()
         setEvents(data.events || [])
       } catch (error) {
         console.error("Error fetching events:", error)
+        setLoadError("Couldn't load your events. Check your connection and try again.")
       } finally {
         setLoading(false)
       }
@@ -71,16 +74,21 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
   const totalTicketsSold = events.reduce((sum, e) => sum + e.tickets_sold, 0)
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
       {/* Header */}
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-10 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Promoter Dashboard</h1>
-          <p className="mt-1 text-sm text-neutral-400">{orgName}</p>
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-amber-300/80">
+            OckOck · Promoter
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Promoter Dashboard
+          </h1>
+          <p className="mt-2 text-[15px] text-zinc-400">{orgName}</p>
         </div>
         <Link
-          href="/ockock/promoter/events/new"
-          className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-amber-400"
+          href="/promoter/events/new"
+          className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-amber-400"
         >
           <Plus className="h-4 w-4" />
           New Event
@@ -117,6 +125,20 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
           <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
           <span className="ml-3 text-neutral-400">Loading events...</span>
         </div>
+      ) : loadError ? (
+        // Distinguish a real network error from the "no events yet"
+        // empty state — otherwise an outage looks like a brand-new
+        // promoter who hasn't created anything yet.
+        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] px-6 py-12 text-center">
+          <p className="mb-2 text-lg font-medium text-red-300">Couldn&apos;t load your events</p>
+          <p className="mb-6 text-sm text-neutral-400">{loadError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-white/10"
+          >
+            Retry
+          </button>
+        </div>
       ) : events.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] py-20 text-center">
           <Swords className="mx-auto mb-3 h-10 w-10 text-neutral-600" />
@@ -127,7 +149,7 @@ export default function PromoterDashboardClient({ orgName }: { orgName: string }
             Create your first fight event to get started
           </p>
           <Link
-            href="/ockock/promoter/events/new"
+            href="/promoter/events/new"
             className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-black hover:bg-amber-400"
           >
             <Plus className="h-4 w-4" />
@@ -204,7 +226,16 @@ function EventRow({ event }: { event: PromoterEvent }) {
   const status = STATUS_STYLES[event.status] || STATUS_STYLES.draft
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.05]">
+    <div className="relative flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.05] focus-within:ring-2 focus-within:ring-amber-500/40">
+      {/* Card-link overlay — makes the whole row click through to the
+          editor while keeping the icon buttons on the right separately
+          clickable (they sit at z-10 above this absolute link). */}
+      <Link
+        href={`/promoter/events/${event.id}`}
+        aria-label={`Edit ${event.name}`}
+        className="absolute inset-0 rounded-xl focus:outline-none"
+      />
+
       {/* Date */}
       <div className="hidden w-20 flex-shrink-0 text-center sm:block">
         <p className="text-sm font-semibold text-white">
@@ -249,10 +280,14 @@ function EventRow({ event }: { event: PromoterEvent }) {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2">
+      {/* Actions — relative + z-10 so they sit above the card-link
+          overlay and remain independently clickable. Each gets an
+          explicit aria-label so screen readers don't just announce
+          the bare URL. */}
+      <div className="relative z-10 flex items-center gap-2">
         <Link
-          href={`/ockock/promoter/events/${event.id}`}
+          href={`/promoter/events/${event.id}`}
+          aria-label={`Edit ${event.name}`}
           className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
           title="Edit event"
         >
@@ -260,7 +295,8 @@ function EventRow({ event }: { event: PromoterEvent }) {
         </Link>
         {event.status === "published" && (
           <Link
-            href={`/ockock/fights/${event.id}`}
+            href={`/fights/${event.id}`}
+            aria-label={`View public page for ${event.name}`}
             className="rounded-lg border border-white/10 p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
             title="View public page"
           >
@@ -269,7 +305,8 @@ function EventRow({ event }: { event: PromoterEvent }) {
         )}
         {event.status === "published" && (
           <Link
-            href={`/ockock/promoter/events/${event.id}/door`}
+            href={`/promoter/events/${event.id}/door`}
+            aria-label={`Open door scan for ${event.name}`}
             className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-amber-300 transition-colors hover:bg-amber-500/15 hover:text-amber-200"
             title="Door scan tickets"
           >

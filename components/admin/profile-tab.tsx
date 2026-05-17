@@ -49,9 +49,10 @@ export default function ProfileTab() {
     fight_record_draws: 0,
     open_to_fights: false,
     open_to_events: false,
-    // Fighter-network stats — surface on /ockock/fighters and used by
-    // the promoter picker's weight-class filter. Optional; empty values
-    // just mean the picker shows fewer fields for this fighter.
+    // Fighter-network stats — surface on the public fighter directory
+    // (ockock.app/fighters) and used by the promoter picker's weight-class
+    // filter. Optional; empty values just mean the picker shows fewer
+    // fields for this fighter.
     weight_class: "",
     weight_kg: 0,
     height_cm: 0,
@@ -371,14 +372,15 @@ export default function ProfileTab() {
             </div>
 
             {/* Fighter Network — opt-in toggles that surface this profile
-                publicly on /ockock/fighters and let promoters send bout
-                invitations. Worth being explicit about what each does so
-                trainers know what they're opting into. */}
+                publicly on the fighter directory (ockock.app/fighters) and
+                let promoters send bout invitations. Worth being explicit
+                about what each does so trainers know what they're opting
+                into. */}
             <div className="space-y-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-4">
               <div className="flex items-center justify-between gap-2">
                 <Label className="text-white">Fighter Network (OckOck)</Label>
                 <a
-                  href="/ockock/fighters"
+                  href="https://ockock.app/fighters"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[11px] text-amber-300 hover:text-amber-200 inline-flex items-center gap-1"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { OckOckCta } from "@/components/ockock/ockock-cta"
+import { PLAN } from "@/lib/ockock/product"
 
 export const metadata: Metadata = {
   title: "About OckOck",
@@ -46,7 +47,7 @@ export default function AboutPage() {
         </p>
         <p>
           One plan, no upsells, a free month to try it. We&apos;re a small team, we answer
-          our own email (<a href="mailto:hello@muaythaipai.com" className="text-indigo-400 hover:text-indigo-300">hello@muaythaipai.com</a>),
+          our own email (<a href="mailto:hello@muaythaipai.com" className="text-amber-400 hover:text-amber-300">hello@muaythaipai.com</a>),
           and we&apos;re flexible for small family gyms in Thailand. If OckOck makes your gym
           easier to run, that&apos;s the whole point.
         </p>
@@ -54,7 +55,7 @@ export default function AboutPage() {
 
       <div className="mt-12 flex flex-col items-center gap-3">
         <OckOckCta href="/signup" size="lg">
-          Start free 30-day trial
+          Start free {PLAN.trialDays}-day trial
         </OckOckCta>
         <Link href="/for-gyms" className="text-[13px] text-zinc-500 hover:text-zinc-300">
           ← Back to the overview

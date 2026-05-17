@@ -1,15 +1,36 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
+export const runtime = "nodejs"
+export const revalidate = 60
+
+// Allowed `status` query values. Public visitors can ask for
+// 'published' (default) or 'cancelled' (so a fan can find an
+// event they bookmarked that got cancelled). Anything else is
+// rejected — no leaking drafts via ?status=draft.
+const PUBLIC_STATUS_VALUES = new Set(["published", "cancelled"])
+
+// Escape PostgREST ILIKE wildcards in user input so a `city=%`
+// value can't force a full table scan via "%%city%%". Bare PostgREST
+// param binding doesn't escape `%`/`_`.
+function escapeIlike(s: string): string {
+  return s.replace(/[\\%_]/g, "\\$&")
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const status = searchParams.get("status") || "published"
-  const city = searchParams.get("city")
+  const statusParam = searchParams.get("status") || "published"
+  const status = PUBLIC_STATUS_VALUES.has(statusParam) ? statusParam : "published"
+  const cityRaw = searchParams.get("city") ?? ""
+  // Cap city length so a giant param can't blow up the query plan
+  // and strip wildcards before splicing.
+  const city = cityRaw.slice(0, 80).trim()
   const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50)
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
   )
 
   let query = supabase
@@ -40,7 +61,7 @@ export async function GET(request: Request) {
     .limit(limit)
 
   if (city) {
-    query = query.ilike("venue_city", `%${city}%`)
+    query = query.ilike("venue_city", `%${escapeIlike(city)}%`)
   }
 
   // Only show future events (or today)

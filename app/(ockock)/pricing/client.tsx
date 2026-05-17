@@ -52,7 +52,7 @@ export default function PricingClient() {
       {/* Hero */}
       <section className="mx-auto max-w-3xl pt-16 pb-8 text-center sm:pt-24">
         <motion.div
-          className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3.5 py-1.5 text-[12px] font-medium text-indigo-300"
+          className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3.5 py-1.5 text-[12px] font-medium text-amber-300"
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={FADE}
@@ -90,7 +90,7 @@ export default function PricingClient() {
       >
         <Surface accent="indigo" className="p-8 md:p-10">
           <div className="mb-8 text-center">
-            <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-indigo-400">
+            <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-amber-400">
               MUAYTHAIPAI network
             </p>
             <div className="mb-1 flex items-baseline justify-center gap-1">
@@ -123,7 +123,7 @@ export default function PricingClient() {
                 key={item}
                 className="flex items-start gap-2 text-[13px] text-zinc-300"
               >
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                 <span>{item}</span>
               </li>
             ))}
@@ -141,7 +141,7 @@ export default function PricingClient() {
             Anything else? Email{" "}
             <a
               href="mailto:hello@muaythaipai.com"
-              className="text-indigo-400 transition-colors hover:text-indigo-300"
+              className="text-amber-400 transition-colors hover:text-amber-300"
             >
               hello@muaythaipai.com
             </a>
@@ -152,10 +152,15 @@ export default function PricingClient() {
         <div className="grid gap-2">
           {FAQS.map((faq, i) => {
             const open = openFaq === i
+            const panelId = `faq-panel-${i}`
+            const buttonId = `faq-trigger-${i}`
             return (
               <Surface key={faq.q}>
                 <button
+                  id={buttonId}
                   onClick={() => setOpenFaq(open ? null : i)}
+                  aria-expanded={open}
+                  aria-controls={panelId}
                   className="flex w-full items-center justify-between gap-3 p-4 text-left"
                 >
                   <span className="text-[14px] font-medium text-zinc-100">
@@ -170,6 +175,9 @@ export default function PricingClient() {
                 <AnimatePresence initial={false}>
                   {open && (
                     <motion.div
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={buttonId}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}

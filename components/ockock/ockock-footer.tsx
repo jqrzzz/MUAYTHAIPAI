@@ -6,13 +6,12 @@
 import Link from "next/link"
 
 // Browse the consumer/public destinations — fights, fighters, etc.
-// These live under /ockock/* with their own layout but the marketing
-// footer should still surface them so a visitor can move between
-// "this is what I want as a fan" and "this is how I run my gym."
+// hrefs use the clean ockock.app URLs; on the wire they're served by
+// the internal /ockock/* tree via a middleware rewrite.
 const BROWSE_LINKS = [
-  { href: "/ockock/fights", label: "Fight events" },
-  { href: "/ockock/fighters", label: "Fighters" },
-  { href: "/ockock/promoter", label: "Promoter dashboard" },
+  { href: "/fights", label: "Fight events" },
+  { href: "/fighters", label: "Fighters" },
+  { href: "/promoter", label: "Promoter dashboard" },
 ] as const
 
 const PRODUCT_LINKS = [
@@ -97,7 +96,16 @@ export function OckOckFooter() {
         </div>
 
         <div className="mt-10 flex flex-col gap-1.5 border-t border-zinc-900/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[12px] text-zinc-600">© {year} OckOck · Part of the MUAYTHAIPAI network</p>
+          <p className="text-[12px] text-zinc-600">
+            © {year} OckOck — gym software for the{" "}
+            <Link
+              href="/practitioners"
+              className="text-zinc-500 underline-offset-2 hover:underline hover:text-zinc-300"
+            >
+              MUAYTHAIPAI
+            </Link>{" "}
+            certification network
+          </p>
           <p className="text-[12px] text-zinc-600">Made in Thailand 🇹🇭</p>
         </div>
       </div>

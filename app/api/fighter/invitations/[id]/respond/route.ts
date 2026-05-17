@@ -23,6 +23,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { EmailService } from "@/lib/email-service"
 import { notifyInvitationResponded } from "@/lib/notifications"
+import { ockockUrl } from "@/lib/ockock/url"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -181,7 +182,6 @@ async function sendResponseEmailBestEffort(
   const eventId = bout?.event_id
   if (!event || !eventId) return
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
   await EmailService.getInstance().sendBoutInvitationResponseEmail({
     promoterEmail,
     promoterName: invitedBy?.full_name ?? null,
@@ -190,7 +190,7 @@ async function sendResponseEmailBestEffort(
     declineReason: reason,
     eventName: event.name || "Fight event",
     corner: inv.corner === "blue" ? "blue" : "red",
-    editorUrl: `${siteUrl}/ockock/promoter/events/${eventId}`,
+    editorUrl: ockockUrl(`/promoter/events/${eventId}`),
   })
 
   // Bell-ping the promoting gym too so the dashboard surfaces the

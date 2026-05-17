@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Bell, Check, CheckCheck, Calendar, XCircle, Banknote, MessageSquare, Award, GraduationCap, Ticket, Swords } from "lucide-react"
+import { ockockUrl } from "@/lib/ockock/url"
 
 interface Notification {
   id: string
@@ -48,7 +49,9 @@ function getNotificationHref(n: Notification): string | null {
     case "invitation_accepted":
     case "invitation_declined": {
       const eventId = (m.event_id as string | undefined) ?? null
-      return eventId ? `/ockock/promoter/events/${eventId}` : null
+      // Absolute URL because the admin dashboard runs on both hosts;
+      // a bare /promoter/... href would 404 on muaythaipai.com.
+      return eventId ? ockockUrl(`/promoter/events/${eventId}`) : null
     }
     default:
       return null

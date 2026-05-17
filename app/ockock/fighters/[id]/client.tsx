@@ -78,7 +78,7 @@ export default function FighterDetailClient() {
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
         <p className="mb-4 text-neutral-400">Fighter not found</p>
         <Link
-          href="/ockock/fighters"
+          href="/fighters"
           className="text-amber-400 hover:text-amber-300"
         >
           Back to fighters
@@ -99,7 +99,7 @@ export default function FighterDetailClient() {
     <div className="mx-auto max-w-lg px-4 py-8">
       {/* Back */}
       <Link
-        href="/ockock/fighters"
+        href="/fighters"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -336,7 +336,7 @@ function ShareFighterButton({
     setErrored(false)
     const url =
       typeof window !== "undefined"
-        ? `${window.location.origin}/ockock/fighters/${fighterId}`
+        ? `${window.location.origin}/fighters/${fighterId}`
         : ""
     const text = `Check out ${fighterName} on OckOck`
     if (typeof navigator !== "undefined" && (navigator as Navigator & { share?: (data: { title: string; url: string }) => Promise<void> }).share) {

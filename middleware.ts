@@ -129,36 +129,95 @@ const redirects: Record<string, string> = {
   "/booking-calendar": "/train-and-stay",
 }
 
+// OckOck consumer surfaces. Internally they live under /ockock/* so they
+// don't collide with Pai gym routes (Pai has its own /fighters etc. at
+// the root). On ockock.app the middleware rewrites the clean URL onto
+// the internal path; on muaythaipai.com it 301s the old /ockock/* URL
+// over to the clean one on ockock.app. One list keeps both sides in sync.
+const OCKOCK_CONSUMER_PATHS = [
+  { clean: "/fights", internal: "/ockock/fights" },
+  { clean: "/fighters", internal: "/ockock/fighters" },
+  { clean: "/promoter", internal: "/ockock/promoter" },
+] as const
+
+// OckOck marketing pages that already render at clean root URLs via the
+// (ockock) route group — no rewrite needed; we just 301 the
+// muaythaipai.com host over to ockock.app so search engines and
+// bookmarks converge there.
+const OCKOCK_MARKETING_PATHS = [
+  "/for-gyms",
+  "/vision",
+  "/terms",
+  "/privacy",
+] as const
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname.toLowerCase()
-
-  // ockock.app is the front door for the OckOck gym product, so its homepage
-  // shows the "for gyms" pitch instead of the Pai gym homepage. Everything else
-  // (admin, signup, pricing, ...) is shared and works under either host. This is
-  // a rewrite, not a redirect: the URL stays ockock.app/.
   const host = request.headers.get("host") ?? ""
   const onOckOckApp = host.endsWith("ockock.app")
-  if (onOckOckApp && pathname === "/") {
-    const url = request.nextUrl.clone()
-    url.pathname = "/for-gyms"
-    return NextResponse.rewrite(url)
+  const onMuayThaiPai = host.endsWith("muaythaipai.com")
+
+  // ────────────────────────────────────────────────────────────────────
+  // ockock.app — the OckOck product domain
+  // ────────────────────────────────────────────────────────────────────
+  // Internally the OckOck consumer surfaces live under /ockock/* (so they
+  // don't collide with Pai gym routes on muaythaipai.com). On ockock.app
+  // we expose them at clean root URLs by rewriting incoming requests —
+  // /fights stays in the address bar but Next renders /ockock/fights.
+  // Update OCKOCK_CONSUMER_PATHS to add a new surface in one place; the
+  // muaythaipai.com → ockock.app redirect below uses the same list.
+  if (onOckOckApp) {
+    // Homepage shows the gym-owner pitch.
+    if (pathname === "/") {
+      const url = request.nextUrl.clone()
+      url.pathname = "/for-gyms"
+      return NextResponse.rewrite(url)
+    }
+    for (const { clean, internal } of OCKOCK_CONSUMER_PATHS) {
+      if (pathname === clean || pathname.startsWith(clean + "/")) {
+        const url = request.nextUrl.clone()
+        url.pathname = internal + pathname.slice(clean.length)
+        return NextResponse.rewrite(url)
+      }
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // muaythaipai.com — Pai gym domain; OckOck has moved out
+  // ────────────────────────────────────────────────────────────────────
+  // OckOck pages used to live here at /ockock/*, /for-gyms, /vision,
+  // /terms, /privacy. Those URLs 301 over to ockock.app so search
+  // engines + bookmarks converge on the new home. We deliberately leave
+  // /pricing and /about alone here — the legacy Wix map below points
+  // them at Pai's /classes and /gym, which is the right answer for a
+  // visitor on muaythaipai.com who types those generic paths.
+  if (onMuayThaiPai) {
+    // /ockock/fights etc → /fights etc on ockock.app
+    for (const { clean, internal } of OCKOCK_CONSUMER_PATHS) {
+      if (pathname === internal || pathname.startsWith(internal + "/")) {
+        const target = `https://ockock.app${clean}${pathname.slice(internal.length)}${request.nextUrl.search}`
+        return NextResponse.redirect(target, 301)
+      }
+    }
+    // /ockock (consumer hub landing) keeps its URL on the new host.
+    if (pathname === "/ockock") {
+      return NextResponse.redirect(`https://ockock.app/ockock${request.nextUrl.search}`, 301)
+    }
+    // Marketing pages — same path on both sides, just a host swap.
+    if ((OCKOCK_MARKETING_PATHS as readonly string[]).includes(pathname)) {
+      return NextResponse.redirect(`https://ockock.app${pathname}${request.nextUrl.search}`, 301)
+    }
   }
 
   // Paths owned by the OckOck product. On ockock.app these always
   // serve the OckOck route; we skip the legacy Pai gym redirects
   // below (e.g. /pricing → /classes was a legacy redirect from Wix
-  // when "pricing" meant class rates; now it's the OckOck SaaS
-  // pricing page and the redirect would hijack it).
-  const ockockOwnedPaths = new Set([
-    "/pricing",
-    "/for-gyms",
-    "/vision",
-    "/about",
-  ])
-  const isOckOckOwned =
-    onOckOckApp ||
-    ockockOwnedPaths.has(pathname) ||
-    pathname.startsWith("/ockock/")
+  // when "pricing" meant class rates; on ockock.app it's the OckOck
+  // SaaS pricing page and the legacy redirect would hijack it).
+  // Note: on muaythaipai.com the OckOck-branded paths above have
+  // already been redirected to ockock.app, so this set is effectively
+  // only used for ockock.app traffic + preview deployments.
+  const isOckOckOwned = onOckOckApp || pathname.startsWith("/ockock/")
 
   // Handle redirects first. Skip self-redirects so a stale entry can't
   // create an infinite 301 loop that takes the page down. Also skip

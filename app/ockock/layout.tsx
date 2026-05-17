@@ -1,6 +1,17 @@
+/**
+ * Layout for the OckOck consumer/product surfaces. Internally the
+ * routes live at /ockock/* (the file paths below); on ockock.app the
+ * middleware rewrites the clean public URLs — /fights, /fighters,
+ * /promoter — onto the same files. /ockock (the consumer hub) is
+ * served at /ockock on both sides.
+ *
+ * Reuses OckOckLayoutShell so the chrome matches the marketing surface
+ * at app/(ockock)/. Anything brand-level (nav, footer, guide bubble)
+ * belongs in the shell, not here.
+ */
 import type React from "react"
 import type { Metadata } from "next"
-import { OckockHeader } from "./ockock-header"
+import { OckOckLayoutShell } from "@/components/ockock/ockock-layout-shell"
 
 export const metadata: Metadata = {
   title: {
@@ -12,10 +23,5 @@ export const metadata: Metadata = {
 }
 
 export default function OckLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      <OckockHeader />
-      <main>{children}</main>
-    </div>
-  )
+  return <OckOckLayoutShell>{children}</OckOckLayoutShell>
 }

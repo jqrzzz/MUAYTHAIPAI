@@ -18,8 +18,19 @@ import { getPromoterAuth, verifyEventOwnership } from "@/lib/auth-helpers"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+// Max orders we'll return in one request. Promoters can "Load more"
+// to walk back through history; defaults to a slimmer page when not
+// requested so the first paint is fast even for big events.
+const MAX_LIMIT = 1000
+const DEFAULT_LIMIT = 200
+// Cap on the aggregation fetch — for totals we pull lightweight rows
+// of every paid/refunded order so the rollups are accurate regardless
+// of the display page size. 10k rows of {quantity, total, status,
+// scanned_at} is ~300KB which is fine for a single internal request.
+const AGGREGATION_CAP = 10_000
+
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: eventId } = await params
@@ -32,7 +43,21 @@ export async function GET(
     return NextResponse.json({ error: "Event not found" }, { status: 404 })
   }
 
-  const [tiersRes, ordersRes] = await Promise.all([
+  const url = new URL(request.url)
+  const rawLimit = parseInt(url.searchParams.get("limit") || "", 10)
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0
+    ? Math.min(rawLimit, MAX_LIMIT)
+    : DEFAULT_LIMIT
+
+  // Three parallel queries:
+  //   1. tiers — for per-tier breakdown
+  //   2. ordersRes — paginated rows for the buyer list (limit-aware)
+  //   3. aggRes — lightweight scan of ALL paid/refunded orders so the
+  //      headline totals stay accurate even if the buyer list is
+  //      paginated. Requested with `count: "exact"` so we know whether
+  //      to surface a "Load more" affordance and whether totals are
+  //      approximate (truncated at AGGREGATION_CAP).
+  const [tiersRes, ordersRes, aggRes] = await Promise.all([
     supabase
       .from("event_tickets")
       .select("id, tier_name, price_thb, quantity_total, quantity_sold, is_active")
@@ -52,25 +77,34 @@ export async function GET(
       // in the history with a "Refunded" badge, not have them disappear.
       .in("payment_status", ["paid", "refunded"])
       .order("created_at", { ascending: false })
-      .limit(200),
+      .limit(limit),
+    supabase
+      .from("ticket_orders")
+      .select(
+        "ticket_id, quantity, total_price_thb, payment_status, scanned_at",
+        { count: "exact" },
+      )
+      .eq("event_id", eventId)
+      .in("payment_status", ["paid", "refunded"])
+      .limit(AGGREGATION_CAP),
   ])
 
   const tiers = tiersRes.data ?? []
   const orders = ordersRes.data ?? []
+  const aggRows = aggRes.data ?? []
+  const totalOrderCount = aggRes.count ?? aggRows.length
+  const totalsApproximate = totalOrderCount > AGGREGATION_CAP
 
-  // Rollups: only paid orders count toward totals (refunded orders are
-  // money returned, not earned). We still list them below so the
-  // promoter can see the history.
-  const paidOrders = orders.filter((o) => o.payment_status === "paid")
-  const totalSold = paidOrders.reduce((s, o) => s + (o.quantity ?? 0), 0)
-  const totalRevenue = paidOrders.reduce(
+  // Rollups now scan the lightweight aggregation set, not the paginated
+  // display set — so the headline numbers are right even when the
+  // promoter is only looking at the most recent N orders.
+  const paidAgg = aggRows.filter((o) => o.payment_status === "paid")
+  const totalSold = paidAgg.reduce((s, o) => s + (o.quantity ?? 0), 0)
+  const totalRevenue = paidAgg.reduce(
     (s, o) => s + (o.total_price_thb ?? 0),
     0,
   )
-  const totalScanned = paidOrders.filter((o) => !!o.scanned_at).length
-
-  // Defensive: if migration 060 isn't applied the rows just have
-  // scanned_at = undefined which the filter handles naturally.
+  const totalScanned = paidAgg.filter((o) => !!o.scanned_at).length
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const safeOrders = orders.map((o: any) => {
@@ -97,11 +131,18 @@ export async function GET(
       tickets_sold: totalSold,
       revenue_thb: totalRevenue,
       scanned_at_door: totalScanned,
-      orders: orders.length,
+      // Total across ALL paid+refunded orders, not just the page shown
+      // — so the "Buyers (N)" header reflects reality.
+      orders: totalOrderCount,
+      // Surface to the UI so it can show a "totals are approximate"
+      // hint in the (rare) case an event has >10k orders.
+      approximate: totalsApproximate,
     },
     tiers: tiers.map((t) => {
       const remaining = (t.quantity_total ?? 0) - (t.quantity_sold ?? 0)
-      const tierRevenue = paidOrders
+      // Per-tier revenue now comes from the aggregation set, not the
+      // paginated display set — accurate for events with >limit orders.
+      const tierRevenue = paidAgg
         .filter((o) => o.ticket_id === t.id)
         .reduce((s, o) => s + (o.total_price_thb ?? 0), 0)
       return {
@@ -116,5 +157,11 @@ export async function GET(
       }
     }),
     orders: safeOrders,
+    pagination: {
+      limit,
+      returned: safeOrders.length,
+      total: totalOrderCount,
+      has_more: safeOrders.length < totalOrderCount,
+    },
   })
 }

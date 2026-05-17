@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { ensureChatGroups } from "@/lib/chat/bootstrap"
+import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
 
 // Use service role to create orgs (no auth required for signup)
 const supabase = createClient(
@@ -18,6 +19,24 @@ function generateSlug(name: string): string {
 }
 
 export async function POST(request: Request) {
+  // Per-IP rate limit. Without this, an attacker can flood
+  // auth.admin.inviteUserByEmail — that sends real emails through
+  // Supabase / Resend, drives up cost, and creates orphan orgs +
+  // subscriptions for every burned email. 5/hour is generous for
+  // a real human signing up; tight on a script.
+  const ip = ipFromRequest(request)
+  const gate = await checkLimit({
+    key: `signup:${ip}`,
+    max: 5,
+    windowSeconds: 3600,
+  }).catch(() => ({ ok: true as const, remaining: 5, resetAt: new Date() }))
+  if (!gate.ok) {
+    return NextResponse.json(
+      { error: "Too many signups from this IP. Try again in an hour." },
+      { status: 429, headers: gate.headers },
+    )
+  }
+
   try {
     const { gymName, ownerName, ownerEmail, city, province, country, inviteToken } =
       await request.json()

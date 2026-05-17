@@ -18,6 +18,11 @@ import {
   TrendingUp,
   CheckCircle2,
   Search,
+  Download,
+  Bell,
+  ChevronDown,
+  Sparkles,
+  Send,
 } from "lucide-react"
 import { InlineConfirm } from "@/components/ui/inline-confirm"
 
@@ -90,7 +95,7 @@ interface TicketTier {
   is_active: boolean
 }
 
-type Tab = "details" | "bouts" | "tickets" | "sales"
+type Tab = "details" | "bouts" | "tickets" | "sales" | "marketing"
 
 const EMPTY_FORM: EventForm = {
   name: "",
@@ -131,7 +136,15 @@ export default function EventEditorClient({
   >({})
   const [loading, setLoading] = useState(mode === "edit")
   const [saving, setSaving] = useState(false)
+  const [togglingSales, setTogglingSales] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Distinct from `error` — if the initial event-data load fails we
+  // can't safely show the form (saves would PATCH the wrong record
+  // against stale/empty state). Renders a full-page error UI instead.
+  const [loadFailed, setLoadFailed] = useState(false)
+  // Transient "Saved" confirmation after a successful PATCH so the user
+  // knows the round-trip worked. Cleared by a timer below.
+  const [savedFlash, setSavedFlash] = useState(false)
 
   // Load existing event data
   useEffect(() => {
@@ -195,6 +208,12 @@ export default function EventEditorClient({
           setInvitationsByBout(Object.fromEntries(invs))
         }
       } catch (err) {
+        // Set the hard-fail flag so the render below shows a retry UI
+        // instead of an empty form against a stale event ID. The error
+        // string is only used to surface details if we ever decide to
+        // show them — for now the UI is generic.
+        console.error("[event-editor] load failed:", err)
+        setLoadFailed(true)
         setError("Failed to load event")
       } finally {
         setLoading(false)
@@ -205,12 +224,29 @@ export default function EventEditorClient({
 
   // Save event details
   async function saveEvent() {
-    setSaving(true)
     setError(null)
+
+    // Client-side validation. The server validates too, but failing
+    // here gives an immediate inline error instead of a round-trip.
+    if (!form.name.trim()) {
+      setError("Event name is required.")
+      return
+    }
+    if (!form.event_date) {
+      setError("Event date is required.")
+      return
+    }
+    const capacityNum = form.max_capacity ? Number(form.max_capacity) : null
+    if (capacityNum !== null && (!Number.isInteger(capacityNum) || capacityNum < 0)) {
+      setError("Capacity must be a whole number 0 or greater.")
+      return
+    }
+
+    setSaving(true)
 
     try {
       const body = {
-        name: form.name,
+        name: form.name.trim(),
         description: form.description || null,
         event_date: form.event_date,
         event_time: form.event_time || null,
@@ -219,7 +255,7 @@ export default function EventEditorClient({
         venue_city: form.venue_city || null,
         venue_province: form.venue_province || null,
         venue_country: form.venue_country || "Thailand",
-        max_capacity: form.max_capacity ? parseInt(form.max_capacity) : null,
+        max_capacity: capacityNum,
         cover_image_url: form.cover_image_url || null,
       }
 
@@ -234,7 +270,7 @@ export default function EventEditorClient({
           throw new Error(data.error || "Failed to create event")
         }
         const data = await res.json()
-        router.push(`/ockock/promoter/events/${data.event.id}`)
+        router.push(`/promoter/events/${data.event.id}`)
       } else {
         const res = await fetch(`/api/promoter/events/${eventId}`, {
           method: "PATCH",
@@ -245,6 +281,7 @@ export default function EventEditorClient({
           const data = await res.json()
           throw new Error(data.error || "Failed to update event")
         }
+        setSavedFlash(true)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed")
@@ -274,9 +311,13 @@ export default function EventEditorClient({
     }
   }
 
-  // Toggle ticket sales
+  // Toggle ticket sales. Uses a dedicated `togglingSales` flag (not the
+  // shared `saving`) so the switch can disable itself without locking
+  // out the rest of the form. Double-taps are blocked while in flight
+  // so we can't queue duplicate PATCHes.
   async function toggleTicketSales() {
-    if (!eventId) return
+    if (!eventId || togglingSales) return
+    setTogglingSales(true)
     const newValue = !ticketSalesOpen
 
     try {
@@ -289,8 +330,17 @@ export default function EventEditorClient({
       setTicketSalesOpen(newValue)
     } catch {
       setError("Failed to toggle ticket sales")
+    } finally {
+      setTogglingSales(false)
     }
   }
+
+  // Clear the "Saved" flash after 2.5s so it doesn't linger.
+  useEffect(() => {
+    if (!savedFlash) return
+    const t = setTimeout(() => setSavedFlash(false), 2500)
+    return () => clearTimeout(t)
+  }, [savedFlash])
 
   // Add bout
   async function addBout() {
@@ -306,6 +356,43 @@ export default function EventEditorClient({
       setBouts([...bouts, { ...data.bout, fighter_red: null, fighter_blue: null }])
     } catch {
       setError("Failed to add bout")
+    }
+  }
+
+  // Refetch bouts + their invitations from the server. Used after the
+  // AI matchmaker accepts a suggestion (which creates a bout + invites
+  // server-side and we want the editor to reflect the new state with
+  // full fighter data + pending-invitation chips).
+  async function refetchBouts() {
+    if (!eventId) return
+    try {
+      const boutsRes = await fetch(`/api/promoter/events/${eventId}/bouts`)
+      if (!boutsRes.ok) throw new Error("Failed to reload bouts")
+      const data = await boutsRes.json()
+      const loadedBouts: Bout[] = data.bouts || []
+      setBouts(loadedBouts)
+      if (loadedBouts.length > 0) {
+        const invs = await Promise.all(
+          loadedBouts.map(async (b) => {
+            try {
+              const r = await fetch(
+                `/api/promoter/events/${eventId}/bouts/${b.id}/invitations`,
+              )
+              if (!r.ok) return [b.id, [] as BoutInvitation[]] as const
+              const j = await r.json()
+              const pending = ((j.invitations ?? []) as BoutInvitation[]).filter(
+                (i) => i.status === "pending",
+              )
+              return [b.id, pending] as const
+            } catch {
+              return [b.id, [] as BoutInvitation[]] as const
+            }
+          }),
+        )
+        setInvitationsByBout(Object.fromEntries(invs))
+      }
+    } catch (err) {
+      console.error("[refetchBouts]", err)
     }
   }
 
@@ -504,6 +591,35 @@ export default function EventEditorClient({
     )
   }
 
+  // Hard load failure (only possible in edit mode). Showing the empty
+  // form here would let the user PATCH the wrong record once they
+  // typed anything, so we block the editor entirely and offer a retry.
+  if (loadFailed) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <Link
+          href="/promoter"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] px-6 py-12 text-center">
+          <p className="mb-2 text-lg font-medium text-red-300">Couldn&apos;t load this event</p>
+          <p className="mb-6 text-sm text-neutral-400">
+            The event data didn&apos;t come back. Don&apos;t edit blind — try again.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "details", label: "Details", icon: <FileText className="h-4 w-4" /> },
     ...(mode === "edit"
@@ -511,6 +627,7 @@ export default function EventEditorClient({
           { key: "bouts" as Tab, label: "Fight Card", icon: <Swords className="h-4 w-4" /> },
           { key: "tickets" as Tab, label: "Tickets", icon: <Ticket className="h-4 w-4" /> },
           { key: "sales" as Tab, label: "Sales", icon: <TrendingUp className="h-4 w-4" /> },
+          { key: "marketing" as Tab, label: "Marketing", icon: <Send className="h-4 w-4" /> },
         ]
       : []),
   ]
@@ -519,7 +636,7 @@ export default function EventEditorClient({
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Back */}
       <Link
-        href="/ockock/promoter"
+        href="/promoter"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -535,7 +652,7 @@ export default function EventEditorClient({
           <div className="flex items-center gap-2">
             {eventStatus === "published" && (
               <Link
-                href={`/ockock/fights/${eventId}`}
+                href={`/fights/${eventId}`}
                 className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >
                 <Eye className="h-3.5 w-3.5" />
@@ -558,11 +675,19 @@ export default function EventEditorClient({
         )}
       </div>
 
+      {/* Saved confirmation — clears itself after 2.5s. Lives above the
+          tabs so users get visible feedback after PATCH succeeds. */}
+      {savedFlash && (
+        <div role="status" aria-live="polite" className="mb-4 rounded-lg bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+          Saved
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="mb-4 flex items-center justify-between rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {error}
-          <button onClick={() => setError(null)}>
+          <button onClick={() => setError(null)} aria-label="Dismiss error">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -570,21 +695,33 @@ export default function EventEditorClient({
 
       {/* Tabs */}
       {TABS.length > 1 && (
-        <div className="mb-6 flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
-                tab === t.key
-                  ? "bg-white/10 text-white"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
+        <div
+          role="tablist"
+          aria-label="Event editor sections"
+          className="mb-6 flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1"
+        >
+          {TABS.map((t) => {
+            const selected = tab === t.key
+            return (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={selected}
+                aria-controls={`tab-panel-${t.key}`}
+                id={`tab-${t.key}`}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => setTab(t.key)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
+                  selected
+                    ? "bg-white/10 text-white"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                {t.icon}
+                {t.label}
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -602,6 +739,7 @@ export default function EventEditorClient({
       )}
       {tab === "bouts" && (
         <BoutsTab
+          eventId={eventId}
           bouts={bouts}
           invitationsByBout={invitationsByBout}
           onAdd={addBout}
@@ -610,12 +748,15 @@ export default function EventEditorClient({
           onAssignFighter={assignFighter}
           onInviteFighter={inviteFighter}
           onCancelInvitation={cancelInvitation}
+          onBoutsChanged={refetchBouts}
         />
       )}
       {tab === "tickets" && (
         <TicketsTab
+          eventId={eventId}
           tickets={tickets}
           ticketSalesOpen={ticketSalesOpen}
+          togglingSales={togglingSales}
           onToggleSales={toggleTicketSales}
           onAdd={addTicketTier}
           onDelete={deleteTicketTier}
@@ -624,6 +765,9 @@ export default function EventEditorClient({
       )}
       {tab === "sales" && eventId && (
         <SalesTab eventId={eventId} />
+      )}
+      {tab === "marketing" && eventId && (
+        <MarketingTab eventId={eventId} eventName={form.name || "this event"} />
       )}
     </div>
   )
@@ -743,7 +887,7 @@ function DetailsTab({
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-zinc-500">
               Shows on the public fight page hero, the event card on
-              /ockock/fights, and the social preview when shared.
+              the fights list (ockock.app/fights), and the social preview when shared.
               JPEG / PNG / WebP / GIF, up to 8MB. Landscape works best.
             </p>
             {isCreate ? (
@@ -866,6 +1010,8 @@ function DetailsTab({
         <Field label="Capacity">
           <input
             type="number"
+            min={0}
+            step={1}
             value={form.max_capacity}
             onChange={(e) => update("max_capacity", e.target.value)}
             placeholder="e.g. 500"
@@ -893,14 +1039,17 @@ function DetailsTab({
           in create mode) and never re-render once the event is
           already cancelled. */}
       {!isCreate && eventId && eventStatus !== "cancelled" && (
-        <DangerZone eventId={eventId} />
+        <DangerZone
+          eventId={eventId}
+          onCancelled={() => setEventStatus("cancelled")}
+        />
       )}
       {!isCreate && eventStatus === "cancelled" && (
         <div className="mt-10 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-4 text-sm text-rose-200">
           <p className="font-semibold">This event is cancelled.</p>
           <p className="mt-1 text-xs text-rose-200/80">
             Ticket sales are closed and any paid orders were refunded.
-            The event is hidden from /ockock/fights.
+            The event is hidden from the public fights list.
           </p>
         </div>
       )}
@@ -913,7 +1062,16 @@ function DetailsTab({
 // with an optional reason textarea that gets stamped on each
 // Stripe refund (so the receipt to the buyer references the
 // cancellation, not a generic refund).
-function DangerZone({ eventId }: { eventId: string }) {
+const REASON_MAX = 500
+
+function DangerZone({
+  eventId,
+  onCancelled,
+}: {
+  eventId: string
+  onCancelled: () => void
+}) {
+  const router = useRouter()
   const [reason, setReason] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [summary, setSummary] = useState<{
@@ -940,9 +1098,15 @@ function DangerZone({ eventId }: { eventId: string }) {
         return
       }
       setSummary(data.summary)
-      // Soft refresh — the parent reload will reflect the new status
-      // and swap the Danger Zone for the "already cancelled" panel.
-      setTimeout(() => window.location.reload(), 2000)
+      // Soft swap to the "already cancelled" panel — parent flips
+      // eventStatus, we ask Next to revalidate any server data, no
+      // full page reload, scroll position preserved. The summary
+      // stays visible for 2s before the panel swaps out so the
+      // promoter has time to read the refund counts.
+      setTimeout(() => {
+        onCancelled()
+        router.refresh()
+      }, 2000)
     } catch {
       setError("Network error — try again.")
     } finally {
@@ -994,14 +1158,27 @@ function DangerZone({ eventId }: { eventId: string }) {
       </p>
 
       <div className="mt-3">
-        <label htmlFor="cancel-reason" className="block text-xs font-medium text-rose-200 mb-1">
-          Reason <span className="text-rose-200/60">(optional — stamped on every refund)</span>
-        </label>
+        <div className="mb-1 flex items-center justify-between">
+          <label htmlFor="cancel-reason" className="block text-xs font-medium text-rose-200">
+            Reason <span className="text-rose-200/60">(optional — stamped on every refund)</span>
+          </label>
+          {/* Visible counter so the silent truncation at 500 isn't a
+              surprise. Only shown past 80% to avoid clutter. */}
+          {reason.length > REASON_MAX * 0.8 && (
+            <span
+              className={`text-[10px] tabular-nums ${
+                reason.length >= REASON_MAX ? "text-rose-300" : "text-rose-200/60"
+              }`}
+            >
+              {reason.length}/{REASON_MAX}
+            </span>
+          )}
+        </div>
         <textarea
           id="cancel-reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          maxLength={500}
+          maxLength={REASON_MAX}
           rows={2}
           placeholder="e.g. Severe weather — venue closed. Refund processing now."
           className="w-full resize-none rounded-md border border-rose-500/20 bg-zinc-950 px-3 py-2 text-xs text-white placeholder-rose-200/40 outline-none focus:border-rose-400/50"
@@ -1042,6 +1219,7 @@ function DangerZone({ eventId }: { eventId: string }) {
 // ============================================
 
 function BoutsTab({
+  eventId,
   bouts,
   invitationsByBout,
   onAdd,
@@ -1050,7 +1228,9 @@ function BoutsTab({
   onAssignFighter,
   onInviteFighter,
   onCancelInvitation,
+  onBoutsChanged,
 }: {
+  eventId: string | null
   bouts: Bout[]
   invitationsByBout: Record<string, BoutInvitation[]>
   onAdd: () => void
@@ -1059,9 +1239,18 @@ function BoutsTab({
   onAssignFighter: (boutId: string, corner: "red" | "blue", fighter: FighterInfo | null) => void | Promise<void>
   onInviteFighter: (boutId: string, corner: "red" | "blue", fighter: FighterInfo, message?: string) => void | Promise<void>
   onCancelInvitation: (boutId: string, invId: string) => void | Promise<void>
+  onBoutsChanged: () => void | Promise<void>
 }) {
   return (
     <div className="space-y-4">
+      {/* AI Matchmaker — proposes bout pairs from the open-to-fight
+          fighter pool. Each accepted suggestion creates a bout (and
+          invites cross-gym fighters via the existing consent flow),
+          each dismissed suggestion is logged as a learning signal.
+          Lives above the manual Add Bout flow so AI is the default
+          path for a fresh card. */}
+      {eventId && <MatchmakerPanel eventId={eventId} onAccepted={onBoutsChanged} />}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-400">
           {bouts.length} bout{bouts.length !== 1 ? "s" : ""} on the card
@@ -1076,12 +1265,19 @@ function BoutsTab({
       </div>
 
       {bouts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 py-12 text-center">
+        // Empty state IS the CTA — clicking the dashed card adds the
+        // first bout, same as the Add Bout button above. Saves the
+        // promoter from hunting for the affordance on a fresh event.
+        <button
+          type="button"
+          onClick={onAdd}
+          className="w-full rounded-xl border border-dashed border-white/10 py-12 text-center transition-colors hover:border-amber-500/40 hover:bg-amber-500/[0.03] focus:outline-none focus-visible:border-amber-500/60 focus-visible:bg-amber-500/[0.05]"
+        >
           <Swords className="mx-auto mb-2 h-8 w-8 text-neutral-600" />
-          <p className="text-sm text-neutral-500">
-            No bouts yet. Add your first bout to build the fight card.
+          <p className="text-sm text-neutral-400">
+            No bouts yet. Click to add your first bout.
           </p>
-        </div>
+        </button>
       ) : (
         <div className="space-y-3">
           {bouts.map((bout, index) => (
@@ -1154,13 +1350,14 @@ function BoutCard({
           >
             {bout.is_main_event ? "Remove Main" : "Set Main"}
           </button>
-          <button
-            onClick={onDelete}
+          <InlineConfirm
+            onConfirm={onDelete}
+            title="Delete bout"
+            confirmLabel="Delete"
             className="rounded p-1 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
-            aria-label="Delete bout"
           >
             <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          </InlineConfirm>
         </div>
       </div>
 
@@ -1258,12 +1455,14 @@ function CornerSlot({
         <p className="mt-0.5 text-sm font-medium text-white truncate">
           {pending.fighter?.display_name ?? "Invited fighter"}
         </p>
-        <button
-          onClick={() => onCancelInvitation(pending.id)}
+        <InlineConfirm
+          onConfirm={() => onCancelInvitation(pending.id)}
+          title="Cancel invitation"
+          confirmLabel="Cancel invite"
           className="mt-2 rounded px-2 py-0.5 text-[10px] text-neutral-400 hover:bg-red-500/10 hover:text-red-400"
         >
           Cancel invite
-        </button>
+        </InlineConfirm>
       </div>
     )
   }
@@ -1306,12 +1505,14 @@ function CornerSlot({
           Change
         </button>
         <span className="text-neutral-700">·</span>
-        <button
-          onClick={onClear}
+        <InlineConfirm
+          onConfirm={onClear}
+          title="Clear fighter"
+          confirmLabel="Clear"
           className="rounded px-2 py-0.5 text-[10px] text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
         >
           Clear
-        </button>
+        </InlineConfirm>
       </div>
     </div>
   )
@@ -1346,6 +1547,16 @@ function FighterPickerDialog({
   // for cross-gym promoters and explicit consent is the better norm.
   const [mode, setMode] = useState<"invite" | "assign">("invite")
   const [inviteMessage, setInviteMessage] = useState("")
+
+  // Escape closes the picker — matches the standard modal interaction
+  // and avoids forcing the promoter to aim for the backdrop on mobile.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
 
   useEffect(() => {
     let cancelled = false
@@ -1576,15 +1787,19 @@ function FighterPickerDialog({
 // ============================================
 
 function TicketsTab({
+  eventId,
   tickets,
   ticketSalesOpen,
+  togglingSales,
   onToggleSales,
   onAdd,
   onDelete,
   onUpdate,
 }: {
+  eventId: string | null
   tickets: TicketTier[]
   ticketSalesOpen: boolean
+  togglingSales: boolean
   onToggleSales: () => void
   onAdd: () => void
   onDelete: (id: string) => void
@@ -1592,6 +1807,15 @@ function TicketsTab({
 }) {
   return (
     <div className="space-y-4">
+      {/* Waitlist banner — shown only when there's an actual waitlist
+          AND sales are still closed. Once sales are open, the prompt
+          to notify is moot. The banner sits above the toggle so the
+          promoter sees the demand signal at the moment they're
+          deciding whether to publish tickets. */}
+      {eventId && !ticketSalesOpen && (
+        <InterestBanner eventId={eventId} />
+      )}
+
       {/* Sales toggle */}
       <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
         <div>
@@ -1603,8 +1827,13 @@ function TicketsTab({
           </p>
         </div>
         <button
+          type="button"
+          role="switch"
+          aria-checked={ticketSalesOpen}
+          aria-label={ticketSalesOpen ? "Close ticket sales" : "Open ticket sales"}
           onClick={onToggleSales}
-          className={`relative h-6 w-11 rounded-full transition-colors ${
+          disabled={togglingSales}
+          className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
             ticketSalesOpen ? "bg-emerald-500" : "bg-white/10"
           }`}
         >
@@ -1631,17 +1860,22 @@ function TicketsTab({
       </div>
 
       {tickets.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 py-12 text-center">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="w-full rounded-xl border border-dashed border-white/10 py-12 text-center transition-colors hover:border-amber-500/40 hover:bg-amber-500/[0.03] focus:outline-none focus-visible:border-amber-500/60 focus-visible:bg-amber-500/[0.05]"
+        >
           <Ticket className="mx-auto mb-2 h-8 w-8 text-neutral-600" />
-          <p className="text-sm text-neutral-500">
-            No ticket tiers. Add tiers to start selling tickets.
+          <p className="text-sm text-neutral-400">
+            No ticket tiers. Click to add your first tier.
           </p>
-        </div>
+        </button>
       ) : (
         <div className="space-y-3">
           {tickets.map((tier) => (
             <TicketTierCard
               key={tier.id}
+              eventId={eventId}
               tier={tier}
               onDelete={() => onDelete(tier.id)}
               onUpdate={(updates) => onUpdate(tier.id, updates)}
@@ -1654,10 +1888,12 @@ function TicketsTab({
 }
 
 function TicketTierCard({
+  eventId,
   tier,
   onDelete,
   onUpdate,
 }: {
+  eventId: string | null
   tier: TicketTier
   onDelete: () => void
   onUpdate: (updates: Partial<TicketTier>) => void
@@ -1666,12 +1902,41 @@ function TicketTierCard({
   const [name, setName] = useState(tier.tier_name)
   const [price, setPrice] = useState(tier.price_thb.toString())
   const [qty, setQty] = useState(tier.quantity_total.toString())
+  const [oracleOpen, setOracleOpen] = useState(false)
+  // Surface the specific reason a save was rejected rather than
+  // silently coercing bad input back to the old value. Cleared on
+  // each edit attempt + every keystroke.
+  const [editError, setEditError] = useState<string | null>(null)
 
   function save() {
+    setEditError(null)
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      setEditError("Tier name is required.")
+      return
+    }
+    const priceNum = Number(price)
+    if (!Number.isFinite(priceNum) || priceNum <= 0 || !Number.isInteger(priceNum)) {
+      setEditError("Price must be a whole positive number (THB).")
+      return
+    }
+    const qtyNum = Number(qty)
+    if (!Number.isFinite(qtyNum) || qtyNum < 0 || !Number.isInteger(qtyNum)) {
+      setEditError("Quantity must be a whole number 0 or greater.")
+      return
+    }
+    // Don't let the promoter set total below what's already sold —
+    // the API would reject this, but failing here is friendlier.
+    if (qtyNum < tier.quantity_sold) {
+      setEditError(
+        `Can't set total below ${tier.quantity_sold} — that many are already sold.`,
+      )
+      return
+    }
     onUpdate({
-      tier_name: name,
-      price_thb: parseInt(price) || tier.price_thb,
-      quantity_total: parseInt(qty) || tier.quantity_total,
+      tier_name: trimmedName,
+      price_thb: priceNum,
+      quantity_total: qtyNum,
     })
     setEditing(false)
   }
@@ -1694,6 +1959,8 @@ function TicketTierCard({
             <Field label="Price (THB)">
               <input
                 type="number"
+                min={1}
+                step={1}
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-amber-500/50"
@@ -1702,12 +1969,17 @@ function TicketTierCard({
             <Field label="Total Quantity">
               <input
                 type="number"
+                min={tier.quantity_sold}
+                step={1}
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-amber-500/50"
               />
             </Field>
           </div>
+          {editError && (
+            <p role="alert" className="text-xs text-red-400">{editError}</p>
+          )}
           <div className="flex gap-2">
             <button
               onClick={save}
@@ -1716,7 +1988,15 @@ function TicketTierCard({
               Save
             </button>
             <button
-              onClick={() => setEditing(false)}
+              onClick={() => {
+                setEditError(null)
+                // Reset local state so the next "Edit" starts clean
+                // from the canonical tier values, not abandoned input.
+                setName(tier.tier_name)
+                setPrice(tier.price_thb.toString())
+                setQty(tier.quantity_total.toString())
+                setEditing(false)
+              }}
               className="rounded-lg px-4 py-1.5 text-sm text-neutral-400 hover:text-white"
             >
               Cancel
@@ -1728,37 +2008,77 @@ function TicketTierCard({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="font-semibold text-white">{tier.tier_name}</p>
-          {!tier.is_active && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] text-red-400">
-              Inactive
-            </span>
-          )}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-white">{tier.tier_name}</p>
+            {!tier.is_active && (
+              <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] text-red-400">
+                Inactive
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-sm text-neutral-400">
+            ฿{tier.price_thb.toLocaleString()} &middot;{" "}
+            {tier.quantity_sold > 0
+              ? `${tier.quantity_sold} sold / ${remaining} remaining`
+              : `${tier.quantity_total} available`}
+          </p>
         </div>
-        <p className="mt-0.5 text-sm text-neutral-400">
-          ฿{tier.price_thb.toLocaleString()} &middot;{" "}
-          {tier.quantity_sold > 0
-            ? `${tier.quantity_sold} sold / ${remaining} remaining`
-            : `${tier.quantity_total} available`}
-        </p>
+        <div className="flex items-center gap-1">
+          {/* Pricing Oracle — fetches an AI rec for this tier. Only
+              available once the event has an ID (i.e. after first save). */}
+          {eventId && (
+            <button
+              type="button"
+              onClick={() => setOracleOpen((v) => !v)}
+              aria-expanded={oracleOpen}
+              aria-label={oracleOpen ? "Close pricing check" : "Pricing check with AI"}
+              className={`rounded p-1.5 transition-colors ${
+                oracleOpen
+                  ? "bg-amber-500/15 text-amber-300"
+                  : "text-neutral-500 hover:bg-amber-500/10 hover:text-amber-300"
+              }`}
+              title="AI pricing check"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded p-1.5 text-neutral-500 hover:bg-white/5 hover:text-white"
+            aria-label="Edit ticket tier"
+          >
+            <FileText className="h-3.5 w-3.5" />
+          </button>
+          <InlineConfirm
+            onConfirm={onDelete}
+            title="Delete ticket tier"
+            confirmLabel="Delete"
+            className="rounded p-1.5 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </InlineConfirm>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setEditing(true)}
-          className="rounded p-1.5 text-neutral-500 hover:bg-white/5 hover:text-white"
-        >
-          <FileText className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={onDelete}
-          className="rounded p-1.5 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      {oracleOpen && eventId && (
+        <PricingOraclePanel
+          eventId={eventId}
+          tier={tier}
+          onApplied={(price_thb, quantity_total) => {
+            // Mirror server-side change into local editor state so
+            // the card reflects the new numbers without a refetch.
+            const updates: Partial<TicketTier> = { price_thb }
+            if (typeof quantity_total === "number") {
+              updates.quantity_total = quantity_total
+            }
+            onUpdate(updates)
+            setOracleOpen(false)
+          }}
+          onClose={() => setOracleOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -1796,6 +2116,10 @@ interface SalesTotals {
   revenue_thb: number
   scanned_at_door: number
   orders: number
+  // True if there are more orders than the API's aggregation cap, in
+  // which case the totals are computed from the first 10k and may
+  // under-count. Hint shown next to the numbers.
+  approximate?: boolean
 }
 
 interface SalesTier {
@@ -1825,11 +2149,29 @@ interface SalesOrder {
   payment_method?: string | null
 }
 
+// Default page size — matches the API default. Buttons walk the
+// promoter through larger pages on demand.
+const SALES_PAGE_SIZE = 200
+// Max page size the API will honor; surfaced as a "Load all" option
+// when the page-by-page cadence isn't fast enough.
+const SALES_MAX_PAGE = 1000
+
 function SalesTab({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true)
   const [totals, setTotals] = useState<SalesTotals | null>(null)
   const [tiers, setTiers] = useState<SalesTier[]>([])
   const [orders, setOrders] = useState<SalesOrder[]>([])
+  const [pagination, setPagination] = useState<{
+    limit: number
+    returned: number
+    total: number
+    has_more: boolean
+  } | null>(null)
+  // Promoter-controlled page size. Stepping up triggers a fresh load
+  // (we always fetch from the top with the new cap rather than
+  // accumulating client-side, so polling stays consistent).
+  const [pageSize, setPageSize] = useState(SALES_PAGE_SIZE)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const [refreshing, setRefreshing] = useState(false)
@@ -1881,11 +2223,13 @@ function SalesTab({ eventId }: { eventId: string }) {
     return () => clearInterval(t)
   }, [])
 
-  const load = async (opts?: { background?: boolean }) => {
+  const load = async (opts?: { background?: boolean; limit?: number }) => {
+    const limit = opts?.limit ?? pageSize
     try {
-      const res = await fetch(`/api/promoter/events/${eventId}/sales`, {
-        cache: "no-store",
-      })
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/sales?limit=${limit}`,
+        { cache: "no-store" },
+      )
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setError(data?.error || "Couldn't load sales data.")
@@ -1895,6 +2239,7 @@ function SalesTab({ eventId }: { eventId: string }) {
       setTotals(data.totals)
       setTiers(data.tiers ?? [])
       setOrders(data.orders ?? [])
+      setPagination(data.pagination ?? null)
       setError(null)
       setLastUpdated(new Date())
     } catch {
@@ -1904,7 +2249,19 @@ function SalesTab({ eventId }: { eventId: string }) {
     } finally {
       setLoading(false)
       setRefreshing(false)
+      setLoadingMore(false)
     }
+  }
+
+  // Step up the page size and reload from the top. Re-fetching (vs
+  // appending) keeps the data consistent with the polling cadence:
+  // every poll uses the current `pageSize`, so the user always sees
+  // the most recent N rows in order.
+  const loadMore = async () => {
+    const next = Math.min(pageSize + SALES_PAGE_SIZE, SALES_MAX_PAGE)
+    setPageSize(next)
+    setLoadingMore(true)
+    await load({ limit: next })
   }
 
   // Initial load on mount + when eventId changes.
@@ -1944,8 +2301,11 @@ function SalesTab({ eventId }: { eventId: string }) {
         document.removeEventListener("visibilitychange", onVis)
       }
     }
+    // pageSize is included so polling picks up the current page after
+    // the promoter clicks "Load more" — otherwise the closure-captured
+    // load() would keep fetching the smaller initial page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live, eventId])
+  }, [live, eventId, pageSize])
 
   if (loading) {
     return (
@@ -1957,8 +2317,18 @@ function SalesTab({ eventId }: { eventId: string }) {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
-        {error}
+      <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+        <p className="mb-3">{error}</p>
+        <button
+          onClick={() => {
+            setError(null)
+            setLoading(true)
+            load()
+          }}
+          className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-200 hover:bg-red-500/20"
+        >
+          Retry
+        </button>
       </div>
     )
   }
@@ -1984,21 +2354,21 @@ function SalesTab({ eventId }: { eventId: string }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           label="Revenue"
-          value={`฿${(totals?.revenue_thb ?? 0).toLocaleString()}`}
+          value={`${totals?.approximate ? "~" : ""}฿${(totals?.revenue_thb ?? 0).toLocaleString()}`}
           icon={<TrendingUp className="h-4 w-4 text-emerald-300" />}
           tone="emerald"
         />
         <StatCard
           label="Tickets sold"
-          value={(totals?.tickets_sold ?? 0).toLocaleString()}
+          value={`${totals?.approximate ? "~" : ""}${(totals?.tickets_sold ?? 0).toLocaleString()}`}
           icon={<Ticket className="h-4 w-4 text-amber-300" />}
           tone="amber"
         />
         <StatCard
           label="Orders"
           value={(totals?.orders ?? 0).toLocaleString()}
-          icon={<FileText className="h-4 w-4 text-indigo-300" />}
-          tone="indigo"
+          icon={<FileText className="h-4 w-4 text-sky-300" />}
+          tone="sky"
         />
         <StatCard
           label="Scanned at door"
@@ -2010,6 +2380,13 @@ function SalesTab({ eventId }: { eventId: string }) {
           sub={totals && totals.tickets_sold > 0 ? `${scanProgress}% admitted` : undefined}
         />
       </div>
+      {totals?.approximate && (
+        <p className="-mt-3 text-[11px] text-amber-400/80">
+          Totals shown are approximate (first 10,000 orders). Use{" "}
+          <span className="font-medium text-amber-300">Export CSV</span> below
+          for the complete history.
+        </p>
+      )}
 
       {/* Live status bar — shows freshness + toggle. Worth its own row
           because event-night promoters check this constantly. */}
@@ -2108,10 +2485,27 @@ function SalesTab({ eventId }: { eventId: string }) {
 
       {/* Orders */}
       <section>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
-            Buyers ({orders.length})
+            Buyers ({(pagination?.total ?? orders.length).toLocaleString()})
           </h3>
+          {/* CSV export — the only path to the full order history when
+              an event exceeds the 10k aggregation cap on the live
+              endpoint. Works at any size though, so we expose it
+              whenever there's anything to export. The endpoint sets
+              the Content-Disposition header so the browser handles
+              the download natively. */}
+          {(pagination?.total ?? 0) > 0 && (
+            <a
+              href={`/api/promoter/events/${eventId}/sales/export`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/10"
+              title="Download all orders as CSV"
+            >
+              <Download className="h-3 w-3" />
+              Export CSV
+            </a>
+          )}
         </div>
         {refundError && (
           <div
@@ -2175,7 +2569,7 @@ function SalesTab({ eventId }: { eventId: string }) {
                           </span>
                         )}
                         {o.payment_method === "transfer" && (
-                          <span className="rounded bg-indigo-500/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-indigo-300">
+                          <span className="rounded bg-sky-500/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-sky-300">
                             Transfer
                           </span>
                         )}
@@ -2241,10 +2635,36 @@ function SalesTab({ eventId }: { eventId: string }) {
             })}
           </div>
         )}
-        {orders.length === 200 && (
-          <p className="mt-2 text-[11px] text-neutral-600">
-            Showing the most recent 200 orders. Older orders aren&apos;t loaded.
-          </p>
+        {pagination && pagination.total > 0 && (
+          <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+            <p className="text-[11px] text-neutral-600">
+              Showing {pagination.returned.toLocaleString()} of{" "}
+              {pagination.total.toLocaleString()} order
+              {pagination.total === 1 ? "" : "s"}
+              {pagination.has_more && " — most recent first"}
+            </p>
+            {pagination.has_more && pageSize < SALES_MAX_PAGE && (
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/10 disabled:opacity-60"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading…
+                  </>
+                ) : (
+                  <>Load more</>
+                )}
+              </button>
+            )}
+            {pagination.has_more && pageSize >= SALES_MAX_PAGE && (
+              <p className="text-[11px] text-neutral-600">
+                Hit the per-page max ({SALES_MAX_PAGE.toLocaleString()}). Export to see the full history.
+              </p>
+            )}
+          </div>
         )}
       </section>
     </div>
@@ -2261,14 +2681,14 @@ function StatCard({
   label: string
   value: string
   icon: React.ReactNode
-  tone: "amber" | "emerald" | "indigo"
+  tone: "amber" | "emerald" | "sky"
   sub?: string
 }) {
   const toneRing =
     tone === "emerald"
       ? "ring-emerald-500/20"
-      : tone === "indigo"
-        ? "ring-indigo-500/20"
+      : tone === "sky"
+        ? "ring-sky-500/20"
         : "ring-amber-500/20"
   return (
     <div className={`rounded-xl bg-white/[0.03] ring-1 ${toneRing} p-3`}>
@@ -2292,4 +2712,1340 @@ function formatRelativeTime(d: Date): string {
   if (diff < 60) return `${diff}s ago`
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+}
+
+// ============================================
+// Notify-me waitlist banner — surfaces the count of people who
+// signed up for "tickets coming soon" notifications. Lives in the
+// Tickets tab so it sits next to the sales-open toggle (the moment
+// the promoter sees the demand signal is also the moment they're
+// deciding whether to publish). Expandable into a list so the
+// promoter can email everyone manually until we wire the auto-blast.
+// ============================================
+
+interface InterestEntry {
+  email: string
+  created_at: string
+  notified_at: string | null
+}
+
+function InterestBanner({ eventId }: { eventId: string }) {
+  const [count, setCount] = useState<number | null>(null)
+  const [entries, setEntries] = useState<InterestEntry[]>([])
+  const [installed, setInstalled] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/promoter/events/${eventId}/interest`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setCount(data.count ?? 0)
+        setEntries(data.entries ?? [])
+        setInstalled(data.installed !== false)
+      } catch {
+        // Silent — banner just doesn't render. Not worth interrupting
+        // the editor's primary flow over.
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId])
+
+  // Hide entirely if migration isn't applied or there are no signups
+  // — the banner is purely a positive demand signal, not a state
+  // toggle. Empty == nothing to show.
+  if (!installed || count === null || count === 0) return null
+
+  const copyEmails = async () => {
+    setError(null)
+    try {
+      await navigator.clipboard.writeText(
+        entries.map((e) => e.email).join(", "),
+      )
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError("Couldn't copy to clipboard.")
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <Bell className="h-4 w-4 shrink-0 text-amber-300" />
+          <div>
+            <p className="text-sm font-semibold text-amber-100">
+              {count.toLocaleString()} {count === 1 ? "person is" : "people are"}{" "}
+              waiting for tickets
+            </p>
+            <p className="text-[11px] text-amber-200/70">
+              Open ticket sales below to make tickets visible — then notify them
+              manually until the auto-blast ships.
+            </p>
+          </div>
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-amber-300 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="mt-4 border-t border-amber-500/20 pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[11px] uppercase tracking-wider text-amber-300/70">
+              Registered emails
+            </p>
+            <button
+              type="button"
+              onClick={copyEmails}
+              className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-200 hover:bg-amber-500/20"
+            >
+              {copied ? "Copied!" : "Copy all"}
+            </button>
+          </div>
+          {error && (
+            <p role="alert" className="mb-2 text-[11px] text-rose-300">
+              {error}
+            </p>
+          )}
+          <ul className="max-h-48 space-y-1 overflow-y-auto rounded-md bg-amber-500/[0.04] p-2 text-[12px] font-mono text-amber-100">
+            {entries.map((e) => (
+              <li key={e.email} className="flex items-center justify-between">
+                <span className="truncate">{e.email}</span>
+                <span className="ml-2 shrink-0 text-[10px] text-amber-200/50">
+                  {new Date(e.created_at).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {count > entries.length && (
+            <p className="mt-2 text-[10px] text-amber-200/60">
+              Showing {entries.length.toLocaleString()} of{" "}
+              {count.toLocaleString()} — paste your email client&apos;s BCC
+              field with the copy above to reach everyone shown.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// AI Matchmaker panel — Door B's first AI feature. Proposes bout
+// pairs from the open-to-fights fighter pool. Each suggestion lands
+// in matchmaker_suggestions for the learning loop regardless of the
+// promoter's decision. Accepting creates a real event_bouts row +
+// fires invitations for cross-gym fighters; dismissing is a one-tap
+// "no thanks" that still feeds the model.
+// ============================================
+
+interface MatchmakerFighter {
+  id: string
+  display_name: string
+  photo_url: string | null
+  record: string
+  weight_class: string | null
+  weight_kg: number | null
+  fighter_country: string | null
+  gym_name: string | null
+  gym_id: string | null
+}
+
+interface MatchmakerSuggestion {
+  id: string
+  fighter_red: MatchmakerFighter
+  fighter_blue: MatchmakerFighter
+  weight_class: string | null
+  scheduled_rounds: number
+  reasoning: string
+  estimated_draw: "low" | "medium" | "high"
+  cross_gym: boolean
+}
+
+function MatchmakerPanel({
+  eventId,
+  onAccepted,
+}: {
+  eventId: string
+  onAccepted: () => void | Promise<void>
+}) {
+  const [suggestions, setSuggestions] = useState<MatchmakerSuggestion[]>([])
+  const [generating, setGenerating] = useState(false)
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [notes, setNotes] = useState("")
+  const [notesOpen, setNotesOpen] = useState(false)
+  // Brief confirmation shown after an accept — clears itself after
+  // a few seconds. Says how many invitations went out vs assignments
+  // happened, so the promoter knows the consent flow ran.
+  const [acceptedToast, setAcceptedToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!acceptedToast) return
+    const t = setTimeout(() => setAcceptedToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [acceptedToast])
+
+  async function generate() {
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/promoter/events/${eventId}/matchmaker`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          count: 4,
+          notes: notes.trim() || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "The matchmaker couldn't generate suggestions.")
+        return
+      }
+      setSuggestions(data.suggestions ?? [])
+    } catch {
+      setError("Network error reaching the matchmaker.")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function resolve(suggestion: MatchmakerSuggestion, action: "accept" | "dismiss") {
+    setResolvingId(suggestion.id)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/matchmaker/${suggestion.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Couldn't resolve suggestion. Try again.")
+        return
+      }
+      // Drop the suggestion from the local list regardless of
+      // dismiss/accept so the UI doesn't restate decisions.
+      setSuggestions((s) => s.filter((x) => x.id !== suggestion.id))
+      if (action === "accept") {
+        const inv = data.invitations?.length ?? 0
+        const asg = data.assignments?.length ?? 0
+        let summary = "Bout added to the card."
+        if (inv > 0 && asg > 0) {
+          summary = `Bout created. ${asg} fighter${asg === 1 ? "" : "s"} assigned, ${inv} invitation${inv === 1 ? "" : "s"} sent.`
+        } else if (inv > 0) {
+          summary = `Bout created. ${inv} invitation${inv === 1 ? "" : "s"} sent.`
+        } else if (asg > 0) {
+          summary = `Bout created with ${asg} fighter${asg === 1 ? "" : "s"} assigned.`
+        }
+        setAcceptedToast(summary)
+        await onAccepted()
+      }
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setResolvingId(null)
+    }
+  }
+
+  // Pre-generate state: the pitch + the button.
+  if (suggestions.length === 0 && !generating) {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-amber-500/[0.02] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-amber-500/15 p-2">
+              <Sparkles className="h-5 w-5 text-amber-300" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-amber-100">
+                AI Matchmaker
+              </p>
+              <p className="mt-0.5 text-[12px] text-amber-200/70">
+                Propose bouts from the Open-to-Fight pool — record-balanced,
+                cross-gym storylines, weight-matched.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={generate}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-amber-400"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Suggest bouts
+          </button>
+        </div>
+
+        {/* Collapsible notes — lets the promoter steer the model
+            without cluttering the default state. Examples are
+            in-placeholder so the promoter knows what to write. */}
+        <button
+          type="button"
+          onClick={() => setNotesOpen((v) => !v)}
+          aria-expanded={notesOpen}
+          className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300/70 hover:text-amber-200"
+        >
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${notesOpen ? "rotate-180" : ""}`}
+          />
+          {notesOpen ? "Hide notes" : "Add notes for the matchmaker (optional)"}
+        </button>
+        {notesOpen && (
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. Lean technical, no international fighters, save the big names for main event"
+            rows={2}
+            maxLength={500}
+            className="mt-2 w-full resize-none rounded-md border border-amber-500/20 bg-zinc-950 px-3 py-2 text-xs text-amber-100 placeholder-amber-200/30 outline-none focus:border-amber-400/50"
+          />
+        )}
+
+        {error && (
+          <p role="alert" className="mt-3 text-xs text-rose-300">
+            {error}
+          </p>
+        )}
+        {acceptedToast && (
+          <p role="status" aria-live="polite" className="mt-3 text-xs text-emerald-300">
+            {acceptedToast}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  // Generating state.
+  if (generating) {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] p-8 text-center">
+        <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-amber-400" />
+        <p className="text-sm font-medium text-amber-100">
+          Building your card…
+        </p>
+        <p className="mt-1 text-[11px] text-amber-200/60">
+          Reasoning over the fighter pool, balancing records, weighing gym storylines.
+        </p>
+      </div>
+    )
+  }
+
+  // Results state.
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-amber-300" />
+          <p className="text-sm font-semibold text-amber-100">
+            {suggestions.length} suggestion{suggestions.length === 1 ? "" : "s"} —
+            review, accept, or skip
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={generate}
+          className="text-xs text-amber-300 hover:text-amber-200"
+        >
+          Generate more
+        </button>
+      </div>
+
+      {acceptedToast && (
+        <p role="status" aria-live="polite" className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+          {acceptedToast}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          {error}
+        </p>
+      )}
+
+      {suggestions.map((s) => (
+        <SuggestionCard
+          key={s.id}
+          suggestion={s}
+          resolving={resolvingId === s.id}
+          onAccept={() => resolve(s, "accept")}
+          onDismiss={() => resolve(s, "dismiss")}
+        />
+      ))}
+    </div>
+  )
+}
+
+function SuggestionCard({
+  suggestion,
+  resolving,
+  onAccept,
+  onDismiss,
+}: {
+  suggestion: MatchmakerSuggestion
+  resolving: boolean
+  onAccept: () => void
+  onDismiss: () => void
+}) {
+  const drawColor =
+    suggestion.estimated_draw === "high"
+      ? "bg-emerald-500/15 text-emerald-300"
+      : suggestion.estimated_draw === "medium"
+        ? "bg-amber-500/15 text-amber-300"
+        : "bg-zinc-700/40 text-zinc-400"
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] p-4">
+      {/* Meta row: weight class, draw estimate, cross-gym flag */}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px]">
+        {suggestion.weight_class && (
+          <span className="rounded-full bg-white/5 px-2 py-0.5 text-neutral-300">
+            {suggestion.weight_class}
+          </span>
+        )}
+        <span className="rounded-full bg-white/5 px-2 py-0.5 text-neutral-300">
+          {suggestion.scheduled_rounds} rounds
+        </span>
+        <span className={`rounded-full px-2 py-0.5 font-medium uppercase tracking-wider ${drawColor}`}>
+          {suggestion.estimated_draw} draw
+        </span>
+        {suggestion.cross_gym && (
+          <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-300">
+            Cross-gym — invitations will fire
+          </span>
+        )}
+      </div>
+
+      {/* Fighters */}
+      <div className="flex items-center gap-3">
+        <SuggestionFighter fighter={suggestion.fighter_red} corner="red" />
+        <span className="text-xs font-bold text-neutral-600">VS</span>
+        <SuggestionFighter fighter={suggestion.fighter_blue} corner="blue" />
+      </div>
+
+      {/* Reasoning */}
+      <p className="mt-3 text-[12px] italic leading-relaxed text-amber-100/80">
+        &ldquo;{suggestion.reasoning}&rdquo;
+      </p>
+
+      {/* Actions */}
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onAccept}
+          disabled={resolving}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resolving ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Adding…
+            </>
+          ) : (
+            <>
+              {suggestion.cross_gym ? (
+                <Send className="h-3.5 w-3.5" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" />
+              )}
+              {suggestion.cross_gym ? "Add bout & invite" : "Add bout"}
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          disabled={resolving}
+          className="rounded-lg border border-white/10 px-3 py-2 text-sm text-neutral-400 hover:bg-white/5 hover:text-neutral-200 disabled:opacity-50"
+        >
+          Skip
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SuggestionFighter({
+  fighter,
+  corner,
+}: {
+  fighter: MatchmakerFighter
+  corner: "red" | "blue"
+}) {
+  const tone =
+    corner === "red"
+      ? "ring-red-500/30 bg-red-500/[0.04]"
+      : "ring-blue-500/30 bg-blue-500/[0.04]"
+  const label =
+    corner === "red" ? "text-red-300" : "text-blue-300"
+
+  return (
+    <div className={`flex-1 rounded-lg ring-1 ${tone} p-3 min-w-0`}>
+      <p className={`text-[10px] font-semibold uppercase tracking-wider ${label}`}>
+        {corner === "red" ? "Red corner" : "Blue corner"}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-white">
+        {fighter.display_name}
+      </p>
+      <p className="text-[11px] tabular-nums text-neutral-400">{fighter.record}</p>
+      <p className="truncate text-[10px] text-neutral-500">
+        {fighter.gym_name ?? "Unaffiliated"}
+        {fighter.fighter_country ? ` · ${fighter.fighter_country}` : ""}
+      </p>
+    </div>
+  )
+}
+
+// ============================================
+// AI Pricing Oracle panel — Door B's second AI feature. Per-tier
+// AI-recommended pricing with comparable-event evidence + an Apply
+// button that updates the tier and records the decision for the
+// learning loop.
+// ============================================
+
+interface PricingRecommendation {
+  id: string
+  recommended_price_thb: number
+  recommended_quantity_total: number | null
+  projected_sold: number | null
+  confidence: "low" | "medium" | "high"
+  signal: "underpriced" | "overpriced" | "on-target" | "cold-start"
+  reasoning: string
+}
+
+interface PricingComparable {
+  event_name: string
+  venue: string | null
+  city: string | null
+  date: string
+  tier_name: string
+  price_thb: number
+  sold: number
+  sold_percent: number
+}
+
+// ============================================
+// AI Auto-Marketer tab — generates copy-ready social posts in
+// Thai + English for the platforms a Thai promoter actually uses
+// (Facebook, Instagram, LINE OA, Twitter/X). Each draft is logged
+// with a 'used' / 'dismissed' decision for the learning loop.
+// ============================================
+
+interface MarketingDraft {
+  id: string
+  platform: "facebook" | "instagram" | "line" | "twitter"
+  language: "en" | "th"
+  caption: string
+  hashtags: string[] | null
+  status: "draft" | "used" | "dismissed"
+  created_at: string
+  used_at: string | null
+}
+
+const MARKETING_PLATFORMS = [
+  { key: "facebook" as const, label: "Facebook" },
+  { key: "instagram" as const, label: "Instagram" },
+  { key: "line" as const, label: "LINE OA" },
+  { key: "twitter" as const, label: "Twitter / X" },
+]
+const MARKETING_LANGUAGES = [
+  { key: "en" as const, label: "English" },
+  { key: "th" as const, label: "ไทย" },
+]
+
+function MarketingTab({
+  eventId,
+  eventName,
+}: {
+  eventId: string
+  eventName: string
+}) {
+  const [drafts, setDrafts] = useState<MarketingDraft[]>([])
+  const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [notes, setNotes] = useState("")
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [selectedPlatforms, setSelectedPlatforms] = useState<
+    Set<MarketingDraft["platform"]>
+  >(new Set(["facebook", "instagram", "line"]))
+  const [selectedLanguages, setSelectedLanguages] = useState<
+    Set<MarketingDraft["language"]>
+  >(new Set(["en", "th"]))
+
+  // Load existing drafts on mount.
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`/api/promoter/events/${eventId}/marketing`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setDrafts(data.drafts ?? [])
+      } catch {
+        // Silent — tab still renders with the generate CTA.
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId])
+
+  async function generate() {
+    if (selectedPlatforms.size === 0) {
+      setError("Pick at least one platform.")
+      return
+    }
+    if (selectedLanguages.size === 0) {
+      setError("Pick at least one language.")
+      return
+    }
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/marketing/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            platforms: Array.from(selectedPlatforms),
+            languages: Array.from(selectedLanguages),
+            notes: notes.trim() || undefined,
+          }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Couldn't generate drafts.")
+        return
+      }
+      // Merge new drafts on top of existing; drop any older drafts
+      // for the same (platform, language) since the new one
+      // supersedes.
+      const newest = new Map<string, MarketingDraft>()
+      for (const d of data.drafts as MarketingDraft[]) {
+        newest.set(`${d.platform}|${d.language}`, {
+          ...d,
+          status: "draft",
+          created_at: new Date().toISOString(),
+          used_at: null,
+        })
+      }
+      for (const d of drafts) {
+        const key = `${d.platform}|${d.language}`
+        if (!newest.has(key)) newest.set(key, d)
+      }
+      setDrafts(Array.from(newest.values()))
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function markUsed(draftId: string) {
+    // Optimistic: flip status locally, then PATCH server. Keeps
+    // the UI responsive.
+    setDrafts((d) =>
+      d.map((x) =>
+        x.id === draftId ? { ...x, status: "used", used_at: new Date().toISOString() } : x,
+      ),
+    )
+    try {
+      await fetch(`/api/promoter/events/${eventId}/marketing/${draftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "used" }),
+      })
+    } catch {
+      // No-op — local optimistic update keeps the UI consistent
+      // even if the API call fails; user can retry on the next copy.
+    }
+  }
+
+  async function dismiss(draftId: string) {
+    setDrafts((d) => d.filter((x) => x.id !== draftId))
+    try {
+      await fetch(`/api/promoter/events/${eventId}/marketing/${draftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dismissed" }),
+      })
+    } catch {
+      // Best-effort.
+    }
+  }
+
+  function togglePlatform(p: MarketingDraft["platform"]) {
+    setSelectedPlatforms((s) => {
+      const next = new Set(s)
+      if (next.has(p)) next.delete(p)
+      else next.add(p)
+      return next
+    })
+  }
+
+  function toggleLanguage(l: MarketingDraft["language"]) {
+    setSelectedLanguages((s) => {
+      const next = new Set(s)
+      if (next.has(l)) next.delete(l)
+      else next.add(l)
+      return next
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-neutral-500" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Generate panel — collapses to a one-line "generate more"
+          row once drafts exist, so the page leads with the actual
+          copy. */}
+      <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-amber-500/[0.02] p-5">
+        <div className="mb-3 flex items-start gap-3">
+          <div className="rounded-lg bg-amber-500/15 p-2">
+            <Send className="h-5 w-5 text-amber-300" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-100">
+              AI Auto-Marketer
+            </p>
+            <p className="mt-0.5 text-[12px] text-amber-200/70">
+              Ready-to-paste copy for {eventName} in Thai or English. Coach voice — not corporate.
+            </p>
+          </div>
+        </div>
+
+        {/* Platform selector */}
+        <div className="mb-3">
+          <p className="mb-1.5 text-[10px] uppercase tracking-wider text-amber-300/70">
+            Platforms
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {MARKETING_PLATFORMS.map((p) => {
+              const on = selectedPlatforms.has(p.key)
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => togglePlatform(p.key)}
+                  aria-pressed={on}
+                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                    on
+                      ? "bg-amber-500 text-black"
+                      : "bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Language selector */}
+        <div className="mb-3">
+          <p className="mb-1.5 text-[10px] uppercase tracking-wider text-amber-300/70">
+            Languages
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {MARKETING_LANGUAGES.map((l) => {
+              const on = selectedLanguages.has(l.key)
+              return (
+                <button
+                  key={l.key}
+                  type="button"
+                  onClick={() => toggleLanguage(l.key)}
+                  aria-pressed={on}
+                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                    on
+                      ? "bg-amber-500 text-black"
+                      : "bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {l.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Notes toggle */}
+        <button
+          type="button"
+          onClick={() => setNotesOpen((v) => !v)}
+          aria-expanded={notesOpen}
+          className="inline-flex items-center gap-1 text-[11px] text-amber-300/70 hover:text-amber-200"
+        >
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${notesOpen ? "rotate-180" : ""}`}
+          />
+          {notesOpen ? "Hide notes" : "Add steering notes (optional)"}
+        </button>
+        {notesOpen && (
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. emphasize the headliner, mention parking is free, tourist-focused, no emojis"
+            rows={2}
+            maxLength={500}
+            className="mt-2 w-full resize-none rounded-md border border-amber-500/20 bg-zinc-950 px-3 py-2 text-xs text-amber-100 placeholder-amber-200/30 outline-none focus:border-amber-400/50"
+          />
+        )}
+
+        {error && (
+          <p role="alert" className="mt-3 text-xs text-rose-300">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={generate}
+          disabled={generating}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Writing copy…
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-3.5 w-3.5" />
+              {drafts.length === 0 ? "Generate copy" : "Regenerate selected"}
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Drafts grouped by platform */}
+      {drafts.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-white/10 py-12 text-center">
+          <p className="text-sm text-neutral-500">
+            No drafts yet. Pick your platforms + languages and click Generate.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {drafts.map((d) => (
+            <MarketingDraftCard
+              key={d.id}
+              draft={d}
+              onMarkUsed={() => markUsed(d.id)}
+              onDismiss={() => dismiss(d.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MarketingDraftCard({
+  draft,
+  onMarkUsed,
+  onDismiss,
+}: {
+  draft: MarketingDraft
+  onMarkUsed: () => void
+  onDismiss: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState<string | null>(null)
+
+  // Compose the final copy: caption + hashtag block at the bottom
+  // for platforms that want it grouped, inline for twitter (already
+  // baked into the caption by the model), nothing for LINE.
+  const finalCopy = (() => {
+    const lines = [draft.caption.trim()]
+    if (draft.platform !== "twitter" && draft.platform !== "line") {
+      const tags = (draft.hashtags ?? []).filter(Boolean)
+      if (tags.length > 0) {
+        lines.push("")
+        lines.push(tags.map((h) => `#${h}`).join(" "))
+      }
+    }
+    return lines.join("\n")
+  })()
+
+  async function copy() {
+    setCopyError(null)
+    try {
+      await navigator.clipboard.writeText(finalCopy)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+      onMarkUsed()
+    } catch {
+      setCopyError("Couldn't copy to clipboard. Select the text manually.")
+    }
+  }
+
+  const platformLabel = {
+    facebook: "Facebook",
+    instagram: "Instagram",
+    line: "LINE OA",
+    twitter: "Twitter / X",
+  }[draft.platform]
+
+  const platformTone = {
+    facebook: "bg-blue-500/15 text-blue-300",
+    instagram: "bg-pink-500/15 text-pink-300",
+    line: "bg-emerald-500/15 text-emerald-300",
+    twitter: "bg-sky-500/15 text-sky-300",
+  }[draft.platform]
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${platformTone}`}
+          >
+            {platformLabel}
+          </span>
+          <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
+            {draft.language === "th" ? "ไทย" : "English"}
+          </span>
+          {draft.status === "used" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-300">
+              <CheckCircle2 className="h-2.5 w-2.5" />
+              Used
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss draft"
+          className="rounded p-1 text-neutral-500 hover:bg-white/5 hover:text-neutral-300"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <pre className="mb-3 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-zinc-950/40 p-3 text-[12px] leading-relaxed text-neutral-200 font-sans">
+        {finalCopy}
+      </pre>
+
+      {copyError && (
+        <p role="alert" className="mb-2 text-xs text-rose-300">
+          {copyError}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={copy}
+        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+          copied
+            ? "bg-emerald-500 text-black"
+            : "bg-amber-500 text-black hover:bg-amber-400"
+        }`}
+      >
+        {copied ? (
+          <>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Copied
+          </>
+        ) : (
+          <>Copy</>
+        )}
+      </button>
+    </div>
+  )
+}
+
+function PricingOraclePanel({
+  eventId,
+  tier,
+  onApplied,
+  onClose,
+}: {
+  eventId: string
+  tier: TicketTier
+  onApplied: (price_thb: number, quantity_total?: number) => void
+  onClose: () => void
+}) {
+  const [loading, setLoading] = useState(true)
+  const [rec, setRec] = useState<PricingRecommendation | null>(null)
+  const [comparables, setComparables] = useState<PricingComparable[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [applying, setApplying] = useState(false)
+  // Promoter can tweak before applying. Initialized from the rec
+  // when it lands.
+  const [tweakedPrice, setTweakedPrice] = useState<string>("")
+  const [tweakedQty, setTweakedQty] = useState<string>("")
+  const [comparablesOpen, setComparablesOpen] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(
+          `/api/promoter/events/${eventId}/pricing`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tier_id: tier.id,
+              tier_name: tier.tier_name,
+              current_price_thb: tier.price_thb,
+              current_quantity_total: tier.quantity_total,
+            }),
+          },
+        )
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok) {
+          setError(data.error || "Couldn't generate a pricing recommendation.")
+          return
+        }
+        setRec(data.recommendation)
+        setComparables(data.comparables ?? [])
+        setTweakedPrice(String(data.recommendation.recommended_price_thb))
+        if (data.recommendation.recommended_quantity_total != null) {
+          setTweakedQty(String(data.recommendation.recommended_quantity_total))
+        } else {
+          setTweakedQty(String(tier.quantity_total))
+        }
+      } catch {
+        if (!cancelled) setError("Network error reaching the pricing oracle.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+    // Intentionally only run on tier id changes — refetching on
+    // every keystroke in the tweaked inputs would be wasteful and
+    // re-roll the rec on the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, tier.id])
+
+  async function apply() {
+    if (!rec) return
+    const priceNum = Number(tweakedPrice)
+    if (!Number.isFinite(priceNum) || priceNum < 50 || !Number.isInteger(priceNum)) {
+      setError("Price must be a whole number ฿50 or higher.")
+      return
+    }
+    const qtyNum = Number(tweakedQty)
+    if (!Number.isFinite(qtyNum) || qtyNum < 0 || !Number.isInteger(qtyNum)) {
+      setError("Quantity must be a whole number 0 or greater.")
+      return
+    }
+    if (qtyNum < tier.quantity_sold) {
+      setError(
+        `Can't set quantity below ${tier.quantity_sold} — that many are already sold.`,
+      )
+      return
+    }
+
+    setApplying(true)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/promoter/events/${eventId}/pricing/${rec.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "apply",
+            applied_price_thb: priceNum,
+            applied_quantity_total: qtyNum,
+          }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Couldn't apply recommendation.")
+        return
+      }
+      onApplied(priceNum, qtyNum)
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  async function dismiss() {
+    if (!rec) {
+      onClose()
+      return
+    }
+    // Best-effort dismiss — we record the rejection for learning
+    // but don't block the UI if it fails.
+    fetch(`/api/promoter/events/${eventId}/pricing/${rec.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "dismiss" }),
+    }).catch(() => {})
+    onClose()
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] p-6 text-center">
+        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-amber-400" />
+        <p className="text-xs text-amber-200/70">
+          Pulling comparables, reasoning over price points…
+        </p>
+      </div>
+    )
+  }
+
+  if (error && !rec) {
+    return (
+      <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-4">
+        <p className="text-sm text-rose-200">{error}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3 text-xs text-rose-300 hover:text-rose-200"
+        >
+          Close
+        </button>
+      </div>
+    )
+  }
+
+  if (!rec) return null
+
+  const priceDelta = rec.recommended_price_thb - tier.price_thb
+  const priceDeltaPct =
+    tier.price_thb > 0 ? Math.round((priceDelta / tier.price_thb) * 100) : 0
+
+  const signalCopy = {
+    underpriced: {
+      label: "Underpriced",
+      tone: "bg-emerald-500/15 text-emerald-300",
+      icon: <TrendingUp className="h-3 w-3" />,
+    },
+    overpriced: {
+      label: "Overpriced",
+      tone: "bg-rose-500/15 text-rose-300",
+      icon: <TrendingUp className="h-3 w-3 rotate-180" />,
+    },
+    "on-target": {
+      label: "On target",
+      tone: "bg-zinc-700/40 text-zinc-300",
+      icon: <CheckCircle2 className="h-3 w-3" />,
+    },
+    "cold-start": {
+      label: "Cold start",
+      tone: "bg-sky-500/15 text-sky-300",
+      icon: <Sparkles className="h-3 w-3" />,
+    },
+  }[rec.signal]
+
+  const confidenceTone =
+    rec.confidence === "high"
+      ? "text-emerald-300"
+      : rec.confidence === "medium"
+        ? "text-amber-300"
+        : "text-zinc-400"
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-amber-500/[0.02] p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="rounded-lg bg-amber-500/15 p-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+        </div>
+        <p className="text-sm font-semibold text-amber-100">
+          AI pricing for {tier.tier_name}
+        </p>
+        <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${signalCopy.tone}`}>
+          {signalCopy.icon}
+          {signalCopy.label}
+        </span>
+      </div>
+
+      {/* Headline price + delta */}
+      <div className="mb-3 grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+            Current
+          </p>
+          <p className="text-lg font-semibold tabular-nums text-neutral-300">
+            ฿{tier.price_thb.toLocaleString()}
+          </p>
+        </div>
+        <div className="border-l border-amber-500/15 pl-3">
+          <p className="text-[10px] uppercase tracking-wider text-amber-300/70">
+            Recommended
+          </p>
+          <p className="text-lg font-bold tabular-nums text-amber-200">
+            ฿{rec.recommended_price_thb.toLocaleString()}
+          </p>
+          {priceDelta !== 0 && (
+            <p
+              className={`text-[10px] tabular-nums ${
+                priceDelta > 0 ? "text-emerald-300" : "text-rose-300"
+              }`}
+            >
+              {priceDelta > 0 ? "+" : ""}
+              ฿{priceDelta.toLocaleString()} ({priceDeltaPct > 0 ? "+" : ""}
+              {priceDeltaPct}%)
+            </p>
+          )}
+        </div>
+        <div className="border-l border-amber-500/15 pl-3">
+          <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+            Projected
+          </p>
+          <p className="text-lg font-semibold tabular-nums text-neutral-300">
+            {rec.projected_sold != null
+              ? `${rec.projected_sold.toLocaleString()} sold`
+              : "—"}
+          </p>
+          <p className={`text-[10px] uppercase tracking-wider ${confidenceTone}`}>
+            {rec.confidence} confidence
+          </p>
+        </div>
+      </div>
+
+      {/* Reasoning */}
+      <p className="mb-3 rounded-lg bg-zinc-950/40 p-3 text-[12px] italic leading-relaxed text-amber-100/80">
+        &ldquo;{rec.reasoning}&rdquo;
+      </p>
+
+      {/* Tweak before applying */}
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-amber-300/70">
+            Apply price (THB)
+          </label>
+          <input
+            type="number"
+            min={50}
+            step={1}
+            value={tweakedPrice}
+            onChange={(e) => setTweakedPrice(e.target.value)}
+            className="w-full rounded-lg border border-amber-500/20 bg-zinc-950 px-3 py-1.5 text-sm tabular-nums text-amber-100 outline-none focus:border-amber-400/60"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-amber-300/70">
+            Apply quantity
+          </label>
+          <input
+            type="number"
+            min={tier.quantity_sold}
+            step={1}
+            value={tweakedQty}
+            onChange={(e) => setTweakedQty(e.target.value)}
+            className="w-full rounded-lg border border-amber-500/20 bg-zinc-950 px-3 py-1.5 text-sm tabular-nums text-amber-100 outline-none focus:border-amber-400/60"
+          />
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="mb-3 text-xs text-rose-300">
+          {error}
+        </p>
+      )}
+
+      {/* Comparables (collapsible) */}
+      {comparables.length > 0 && (
+        <div className="mb-3">
+          <button
+            type="button"
+            onClick={() => setComparablesOpen((v) => !v)}
+            aria-expanded={comparablesOpen}
+            className="inline-flex items-center gap-1 text-[11px] text-amber-300/70 hover:text-amber-200"
+          >
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${comparablesOpen ? "rotate-180" : ""}`}
+            />
+            {comparablesOpen ? "Hide" : "Show"} {comparables.length} comparable
+            event{comparables.length === 1 ? "" : "s"} the AI used
+          </button>
+          {comparablesOpen && (
+            <ul className="mt-2 space-y-1 rounded-lg bg-zinc-950/40 p-2 text-[11px]">
+              {comparables.map((c, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 text-amber-100/70">
+                  <span className="truncate">
+                    {c.event_name}
+                    {c.venue ? ` @ ${c.venue}` : ""}
+                    {" · "}
+                    <span className="text-amber-200/90">{c.tier_name}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    ฿{c.price_thb.toLocaleString()} · {c.sold_percent}% sold
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={apply}
+          disabled={applying}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {applying ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Applying…
+            </>
+          ) : (
+            <>Apply to tier</>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={dismiss}
+          disabled={applying}
+          className="rounded-lg border border-white/10 px-3 py-2 text-sm text-neutral-400 hover:bg-white/5 hover:text-neutral-200 disabled:opacity-50"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  )
 }

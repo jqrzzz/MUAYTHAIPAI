@@ -21,7 +21,7 @@ export default async function TicketSuccessPage({ params, searchParams }: Props)
   const reference = ref?.trim() || null
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div>
       <div className="mx-auto max-w-lg px-5 py-16">
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-8 text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
@@ -30,9 +30,9 @@ export default async function TicketSuccessPage({ params, searchParams }: Props)
             Payment received. Your ticket is on its way.
           </p>
           {reference && (
-            <div className="mt-5 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-neutral-900 px-4 py-2 font-mono text-sm text-amber-300">
-              <Ticket className="h-4 w-4" />
-              {reference}
+            <div className="mt-5 inline-flex max-w-full items-center gap-2 rounded-lg border border-white/10 bg-neutral-900 px-4 py-2 font-mono text-sm text-amber-300">
+              <Ticket className="h-4 w-4 shrink-0" />
+              <span className="truncate">{reference}</span>
             </div>
           )}
           <div className="mt-6 flex items-start gap-2 rounded-lg bg-neutral-900/60 px-4 py-3 text-left">
@@ -45,13 +45,13 @@ export default async function TicketSuccessPage({ params, searchParams }: Props)
 
         <div className="mt-6 flex flex-col gap-2 text-center">
           <Link
-            href={`/ockock/fights/${eventId}`}
+            href={`/fights/${eventId}`}
             className="text-sm text-amber-300 hover:text-amber-200"
           >
             ← Back to the fight card
           </Link>
           <Link
-            href="/ockock/fights"
+            href="/fights"
             className="text-xs text-neutral-500 hover:text-neutral-300"
           >
             See other events

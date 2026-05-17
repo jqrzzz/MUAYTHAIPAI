@@ -17,7 +17,7 @@ export default async function EditEventPage({
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect(`/admin/login?redirect=/ockock/promoter/events/${id}`)
+    redirect(`/admin/login?redirect=/promoter/events/${id}`)
   }
 
   const { data: membership } = await supabase

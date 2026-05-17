@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Loader2, Sparkles, AlertTriangle, ArrowRight } from "lucide-react"
+import { ockockUrl } from "@/lib/ockock/url"
 
 interface Subscription {
   status: string | null
@@ -129,7 +130,7 @@ export default function TrialBanner({ orgId, subscription }: TrialBannerProps) {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <Link
-              href="/pricing"
+              href={ockockUrl("/pricing")}
               className="text-[11px] text-indigo-200/70 hover:text-indigo-100 hidden sm:inline transition-colors"
             >
               See what&apos;s included

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useId, useState } from "react"
 import Link from "next/link"
 import { Loader2, Search, Filter, X, Users } from "lucide-react"
 import { FighterCard } from "@/components/ockock/fighter-card"
@@ -37,6 +37,7 @@ const LOCATIONS = ["Bangkok", "Chiang Mai", "Phuket", "Pattaya", "Pai"]
 export default function FightersClient() {
   const [fighters, setFighters] = useState<Fighter[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [showFilters, setShowFilters] = useState(false)
 
@@ -49,15 +50,21 @@ export default function FightersClient() {
 
   useEffect(() => {
     async function fetchFighters() {
+      // Reset both loading + error on every refetch so toggling
+      // `readyOnly` shows the spinner and clears stale errors.
+      setLoading(true)
+      setLoadError(null)
       try {
         const params = new URLSearchParams()
         if (readyOnly) params.set("open_to_fights", "true")
         const response = await fetch(`/api/public/fighters?${params}`)
+        if (!response.ok) throw new Error("Failed to fetch")
         const data = await response.json()
         setFighters(data.fighters || [])
       } catch (error) {
         console.error("Error fetching fighters:", error)
         setFighters([])
+        setLoadError("Couldn't load the fighter directory. Check your connection and try again.")
       } finally {
         setLoading(false)
       }
@@ -101,11 +108,23 @@ export default function FightersClient() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="relative">
+      {/* Subtle amber hero glow — same treatment as /ockock/fights */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[280px] bg-[radial-gradient(circle_at_50%_-10%,rgba(245,158,11,0.12),transparent_60%)]"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 py-12 sm:py-16">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="mb-1 text-3xl font-bold text-white">Fighters</h1>
-        <p className="text-neutral-400">
+      <div className="mb-10">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-amber-300/80">
+          OckOck · Network Roster
+        </p>
+        <h1 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          Fighters
+        </h1>
+        <p className="text-[15px] text-zinc-400">
           Discover Muay Thai fighters from gyms across Thailand
         </p>
       </div>
@@ -124,6 +143,8 @@ export default function FightersClient() {
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
+          aria-pressed={showFilters || activeFilterCount > 0}
+          aria-label={showFilters ? "Hide filters" : "Show filters"}
           className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
             showFilters || activeFilterCount > 0
               ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
@@ -184,7 +205,11 @@ export default function FightersClient() {
             </div>
           </div>
 
-          {/* Weight Range */}
+          {/* Weight Range — two stacked sliders so each thumb is
+              independently focusable and labeled. Auto-push semantics:
+              moving "From" above "To" drags To along, and vice versa.
+              Previous design overlapped the thumbs which made the
+              extremes (min==max) unreachable in one direction. */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-neutral-300">
@@ -194,37 +219,31 @@ export default function FightersClient() {
                 {weightRange[0]}–{weightRange[1]} kg
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
+            <div className="space-y-2">
+              <RangeRow
+                label="From"
                 min={45}
                 max={120}
                 value={weightRange[0]}
-                onChange={(e) =>
-                  setWeightRange([
-                    Math.min(+e.target.value, weightRange[1]),
-                    weightRange[1],
-                  ])
+                unit="kg"
+                onChange={(v) =>
+                  setWeightRange([v, Math.max(v, weightRange[1])])
                 }
-                className="flex-1 accent-amber-500"
               />
-              <input
-                type="range"
+              <RangeRow
+                label="To"
                 min={45}
                 max={120}
                 value={weightRange[1]}
-                onChange={(e) =>
-                  setWeightRange([
-                    weightRange[0],
-                    Math.max(+e.target.value, weightRange[0]),
-                  ])
+                unit="kg"
+                onChange={(v) =>
+                  setWeightRange([Math.min(v, weightRange[0]), v])
                 }
-                className="flex-1 accent-amber-500"
               />
             </div>
           </div>
 
-          {/* Height Range */}
+          {/* Height Range — same pattern. */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-neutral-300">
@@ -234,32 +253,26 @@ export default function FightersClient() {
                 {heightRange[0]}–{heightRange[1]} cm
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
+            <div className="space-y-2">
+              <RangeRow
+                label="From"
                 min={150}
                 max={200}
                 value={heightRange[0]}
-                onChange={(e) =>
-                  setHeightRange([
-                    Math.min(+e.target.value, heightRange[1]),
-                    heightRange[1],
-                  ])
+                unit="cm"
+                onChange={(v) =>
+                  setHeightRange([v, Math.max(v, heightRange[1])])
                 }
-                className="flex-1 accent-amber-500"
               />
-              <input
-                type="range"
+              <RangeRow
+                label="To"
                 min={150}
                 max={200}
                 value={heightRange[1]}
-                onChange={(e) =>
-                  setHeightRange([
-                    heightRange[0],
-                    Math.max(+e.target.value, heightRange[0]),
-                  ])
+                unit="cm"
+                onChange={(v) =>
+                  setHeightRange([Math.min(v, heightRange[0]), v])
                 }
-                className="flex-1 accent-amber-500"
               />
             </div>
           </div>
@@ -302,6 +315,20 @@ export default function FightersClient() {
           <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
           <span className="ml-3 text-neutral-400">Loading fighters...</span>
         </div>
+      ) : loadError ? (
+        // Real fetch failure — distinguish from the "no fighters yet"
+        // empty state below so visitors don't get a misleading
+        // "become a fighter" CTA when the API is just down.
+        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] px-6 py-16 text-center">
+          <p className="mb-2 text-lg font-medium text-red-300">Couldn&apos;t load fighters</p>
+          <p className="mb-6 text-sm text-neutral-400">{loadError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-white/10"
+          >
+            Retry
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
         fighters.length === 0 ? (
           // No fighters in the system at all — surface the path for a
@@ -338,12 +365,61 @@ export default function FightersClient() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((fighter) => (
-            <Link href={`/ockock/fighters/${fighter.id}`} key={fighter.id}>
+            <Link href={`/fighters/${fighter.id}`} key={fighter.id}>
               <FighterCard fighter={fighter} />
             </Link>
           ))}
         </div>
       )}
+      </div>
+    </div>
+  )
+}
+
+// One labeled slider row. Used twice per range (From + To) so each
+// thumb is independently keyboard-reachable. The aria-valuetext gives
+// screen readers the unit ("65 kg" instead of just "65").
+function RangeRow({
+  label,
+  min,
+  max,
+  value,
+  unit,
+  onChange,
+}: {
+  label: string
+  min: number
+  max: number
+  value: number
+  unit: string
+  onChange: (v: number) => void
+}) {
+  const id = useId()
+  return (
+    <div className="flex items-center gap-3">
+      <label
+        htmlFor={id}
+        className="w-9 shrink-0 text-[11px] uppercase tracking-wider text-neutral-500"
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(+e.target.value)}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        aria-valuetext={`${value} ${unit}`}
+        className="flex-1 accent-amber-500"
+      />
+      <span className="w-12 shrink-0 text-right text-xs tabular-nums text-neutral-300">
+        {value}
+        {unit}
+      </span>
     </div>
   )
 }

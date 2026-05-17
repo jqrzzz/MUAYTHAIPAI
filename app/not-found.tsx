@@ -1,6 +1,7 @@
 import Link from "next/link"
 import type { Metadata } from "next"
 import { PageBackground } from "@/components/marketing"
+import { ockockUrl } from "@/lib/ockock/url"
 
 export const metadata: Metadata = {
   title: "Page Not Found | MUAYTHAIPAI",
@@ -35,13 +36,13 @@ export default function NotFound() {
             Home
           </Link>
           <Link
-            href="/ockock/fights"
+            href={ockockUrl("/fights")}
             className="px-6 py-3 rounded-xl font-semibold border border-orange-600/30 dark:border-orange-500/30 text-orange-700 dark:text-amber-300 hover:bg-orange-500/10 transition-colors"
           >
             Fight Events
           </Link>
           <Link
-            href="/ockock/fighters"
+            href={ockockUrl("/fighters")}
             className="px-6 py-3 rounded-xl font-semibold border border-orange-600/30 dark:border-orange-500/30 text-orange-700 dark:text-amber-300 hover:bg-orange-500/10 transition-colors"
           >
             Fighters
@@ -55,7 +56,7 @@ export default function NotFound() {
         </div>
 
         <div className="mt-16 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
-          <Link href="/for-gyms" className="hover:underline underline-offset-4">
+          <Link href={ockockUrl("/for-gyms")} className="hover:underline underline-offset-4">
             For Gyms
           </Link>
           <span>•</span>

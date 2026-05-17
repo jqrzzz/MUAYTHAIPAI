@@ -5,6 +5,7 @@ import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
 import { notifyTicketSold } from "@/lib/notifications"
+import { ockockUrl } from "@/lib/ockock/url"
 
 // Stripe SDK 18.x typed for the 2025-04-30.basil API. We're pinned to
 // 2024-06-20 (some fields stay at the root level there). Cast the
@@ -588,7 +589,6 @@ async function handleTicketCheckoutCompleted(
   }
 
   try {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
     await EmailService.getInstance().sendTicketConfirmationEmail({
       buyerEmail: existing.guest_email || "",
       buyerName: existing.guest_name || "Guest",
@@ -603,7 +603,7 @@ async function handleTicketCheckoutCompleted(
       quantity: existing.quantity,
       totalThb: existing.total_price_thb,
       orderReference: existing.order_reference || existing.id,
-      eventUrl: `${siteUrl}/ockock/fights/${existing.event_id}`,
+      eventUrl: ockockUrl(`/fights/${existing.event_id}`),
     })
   } catch (err) {
     console.error("[ticket.webhook] confirmation email failed:", err)

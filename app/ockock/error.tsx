@@ -25,7 +25,7 @@ export default function OckOckError({
   }, [error])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-neutral-100 flex items-center justify-center px-4">
+    <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
         <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 ring-1 ring-amber-500/30">
           <AlertTriangle className="h-6 w-6 text-amber-400" />

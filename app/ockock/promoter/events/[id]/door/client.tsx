@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Plus,
   Banknote,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -54,6 +55,7 @@ type ScanStatus =
   | "wrong_event"
   | "not_paid"
   | "cancelled"
+  | "event_cancelled"
   | "error"
   | "feature_disabled"
 
@@ -91,6 +93,10 @@ export default function DoorScanClient({
   // walkup sale. Camera defaults except when unsupported (Safari).
   const [mode, setMode] = useState<"camera" | "manual" | "sale">("camera")
   const [supported, setSupported] = useState<boolean | null>(null)
+  // Distinguishes "camera unavailable" from "user denied permission".
+  // Denied users need to fix it in browser settings — surface that
+  // instead of silently dumping them into manual mode.
+  const [cameraError, setCameraError] = useState<"denied" | "unavailable" | null>(null)
   const [result, setResult] = useState<ScanResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [manual, setManual] = useState("")
@@ -128,7 +134,28 @@ export default function DoorScanClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ order_reference: reference }),
         })
-        const data: ScanResult = await res.json()
+        // Defensive parse — if the server returned HTML (e.g. a 500
+        // proxy page) we don't want to crash on .json() and show
+        // "undefined" in the banner. Surface a clear server-error UI.
+        let data: ScanResult
+        try {
+          data = (await res.json()) as ScanResult
+        } catch {
+          setResult({
+            status: "error",
+            message: `Server error (${res.status}). Try again.`,
+          })
+          return
+        }
+        if (!res.ok && !data?.status) {
+          setResult({
+            status: "error",
+            message:
+              data?.message ||
+              `Server returned ${res.status}. Try again or use manual entry.`,
+          })
+          return
+        }
         setResult(data)
         if (data.status === "valid") setScannedCount((c) => c + 1)
       } catch {
@@ -150,6 +177,7 @@ export default function DoorScanClient({
     let cancelled = false
     async function start() {
       try {
+        setCameraError(null)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         detectorRef.current = new (window as any).BarcodeDetector({
           formats: ["qr_code"],
@@ -171,9 +199,12 @@ export default function DoorScanClient({
               if (codes && codes.length > 0) {
                 const code = String(codes[0].rawValue || "").trim().toUpperCase()
                 const last = lastCodeRef.current
-                // 2-second cooldown for the same code so we don't loop-spam
-                // the backend while the QR is held in the frame.
-                if (code && (!last || last.code !== code || Date.now() - last.at > 2000)) {
+                // 4-second cooldown for the same code so the "already
+                // scanned" amber banner has time to be read by staff
+                // before the next auto-scan clears it. The poll loop
+                // still re-reads the QR every ~30ms, so this only
+                // affects re-submissions of the *same* code.
+                if (code && (!last || last.code !== code || Date.now() - last.at > 4000)) {
                   lastCodeRef.current = { code, at: Date.now() }
                   submitScan(code)
                 }
@@ -185,9 +216,17 @@ export default function DoorScanClient({
           loopRef.current = requestAnimationFrame(tick) as unknown as number
         }
         tick()
-      } catch {
-        // Permission denied / camera missing — fall back to manual.
-        setMode("manual")
+      } catch (err) {
+        // Distinguish "user denied permission" from "no camera at all"
+        // — the fix is different (browser settings vs different device).
+        // Stay on camera mode and show the error, rather than silently
+        // dropping into manual where the user can't tell what happened.
+        const name = (err as { name?: string } | null)?.name
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          setCameraError("denied")
+        } else {
+          setCameraError("unavailable")
+        }
       }
     }
     start()
@@ -218,12 +257,12 @@ export default function DoorScanClient({
     : null
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header — stays fixed so it's always visible while scanning. */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-neutral-950/80 backdrop-blur-md">
         <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
           <Link
-            href={`/ockock/promoter/events/${eventId}`}
+            href={`/promoter/events/${eventId}`}
             className="text-neutral-400 hover:text-white"
             aria-label="Back to event editor"
           >
@@ -307,15 +346,51 @@ export default function DoorScanClient({
 
         {mode === "camera" && supported && (
           <div className="overflow-hidden rounded-xl border border-white/10 bg-black">
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className="w-full aspect-square object-cover bg-black"
-            />
-            <div className="p-3 text-center">
-              <p className="text-[11px] text-neutral-500">Aim at the buyer&apos;s ticket QR code.</p>
-            </div>
+            {cameraError ? (
+              <div role="alert" className="p-6 text-center">
+                {cameraError === "denied" ? (
+                  <>
+                    <p className="text-sm font-semibold text-amber-300">
+                      Camera permission denied
+                    </p>
+                    <p className="mt-2 text-xs text-neutral-400">
+                      Open your browser settings → site permissions →
+                      camera and allow access for this page, then reload.
+                      Or use the Type code tab below.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-amber-300">
+                      No camera available
+                    </p>
+                    <p className="mt-2 text-xs text-neutral-400">
+                      We couldn&apos;t open a camera on this device. Use
+                      Type code, or try a different device.
+                    </p>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setMode("manual")}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-amber-400"
+                >
+                  Switch to type code
+                </button>
+              </div>
+            ) : (
+              <>
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  className="w-full aspect-square object-cover bg-black"
+                />
+                <div className="p-3 text-center">
+                  <p className="text-[11px] text-neutral-500">Aim at the buyer&apos;s ticket QR code.</p>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -359,7 +434,7 @@ export default function DoorScanClient({
         {/* Result — scan result banner OR most recent sale receipt
             depending on what the staff just did. */}
         {mode === "sale" && lastSale ? (
-          <RecentSaleCard order={lastSale} />
+          <RecentSaleCard order={lastSale} onDismiss={() => setLastSale(null)} />
         ) : (
           <ScanResultBanner result={result} busy={busy} />
         )}
@@ -489,6 +564,13 @@ function RecordSaleForm({
               <option key={n} value={n}>{n}</option>
             ))}
           </select>
+          {/* Surface the cap when the user hits it — otherwise a
+              party of 12 silently turns into 10 and they wonder why. */}
+          {quantity === maxQty && tier && tier.quantity_remaining > 10 && (
+            <p className="mt-1 text-[10px] text-neutral-500">
+              Max 10 per order — split larger groups into separate sales.
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="sale-method" className="block text-xs font-medium text-neutral-400 mb-1">
@@ -599,10 +681,28 @@ function RecordSaleForm({
 // Receipt card shown after a walkup sale lands. Big order reference
 // so staff can read it back to the buyer; "Tap to scan" shortcut to
 // admit them immediately (or save the reference for later).
-function RecentSaleCard({ order }: { order: CreatedOrder }) {
+function RecentSaleCard({
+  order,
+  onDismiss,
+}: {
+  order: CreatedOrder
+  onDismiss: () => void
+}) {
   return (
-    <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-5">
-      <div className="flex items-start gap-3">
+    <div className="relative rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-5">
+      {/* Dismiss button — staff often wants to clear the receipt
+          before the next sale (e.g. line is moving and they want a
+          clean slate). Positioned top-right with a generous 44px hit
+          area so it's easy to tap on a phone at the door. */}
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss receipt"
+        className="absolute right-1.5 top-1.5 inline-flex h-11 w-11 items-center justify-center rounded-lg text-emerald-200/70 hover:bg-emerald-500/10 hover:text-emerald-100"
+      >
+        <X className="h-4 w-4" />
+      </button>
+      <div className="flex items-start gap-3 pr-8">
         <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-400" />
         <div className="min-w-0 flex-1">
           <p className="text-base font-bold uppercase tracking-wider text-emerald-300">
@@ -721,6 +821,14 @@ function toneFor(status: ScanStatus) {
         text: "text-red-300",
         icon: XCircle,
         headline: "Cancelled · Deny",
+      }
+    case "event_cancelled":
+      return {
+        bg: "bg-red-500/15",
+        border: "border-red-500/60",
+        text: "text-red-300",
+        icon: XCircle,
+        headline: "Event cancelled · Deny all",
       }
     case "wrong_event":
       return {

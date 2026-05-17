@@ -241,7 +241,10 @@ export class EmailService {
       }
 
       const result = await this.resend.emails.send({
-        from: `Muay Thai Pai <noreply@muaythaipai.com>`,
+        // Cert is a MUAYTHAIPAI network credential — sender is the
+        // network, not the specific issuing gym, so the email reads
+        // consistently across all member gyms.
+        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
         to: data.studentEmail,
         subject: template.subject,
         html: template.html,
@@ -333,7 +336,9 @@ What to do next:
 — The MUAYTHAIPAI team`
 
       const result = await this.resend.emails.send({
-        from: `Muay Thai Pai <noreply@muaythaipai.com>`,
+        // The gym just issued its first MUAYTHAIPAI credential — the
+        // sender is the network, signed by "The MUAYTHAIPAI team."
+        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
         to: data.ownerEmail,
         subject,
         html,
@@ -365,7 +370,10 @@ What to do next:
       }
 
       const result = await this.resend.emails.send({
-        from: `Muay Thai Pai <noreply@muaythaipai.com>`,
+        // Course completion advances the student up the MUAYTHAIPAI
+        // network's cert ladder — network-branded sender keeps the
+        // story consistent with the cert email.
+        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
         to: data.studentEmail,
         subject: template.subject,
         html: template.html,

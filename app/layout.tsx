@@ -155,13 +155,22 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
+              "@id": "https://muaythaipai.com/#gym",
               name: "Muay Thai Pai",
               alternateName: "Wisarut Family Gym",
               url: "https://muaythaipai.com",
               logo: "https://muaythaipai.com/images/muay-thai-logo-og.png",
               description:
-                "Third-generation family-owned Muay Thai gym in Pai, Thailand, offering authentic traditional training",
+                "Third-generation family-owned Muay Thai gym in Pai, Thailand, offering authentic traditional training. Founding member of the MUAYTHAIPAI certification network.",
               foundingDate: "1990",
+              // Explicit parent — makes the gym/network relationship
+              // unambiguous for AI engines crawling the page. Without
+              // this both Organization entries look like peer brands.
+              parentOrganization: {
+                "@type": "Organization",
+                "@id": "https://muaythaipai.com/#organization",
+                name: "MUAYTHAIPAI",
+              },
               founder: {
                 "@type": "Person",
                 name: "Wisarut Family",
