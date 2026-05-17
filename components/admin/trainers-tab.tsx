@@ -70,6 +70,10 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteName, setInviteName] = useState("")
+  // Default = trainer (the common case). 'admin' covers gym MANAGER —
+  // there's no separate manager role in the schema, admin gets the
+  // same /admin dashboard the owner uses.
+  const [inviteRole, setInviteRole] = useState<"trainer" | "admin">("trainer")
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteError, setInviteError] = useState("")
   const [inviteSuccess, setInviteSuccess] = useState("")
@@ -228,16 +232,20 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: inviteEmail.trim(), role: "trainer",
-          trainerName: inviteName.trim() || undefined, org_id: orgId,
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          trainerName: inviteName.trim() || undefined,
+          org_id: orgId,
         }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || "Failed to send invite")
 
-      setInviteSuccess(`Invite sent to ${inviteEmail}`)
+      const roleLabel = inviteRole === "admin" ? "manager" : "trainer"
+      setInviteSuccess(`${roleLabel.charAt(0).toUpperCase() + roleLabel.slice(1)} invite sent to ${inviteEmail}`)
       setInviteEmail("")
       setInviteName("")
+      setInviteRole("trainer")
       fetchPendingInvites()
       setTimeout(() => { setIsInviteDialogOpen(false); setInviteSuccess("") }, 2000)
     } catch (error) {
@@ -300,10 +308,51 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
               </DialogTrigger>
               <DialogContent className="bg-card border-border">
                 <DialogHeader>
-                  <DialogTitle>Invite Trainer</DialogTitle>
-                  <DialogDescription>Send an email invite to a trainer to join your gym</DialogDescription>
+                  <DialogTitle>Invite team member</DialogTitle>
+                  <DialogDescription>
+                    Send an email invite to add a trainer or manager to your gym.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
+                  {/* Role picker — segmented control. 'Manager' maps to
+                      the org_members 'admin' role (same /admin dashboard
+                      as the owner, can't access billing). 'Trainer' goes
+                      to /trainer with class roster + attendance. */}
+                  <div className="space-y-2">
+                    <Label>Role *</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setInviteRole("trainer")}
+                        aria-pressed={inviteRole === "trainer"}
+                        className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                          inviteRole === "trainer"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-background/50 text-muted-foreground hover:text-foreground hover:border-border/80"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold">Trainer</p>
+                        <p className="text-[11px] opacity-70">
+                          Class roster, check-ins, walk-ins
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInviteRole("admin")}
+                        aria-pressed={inviteRole === "admin"}
+                        className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                          inviteRole === "admin"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-background/50 text-muted-foreground hover:text-foreground hover:border-border/80"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold">Manager</p>
+                        <p className="text-[11px] opacity-70">
+                          Same as owner — runs the gym day-to-day
+                        </p>
+                      </button>
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="invite-email">Email *</Label>
                     <Input
@@ -311,7 +360,7 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
                       type="email"
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="trainer@email.com"
+                      placeholder={inviteRole === "admin" ? "manager@email.com" : "trainer@email.com"}
                       className="bg-background/50"
                     />
                   </div>
@@ -321,7 +370,7 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
                       id="invite-name"
                       value={inviteName}
                       onChange={(e) => setInviteName(e.target.value)}
-                      placeholder="e.g. Kru Somchai"
+                      placeholder={inviteRole === "admin" ? "e.g. Manager name" : "e.g. Kru Somchai"}
                       className="bg-background/50"
                     />
                   </div>
@@ -335,7 +384,10 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
                     {inviteLoading ? (
                       <><RefreshCw className="h-4 w-4 animate-spin mr-2" />Sending...</>
                     ) : (
-                      <><Mail className="h-4 w-4 mr-2" />Send Invite</>
+                      <>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Send {inviteRole === "admin" ? "manager" : "trainer"} invite
+                      </>
                     )}
                   </Button>
                 </div>
