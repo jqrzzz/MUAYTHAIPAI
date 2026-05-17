@@ -16,7 +16,7 @@ import { formatPrice, getPaymentSummary } from "@/lib/payment-config"
 import { getTimeSlotsForService, shouldShowTimeSlots, SKILL_LEVELS } from "@/lib/booking-config"
 import { loadStripe } from "@stripe/stripe-js"
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
-import { PAI_TIMEZONE_LABEL, formatDateInPaiTime, getTomorrowInPaiTimezone } from "@/lib/timezone"
+import { PAI_TIMEZONE_LABEL, formatDateInPaiTime, getTodayInPaiTimezone, getTomorrowInPaiTimezone } from "@/lib/timezone"
 import { createClient } from "@/lib/supabase/client"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -296,6 +296,19 @@ export function EnhancedPaymentFlow({
     setStep("success")
   }
 
+  // Earliest bookable date. Was previously "tomorrow" — flipped to
+  // "today" so a same-day booking (which is what a walk-in / on-site
+  // customer wants) lands in the gym's Today view immediately. The
+  // trainer + admin Today tabs filter by booking_date = today, so a
+  // tomorrow-only minimum meant a freshly-booked test never appeared
+  // on the staff dashboards.
+  const getEarliestBookableDate = () => {
+    return getTodayInPaiTimezone()
+  }
+
+  // Retained for any other callers that still want "tomorrow"
+  // semantics (none currently — flagged for removal in a future pass).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getTomorrowDate = () => {
     return getTomorrowInPaiTimezone()
   }
@@ -473,7 +486,7 @@ export function EnhancedPaymentFlow({
                 <Input
                   id="date"
                   type="date"
-                  min={getTomorrowDate()}
+                  min={getEarliestBookableDate()}
                   value={formData.date}
                   onChange={(e) => handleInputChange("date", e.target.value)}
                   className={
