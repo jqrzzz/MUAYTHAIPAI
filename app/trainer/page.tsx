@@ -79,6 +79,17 @@ export default async function TrainerDashboardPage() {
     .eq("booking_date", today)
     .order("booking_time", { ascending: true })
 
+  // Active services — needed by the trainer's new walk-in booking
+  // dialog so they can pick the right service + price at the door.
+  // Inactive services are filtered out (promoter shouldn't surface
+  // them at check-in time).
+  const { data: services } = await supabase
+    .from("services")
+    .select("id, name, price_thb, is_active, duration_minutes")
+    .eq("org_id", orgId)
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+
   // Fetch all students for this gym (from bookings and student_credits)
   const { data: students } = await supabase
     .from("student_credits")
@@ -175,6 +186,7 @@ export default async function TrainerDashboardPage() {
       organization={trainerProfile.organizations}
       todayBookings={todayBookings || []}
       students={allStudents}
+      services={services || []}
     />
   )
 }
