@@ -5,6 +5,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Heart, MessageCircle, BoxIcon as Boxing, Dumbbell, Menu } from "lucide-react"
 import { MoreMenu } from "@/components/more-menu"
+import { useIsMarketingNavLocked } from "@/lib/marketing-nav-lock"
 
 export type MarketingNavKey = "family" | "classes" | "gym" | "contact"
 
@@ -25,6 +26,11 @@ interface MarketingBottomNavProps {
  */
 export function MarketingBottomNav({ active }: MarketingBottomNavProps) {
   const [showMore, setShowMore] = useState(false)
+  // Hide ourselves when a full-screen modal (booking, etc.) asks for
+  // a clean canvas. Modals z-collide with us at z-50 and the user's
+  // tap lands on the nav, not the modal's submit area behind it.
+  const navLocked = useIsMarketingNavLocked()
+  if (navLocked) return null
 
   return (
     <>

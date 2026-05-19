@@ -18,6 +18,7 @@ import { loadStripe } from "@stripe/stripe-js"
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
 import { PAI_TIMEZONE_LABEL, formatDateInPaiTime, getTodayInPaiTimezone, getTomorrowInPaiTimezone } from "@/lib/timezone"
 import { createClient } from "@/lib/supabase/client"
+import { useMarketingNavLock } from "@/lib/marketing-nav-lock"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -138,6 +139,12 @@ export function EnhancedPaymentFlow({
   orgName,
   onClose,
 }: EnhancedPaymentFlowProps) {
+  // Hide the marketing site's bottom nav for the lifetime of this
+  // modal. Without this, the fixed bottom nav (also z-50) overlaps
+  // the modal's submit area on mobile — visible to the user but
+  // intercepting their tap.
+  useMarketingNavLock()
+
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null)
