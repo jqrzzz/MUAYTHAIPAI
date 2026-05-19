@@ -75,11 +75,18 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { email, role = "trainer", trainerName } = body
+  const { email, role: rawRole = "trainer", trainerName } = body
 
   if (!email?.trim()) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 })
   }
+
+  // Only allow trainer + admin (= "manager") through this endpoint.
+  // Owners are created via signup, students via /api/admin/students/add,
+  // promoters via the fight-promoter flow. Anything else here = footgun
+  // or attempted privilege escalation.
+  const ALLOWED_ROLES = ["trainer", "admin"] as const
+  const role = ALLOWED_ROLES.includes(rawRole) ? rawRole : "trainer"
 
   // Get org info for email
   const { data: org } = await supabase.from("organizations").select("name, slug").eq("id", membership.org_id).single()

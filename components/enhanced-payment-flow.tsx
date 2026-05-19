@@ -16,8 +16,9 @@ import { formatPrice, getPaymentSummary } from "@/lib/payment-config"
 import { getTimeSlotsForService, shouldShowTimeSlots, SKILL_LEVELS } from "@/lib/booking-config"
 import { loadStripe } from "@stripe/stripe-js"
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
-import { PAI_TIMEZONE_LABEL, formatDateInPaiTime, getTomorrowInPaiTimezone } from "@/lib/timezone"
+import { PAI_TIMEZONE_LABEL, formatDateInPaiTime, getTodayInPaiTimezone, getTomorrowInPaiTimezone } from "@/lib/timezone"
 import { createClient } from "@/lib/supabase/client"
+import { useMarketingNavLock } from "@/lib/marketing-nav-lock"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -138,6 +139,12 @@ export function EnhancedPaymentFlow({
   orgName,
   onClose,
 }: EnhancedPaymentFlowProps) {
+  // Hide the marketing site's bottom nav for the lifetime of this
+  // modal. Without this, the fixed bottom nav (also z-50) overlaps
+  // the modal's submit area on mobile — visible to the user but
+  // intercepting their tap.
+  useMarketingNavLock()
+
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null)
@@ -296,6 +303,19 @@ export function EnhancedPaymentFlow({
     setStep("success")
   }
 
+  // Earliest bookable date. Was previously "tomorrow" — flipped to
+  // "today" so a same-day booking (which is what a walk-in / on-site
+  // customer wants) lands in the gym's Today view immediately. The
+  // trainer + admin Today tabs filter by booking_date = today, so a
+  // tomorrow-only minimum meant a freshly-booked test never appeared
+  // on the staff dashboards.
+  const getEarliestBookableDate = () => {
+    return getTodayInPaiTimezone()
+  }
+
+  // Retained for any other callers that still want "tomorrow"
+  // semantics (none currently — flagged for removal in a future pass).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getTomorrowDate = () => {
     return getTomorrowInPaiTimezone()
   }
@@ -473,7 +493,7 @@ export function EnhancedPaymentFlow({
                 <Input
                   id="date"
                   type="date"
-                  min={getTomorrowDate()}
+                  min={getEarliestBookableDate()}
                   value={formData.date}
                   onChange={(e) => handleInputChange("date", e.target.value)}
                   className={

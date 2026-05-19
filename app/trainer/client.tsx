@@ -131,13 +131,31 @@ interface ChatMessage {
   content: string
 }
 
+interface ServiceOption {
+  id: string
+  name: string
+  price_thb: number
+  is_active: boolean
+  duration_minutes: number | null
+}
+
 interface TrainerDashboardProps {
   user: SupabaseUser
   trainerProfile: TrainerProfile
   organization: Organization | null
   todayBookings: Booking[]
   students: Student[]
+  services: ServiceOption[]
 }
+
+// Curated half-hour slots the trainer can pick when registering a
+// walk-in. Same set the admin's New Booking dialog uses; mirrors
+// typical Muay Thai gym session start times in Thailand.
+const WALKIN_TIME_SLOTS = [
+  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+  "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+  "18:00", "19:00", "20:00",
+]
 
 export default function TrainerDashboardClient({
   user,
@@ -145,6 +163,7 @@ export default function TrainerDashboardClient({
   organization,
   todayBookings: initialBookings,
   students: initialStudents,
+  services,
 }: TrainerDashboardProps) {
   const router = useRouter()
   const [activeView, setActiveView] = useState<"today" | "students" | "profile" | "ockock">("today")
@@ -158,6 +177,24 @@ export default function TrainerDashboardClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showAddStudent, setShowAddStudent] = useState(false)
+  // Walk-in booking dialog — invoked from the Today view's "+" button.
+  // Creates an event_bookings row server-side so the trainer can then
+  // mark the walk-in present + collect cash through the existing
+  // attendance/payment buttons. Previously the trainer had no way
+  // to register a walk-in (Add Student created a user with no booking,
+  // and cash collection requires a booking_id).
+  const [showWalkInBooking, setShowWalkInBooking] = useState(false)
+  const [walkInForm, setWalkInForm] = useState({
+    serviceId: "",
+    guestName: "",
+    guestEmail: "",
+    guestPhone: "",
+    bookingTime: "",
+    paymentMethod: "cash" as "cash" | "stripe",
+    isPaid: false,
+  })
+  const [walkInError, setWalkInError] = useState("")
+  const [isCreatingWalkIn, setIsCreatingWalkIn] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [studentNotes, setStudentNotes] = useState<StudentNote[]>([])
   const [studentBookingHistory, setStudentBookingHistory] = useState<Booking[]>([])
@@ -536,6 +573,110 @@ export default function TrainerDashboardClient({
     }
   }
 
+  // Create a walk-in booking from the trainer view. Hits the same
+  // /api/bookings endpoint the owner's New Booking dialog uses;
+  // service-role on the server-side bypasses RLS so a trainer
+  // (member of the gym) can write. Validation mirrors the owner
+  // dialog: service + name + (today's) date required. Time is
+  // optional — a walk-in might just want "this morning's class."
+  const handleCreateWalkIn = async () => {
+    setWalkInError("")
+    if (!walkInForm.serviceId) {
+      setWalkInError("Pick a service first.")
+      return
+    }
+    if (!walkInForm.guestName.trim()) {
+      setWalkInError("Enter the customer's name.")
+      return
+    }
+    const selectedService = services.find((s) => s.id === walkInForm.serviceId)
+    if (!selectedService) {
+      setWalkInError("Invalid service.")
+      return
+    }
+    if (!organization?.id) {
+      setWalkInError("No gym context.")
+      return
+    }
+
+    setIsCreatingWalkIn(true)
+    try {
+      const today = new Date().toISOString().split("T")[0]
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_id: organization.id,
+          service_id: walkInForm.serviceId,
+          guest_name: walkInForm.guestName.trim(),
+          guest_email: walkInForm.guestEmail.trim() || null,
+          guest_phone: walkInForm.guestPhone.trim() || null,
+          // Walk-ins are always today by definition. If they want
+          // a future date, that's a booking, not a walk-in — they
+          // can do it through the public site.
+          booking_date: today,
+          booking_time: walkInForm.bookingTime || null,
+          payment_method: walkInForm.paymentMethod,
+          payment_status: walkInForm.isPaid ? "paid" : "pending",
+          payment_amount_thb: selectedService.price_thb,
+          payment_currency: "THB",
+          status: "confirmed",
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create walk-in booking")
+      }
+
+      // Splice the new booking into the local Today list so it
+      // shows up immediately without a full refetch. The server
+      // returns the inserted row in `booking`.
+      const inserted = data.booking
+      if (inserted) {
+        setBookings((prev) =>
+          [
+            ...prev,
+            {
+              id: inserted.id,
+              booking_date: inserted.booking_date,
+              booking_time: inserted.booking_time,
+              status: inserted.status,
+              payment_status: inserted.payment_status,
+              payment_method: inserted.payment_method,
+              payment_amount_thb: inserted.payment_amount_thb,
+              guest_name: inserted.guest_name,
+              guest_email: inserted.guest_email,
+              guest_phone: inserted.guest_phone,
+              customer_notes: inserted.customer_notes ?? null,
+              services: { name: selectedService.name, category: "", duration_minutes: selectedService.duration_minutes ?? null },
+              users: null,
+            } as Booking,
+          ].sort((a, b) => (a.booking_time ?? "").localeCompare(b.booking_time ?? "")),
+        )
+      }
+
+      toast({
+        title: "Walk-in added",
+        description: `${walkInForm.guestName.trim()} · ${selectedService.name}${walkInForm.isPaid ? " (paid)" : ""}`,
+      })
+      // Reset + close.
+      setWalkInForm({
+        serviceId: "",
+        guestName: "",
+        guestEmail: "",
+        guestPhone: "",
+        bookingTime: "",
+        paymentMethod: "cash",
+        isPaid: false,
+      })
+      setShowWalkInBooking(false)
+    } catch (err) {
+      setWalkInError(err instanceof Error ? err.message : "Couldn't add walk-in.")
+    } finally {
+      setIsCreatingWalkIn(false)
+    }
+  }
+
   const handleSaveProfile = async () => {
     setIsSavingProfile(true)
     try {
@@ -862,6 +1003,18 @@ export default function TrainerDashboardClient({
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                 </button>
+                {/* + Walk-in — the front-desk action. Opens a small
+                    dialog that creates a same-day booking with cash
+                    payment, then the trainer marks them present + paid
+                    through the existing booking actions. */}
+                <Button
+                  onClick={() => setShowWalkInBooking(true)}
+                  size="sm"
+                  className="h-9 bg-indigo-500 hover:bg-indigo-400 text-white gap-1 px-3"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-[12px] font-medium">Walk-in</span>
+                </Button>
               </div>
             </div>
 
@@ -1897,6 +2050,197 @@ export default function TrainerDashboardClient({
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Walk-in Booking Dialog — same-day cash/card booking from
+          the trainer's phone. Mirror of the owner's New Booking
+          dialog at components/admin/today-tab.tsx but trimmed for
+          the front-desk moment (date is always today, no future-
+          booking option). After create, the new booking appears in
+          the Today list and the trainer can mark Arrived + Cash
+          through the existing actions. */}
+      <Dialog open={showWalkInBooking} onOpenChange={setShowWalkInBooking}>
+        <DialogContent className="bg-zinc-950 border-zinc-900 text-white max-w-sm mx-4">
+          <DialogHeader>
+            <DialogTitle>Walk-in (มาวันนี้)</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Quick same-day booking. Mark them arrived + cash after.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            {/* Service */}
+            <div className="space-y-1">
+              <Label htmlFor="walkin-service" className="text-[12px] text-zinc-300">
+                Service *
+              </Label>
+              {services.length === 0 ? (
+                <p className="text-[12px] text-amber-300">
+                  No services configured yet. Ask the owner to set them up in /admin → Services.
+                </p>
+              ) : (
+                <select
+                  id="walkin-service"
+                  value={walkInForm.serviceId}
+                  onChange={(e) =>
+                    setWalkInForm((p) => ({ ...p, serviceId: e.target.value }))
+                  }
+                  className="w-full h-11 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-white outline-none focus:border-indigo-500/60"
+                >
+                  <option value="">Pick service</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — ฿{s.price_thb.toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Name */}
+            <div className="space-y-1">
+              <Label htmlFor="walkin-name" className="text-[12px] text-zinc-300">
+                Name *
+              </Label>
+              <Input
+                id="walkin-name"
+                value={walkInForm.guestName}
+                onChange={(e) =>
+                  setWalkInForm((p) => ({ ...p, guestName: e.target.value }))
+                }
+                placeholder="Customer name"
+                autoComplete="name"
+                className="h-11 bg-zinc-900 border-zinc-800 text-white"
+              />
+            </div>
+
+            {/* Email + phone in a single row to keep the dialog tight */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="walkin-email" className="text-[12px] text-zinc-300">
+                  Email
+                </Label>
+                <Input
+                  id="walkin-email"
+                  type="email"
+                  inputMode="email"
+                  value={walkInForm.guestEmail}
+                  onChange={(e) =>
+                    setWalkInForm((p) => ({ ...p, guestEmail: e.target.value }))
+                  }
+                  placeholder="optional"
+                  autoComplete="email"
+                  className="h-11 bg-zinc-900 border-zinc-800 text-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="walkin-phone" className="text-[12px] text-zinc-300">
+                  Phone
+                </Label>
+                <Input
+                  id="walkin-phone"
+                  type="tel"
+                  inputMode="tel"
+                  value={walkInForm.guestPhone}
+                  onChange={(e) =>
+                    setWalkInForm((p) => ({ ...p, guestPhone: e.target.value }))
+                  }
+                  placeholder="optional"
+                  autoComplete="tel"
+                  className="h-11 bg-zinc-900 border-zinc-800 text-white"
+                />
+              </div>
+            </div>
+
+            {/* Time + Payment in a row */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="walkin-time" className="text-[12px] text-zinc-300">
+                  Time
+                </Label>
+                <select
+                  id="walkin-time"
+                  value={walkInForm.bookingTime}
+                  onChange={(e) =>
+                    setWalkInForm((p) => ({ ...p, bookingTime: e.target.value }))
+                  }
+                  className="w-full h-11 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-white outline-none focus:border-indigo-500/60"
+                >
+                  <option value="">No specific time</option>
+                  {WALKIN_TIME_SLOTS.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="walkin-pay" className="text-[12px] text-zinc-300">
+                  Payment
+                </Label>
+                <select
+                  id="walkin-pay"
+                  value={walkInForm.paymentMethod}
+                  onChange={(e) =>
+                    setWalkInForm((p) => ({
+                      ...p,
+                      paymentMethod: e.target.value as "cash" | "stripe",
+                    }))
+                  }
+                  className="w-full h-11 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-white outline-none focus:border-indigo-500/60"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="stripe">Card</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Already paid toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={walkInForm.isPaid}
+                onChange={(e) =>
+                  setWalkInForm((p) => ({ ...p, isPaid: e.target.checked }))
+                }
+                className="w-4 h-4 rounded border-zinc-700 bg-zinc-900"
+              />
+              <span className="text-[13px] text-zinc-300">
+                Already paid (เก็บเงินแล้ว)
+              </span>
+            </label>
+
+            {walkInError && (
+              <p role="alert" className="text-[12px] text-rose-400">
+                {walkInError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setWalkInError("")
+                  setShowWalkInBooking(false)
+                }}
+                disabled={isCreatingWalkIn}
+                className="h-11 bg-transparent border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-900"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateWalkIn}
+                disabled={isCreatingWalkIn || services.length === 0}
+                className="h-11 bg-indigo-500 hover:bg-indigo-400 text-white"
+              >
+                {isCreatingWalkIn ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Add (เพิ่ม)"
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
