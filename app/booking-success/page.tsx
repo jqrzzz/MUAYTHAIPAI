@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { CheckCircle, Calendar, Mail, Phone, MapPin } from "lucide-react"
 import Link from "next/link"
+import { CONTACT_EMAIL, SOCIAL_LINKS } from "@/lib/socials"
 
 function BookingSuccessContent() {
   return (
@@ -44,12 +45,11 @@ function BookingSuccessContent() {
             </h3>
             <div className="text-orange-700 text-sm md:text-base">
               <p className="font-medium">Muay Thai Pai</p>
-              <p>123 Training Street</p>
               <p>Pai, Mae Hong Son 58130</p>
               <p>Thailand</p>
             </div>
             <Button asChild className="mt-3 md:mt-4 bg-orange-600 hover:bg-orange-700 text-sm md:text-base h-9 md:h-10">
-              <Link href="https://maps.google.com" target="_blank">
+              <Link href={SOCIAL_LINKS.maps} target="_blank">
                 Get Directions
               </Link>
             </Button>
@@ -68,9 +68,23 @@ function BookingSuccessContent() {
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 md:p-6">
             <h3 className="font-semibold text-gray-800 mb-2 md:mb-3 text-sm md:text-base">Need Help?</h3>
             <div className="text-gray-700 space-y-1 md:space-y-2 text-sm md:text-base">
-              <p>📧 Email: help@muaythaipai.com</p>
-              <p>📱 WhatsApp: +66 123 456 789</p>
-              <p>☎️ Phone: +66 123 456 789</p>
+              <p>
+                📧 Email:{" "}
+                <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-2">
+                  {CONTACT_EMAIL}
+                </a>
+              </p>
+              <p>
+                💬 Facebook:{" "}
+                <a
+                  href={SOCIAL_LINKS.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  Muay Thai Pai
+                </a>
+              </p>
             </div>
           </div>
 
