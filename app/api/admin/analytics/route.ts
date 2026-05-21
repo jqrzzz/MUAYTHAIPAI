@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { bookingAmountThb } from "@/lib/payment-config"
 
 // Revenue + bookings analytics for the gym dashboard, bucketed by calendar
 // month so the Reports tab can offer a real month filter (the page-level
@@ -41,10 +42,11 @@ interface Row {
   payment_method: string | null
   payment_status: string | null
   payment_amount_thb: number | null
+  payment_amount_usd: number | null
 }
 
 function addRow(b: Bucket, row: Row) {
-  const amt = row.payment_amount_thb || 0
+  const amt = bookingAmountThb(row)
   b.bookings += 1
   switch (row.payment_status) {
     case "paid": {
@@ -99,7 +101,7 @@ export async function GET() {
 
   const { data: rows, error } = await supabase
     .from("bookings")
-    .select("booking_date, status, payment_method, payment_status, payment_amount_thb")
+    .select("booking_date, status, payment_method, payment_status, payment_amount_thb, payment_amount_usd")
     .eq("org_id", membership.org_id)
 
   if (error) {

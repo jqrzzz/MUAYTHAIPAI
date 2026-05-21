@@ -5,6 +5,7 @@ import { ArrowUpRight, Briefcase, GraduationCap, Sparkles } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import TodayPanel from "@/components/platform-admin/today-panel"
 import NetworkAnalytics from "@/components/platform-admin/network-analytics"
+import StripeFinance from "@/components/platform-admin/stripe-finance"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
 import ViewAsPicker from "@/components/platform-admin/view-as-picker"
 import SignalsPanel from "@/components/platform-admin/signals-panel"
@@ -94,6 +95,9 @@ export default async function TodayHomePage() {
         <TodayPanel />
 
         <NetworkAnalytics />
+
+        {/* Real Stripe balance + payouts — money surface, full admins only */}
+        {role === "full" && <StripeFinance />}
 
         {/* Quick link to the Curriculum — keeps the network's
             cornerstone always one click away */}

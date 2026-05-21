@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requirePlatformAdmin } from "@/lib/auth-helpers"
+import { bookingAmountThb } from "@/lib/payment-config"
 
 // Network-wide revenue + bookings for the super-admin view. Mirrors the
 // per-gym analytics, aggregated across every gym on the platform. THB.
@@ -17,6 +18,7 @@ interface BookingRow {
   status: string | null
   payment_status: string | null
   payment_amount_thb: number | null
+  payment_amount_usd: number | null
 }
 
 export async function GET() {
@@ -29,7 +31,7 @@ export async function GET() {
 
   const [{ data: gyms }, { data: bookings }] = await Promise.all([
     supabase.from("organizations").select("id, name, slug, status, gym_subscriptions(status)"),
-    supabase.from("bookings").select("org_id, booking_date, status, payment_status, payment_amount_thb"),
+    supabase.from("bookings").select("org_id, booking_date, status, payment_status, payment_amount_thb, payment_amount_usd"),
   ])
 
   const gymList = (gyms as GymRow[]) || []
@@ -57,7 +59,7 @@ export async function GET() {
   for (const bk of bookingList) {
     if (bk.status === "cancelled") continue
     const gym = bk.org_id ? perGym.get(bk.org_id) : undefined
-    const amt = bk.payment_amount_thb || 0
+    const amt = bookingAmountThb(bk)
     const month = (bk.booking_date || "").slice(0, 7)
     totalBookings += 1
     if (gym) gym.bookings += 1
