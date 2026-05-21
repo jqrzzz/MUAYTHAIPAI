@@ -8,7 +8,7 @@ import { NextResponse } from "next/server"
 function safeNext(raw: string | null): string {
   if (!raw) return "/admin"
   if (!raw.startsWith("/") || raw.startsWith("//")) return "/admin"
-  const allowed = ["/admin", "/trainer", "/ockock", "/platform-admin", "/student"]
+  const allowed = ["/admin", "/trainer", "/ockock", "/platform-admin", "/student", "/invite"]
   if (allowed.some((p) => raw === p || raw.startsWith(`${p}/`) || raw.startsWith(`${p}?`))) {
     return raw
   }

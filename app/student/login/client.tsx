@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Mail, CheckCircle2 } from "lucide-react"
 import { AuthCard, SaasButton, SaasInput } from "@/components/saas"
+import { SocialSignupButtons } from "@/components/ockock/social-signup-buttons"
 
 function StudentLoginInner() {
   const router = useRouter()
@@ -93,6 +94,13 @@ function StudentLoginInner() {
       subtitle="Sign in or create your account with just an email."
       footnote="One account for every Muay Thai gym in Thailand"
     >
+      <SocialSignupButtons next="/student" showWhatsApp={false} />
+      <div className="relative my-4">
+        <div className="absolute inset-x-0 top-1/2 h-px bg-zinc-800" />
+        <p className="relative mx-auto w-fit bg-zinc-950 px-2 text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+          or sign in with email
+        </p>
+      </div>
       <form onSubmit={handleSendMagicLink} className="space-y-4">
         <div className="space-y-1.5">
           <label

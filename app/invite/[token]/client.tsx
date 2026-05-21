@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dumbbell, CheckCircle, Loader2 } from "lucide-react"
+import { SocialSignupButtons } from "@/components/ockock/social-signup-buttons"
 
 interface Organization {
   id: string
@@ -139,8 +140,16 @@ export default function InviteAcceptClient({
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
                 You've been invited to join as a <span className="font-medium text-foreground">{invite.role}</span>.
-                Enter your email to get started.
+                Continue with LINE, or use your email.
               </p>
+
+              <SocialSignupButtons next={`/invite/${invite.token}`} showWhatsApp={false} />
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">or email</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

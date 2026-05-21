@@ -47,6 +47,9 @@ interface Props {
   compact?: boolean
   /** Optional label above the buttons. */
   label?: string
+  /** Render the WhatsApp-to-sales button next to LINE. Turn off on login /
+   *  invite surfaces, where a sales deep-link doesn't belong. Default: true. */
+  showWhatsApp?: boolean
   className?: string
 }
 
@@ -54,6 +57,7 @@ export function SocialSignupButtons({
   next = "/admin",
   compact = false,
   label,
+  showWhatsApp = true,
   className,
 }: Props) {
   const [busy, setBusy] = useState<"line" | null>(null)
@@ -86,7 +90,7 @@ export function SocialSignupButtons({
     }
   }
 
-  const waLink = WHATSAPP_NUMBER
+  const waLink = showWhatsApp && WHATSAPP_NUMBER
     ? `https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MSG)}`
     : null
 
