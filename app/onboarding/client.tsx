@@ -226,6 +226,13 @@ export default function OnboardingClient({
         }),
       })
       if (!res.ok) throw new Error("Failed to save hours")
+      // Generate a starter bookable schedule from these hours so the gym's
+      // public booking shows its real window. Best-effort, idempotent.
+      try {
+        await fetch("/api/admin/time-slots/generate", { method: "POST" })
+      } catch {
+        /* non-blocking */
+      }
       setStep("certifications")
     } catch {
       setError("Failed to save. Please try again.")

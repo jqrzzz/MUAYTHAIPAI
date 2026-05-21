@@ -253,6 +253,14 @@ export default function OnboardingConversation({
           `Saved ${saved} of ${valid.length} services. Couldn't save: ${failedNames.join(", ")}. Add them from the Services tab.`,
         )
       }
+      // 4. Starter bookable schedule from the hours above, so the public
+      // booking page shows the gym's real window instead of fallback times.
+      // Best-effort: never block going live on it.
+      try {
+        await fetch("/api/admin/time-slots/generate", { method: "POST" })
+      } catch {
+        /* non-blocking */
+      }
       // Onboarding complete — clear the saved draft so a refresh doesn't
       // dredge it back.
       try {
