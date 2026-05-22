@@ -77,11 +77,4 @@ export const familyMembers: FamilyMember[] = [
     description: "Experienced trainer and active fighter sharing knowledge.",
     image: "/images/james-profile.png",
   },
-  {
-    id: 12,
-    name: "KRU FOM",
-    role: "Trainer & Fighter",
-    description: "Dedicated trainer and active fighter on the team.",
-    image: "/images/fom-profile.png",
-  },
 ]
