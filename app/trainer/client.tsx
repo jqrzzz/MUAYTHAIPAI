@@ -191,7 +191,7 @@ export default function TrainerDashboardClient({
     guestPhone: "",
     bookingTime: "",
     paymentMethod: "cash" as "cash" | "stripe",
-    isPaid: false,
+    isPaid: true,
   })
   const [walkInError, setWalkInError] = useState("")
   const [isCreatingWalkIn, setIsCreatingWalkIn] = useState(false)
@@ -667,7 +667,7 @@ export default function TrainerDashboardClient({
         guestPhone: "",
         bookingTime: "",
         paymentMethod: "cash",
-        isPaid: false,
+        isPaid: true,
       })
       setShowWalkInBooking(false)
     } catch (err) {
@@ -2206,7 +2206,7 @@ export default function TrainerDashboardClient({
                 className="w-4 h-4 rounded border-zinc-700 bg-zinc-900"
               />
               <span className="text-[13px] text-zinc-300">
-                Already paid (เก็บเงินแล้ว)
+                Payment collected (เก็บเงินแล้ว)
               </span>
             </label>
 

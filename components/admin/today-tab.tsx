@@ -76,7 +76,7 @@ export default function TodayTab({
     bookingDate: getTodayInPaiTimezone(),
     bookingTime: "",
     paymentMethod: "cash" as "cash" | "stripe",
-    isPaid: false,
+    isPaid: true,
   })
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
@@ -158,7 +158,7 @@ export default function TodayTab({
       setNewBookingForm({
         serviceId: "", guestName: "", guestEmail: "", guestPhone: "",
         bookingDate: getTodayInPaiTimezone(), bookingTime: "",
-        paymentMethod: "cash", isPaid: false,
+        paymentMethod: "cash", isPaid: true,
       })
       setIsNewBookingOpen(false)
       onFeedback("success", "Booking created successfully")
@@ -342,7 +342,7 @@ export default function TodayTab({
                       onChange={(e) => setNewBookingForm((prev) => ({ ...prev, isPaid: e.target.checked }))}
                       className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
                     />
-                    <Label htmlFor="isPaid" className="text-neutral-300 text-sm">Already paid</Label>
+                    <Label htmlFor="isPaid" className="text-neutral-300 text-sm">Payment collected</Label>
                   </div>
                 </div>
               </div>
