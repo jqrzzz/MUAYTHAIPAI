@@ -194,6 +194,7 @@ export default function TrainerDashboardClient({
     bookingTime: "",
     paymentMethod: "cash" as "cash" | "stripe",
     isPaid: true,
+    priceThb: 0,
   })
   const [walkInError, setWalkInError] = useState("")
   const [isCreatingWalkIn, setIsCreatingWalkIn] = useState(false)
@@ -290,6 +291,30 @@ export default function TrainerDashboardClient({
       } else {
         const data = await res.json().catch(() => ({}))
         toast({ title: "Error", description: data.error || "Failed to update payment", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // One-tap check-in for the common walk-in: arrived AND paid cash.
+  const handleArrivedPaid = async (bookingId: string) => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed", payment_status: "paid" }),
+      })
+      if (res.ok) {
+        setBookings((prev) =>
+          prev.map((b) => (b.id === bookingId ? { ...b, status: "completed", payment_status: "paid" } : b))
+        )
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast({ title: "Error", description: data.error || "Failed to update booking", variant: "destructive" })
       }
     } catch {
       toast({ title: "Error", description: "Connection error — please try again", variant: "destructive" })
@@ -620,7 +645,7 @@ export default function TrainerDashboardClient({
           booking_time: walkInForm.bookingTime || null,
           payment_method: walkInForm.paymentMethod,
           payment_status: walkInForm.isPaid ? "paid" : "pending",
-          payment_amount_thb: selectedService.price_thb,
+          payment_amount_thb: walkInForm.priceThb || selectedService.price_thb,
           payment_currency: "THB",
           status: "confirmed",
         }),
@@ -670,6 +695,7 @@ export default function TrainerDashboardClient({
         bookingTime: "",
         paymentMethod: "cash",
         isPaid: true,
+        priceThb: 0,
       })
       setShowWalkInBooking(false)
     } catch (err) {
@@ -1230,31 +1256,69 @@ export default function TrainerDashboardClient({
 
                                   {/* Check-in buttons for pending bookings */}
                                   {booking.status === "confirmed" && (
-                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-900">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => handleMarkAttendance(booking.id, "completed")}
-                                        disabled={isLoading}
-                                        className="flex-1 bg-green-600 hover:bg-green-500"
-                                      >
-                                        <CheckCircle className="w-4 h-4 mr-1" />
-                                        Arrived (มาถึง)
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleMarkAttendance(booking.id, "no_show")}
-                                        disabled={isLoading}
-                                        className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
-                                      >
-                                        <XCircle className="w-4 h-4 mr-1" />
-                                        No Show (ไม่มา)
-                                      </Button>
+                                    <div className="mt-3 pt-3 border-t border-zinc-900 space-y-2">
+                                      {booking.payment_status !== "paid" && !isPaidOnline ? (
+                                        <>
+                                          <Button
+                                            size="sm"
+                                            onClick={() => handleArrivedPaid(booking.id)}
+                                            disabled={isLoading}
+                                            className="w-full bg-green-600 hover:bg-green-500"
+                                          >
+                                            <CheckCircle className="w-4 h-4 mr-1" />
+                                            Arrived + Paid (มาถึง·จ่ายแล้ว)
+                                          </Button>
+                                          <div className="flex items-center gap-2">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => handleMarkAttendance(booking.id, "completed")}
+                                              disabled={isLoading}
+                                              className="flex-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
+                                            >
+                                              <CheckCircle className="w-4 h-4 mr-1" />
+                                              Arrived only
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => handleMarkAttendance(booking.id, "no_show")}
+                                              disabled={isLoading}
+                                              className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                                            >
+                                              <XCircle className="w-4 h-4 mr-1" />
+                                              No Show (ไม่มา)
+                                            </Button>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => handleMarkAttendance(booking.id, "completed")}
+                                            disabled={isLoading}
+                                            className="flex-1 bg-green-600 hover:bg-green-500"
+                                          >
+                                            <CheckCircle className="w-4 h-4 mr-1" />
+                                            Arrived (มาถึง)
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleMarkAttendance(booking.id, "no_show")}
+                                            disabled={isLoading}
+                                            className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                                          >
+                                            <XCircle className="w-4 h-4 mr-1" />
+                                            No Show (ไม่มา)
+                                          </Button>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
 
-                                  {/* Cash collection button - only show if not paid online */}
-                                  {booking.payment_status !== "paid" && !isPaidOnline && booking.status !== "cancelled" && (
+                                  {/* Cash collection — after arrival, for "arrived, pay later". */}
+                                  {booking.payment_status !== "paid" && !isPaidOnline && booking.status === "completed" && (
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -2097,9 +2161,10 @@ export default function TrainerDashboardClient({
                 <select
                   id="walkin-service"
                   value={walkInForm.serviceId}
-                  onChange={(e) =>
-                    setWalkInForm((p) => ({ ...p, serviceId: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    const svc = services.find((s) => s.id === e.target.value)
+                    setWalkInForm((p) => ({ ...p, serviceId: e.target.value, priceThb: svc?.price_thb ?? p.priceThb }))
+                  }}
                   className="w-full h-11 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-white outline-none focus:border-indigo-500/60"
                 >
                   <option value="">Pick service</option>
@@ -2208,6 +2273,25 @@ export default function TrainerDashboardClient({
                   <option value="stripe">Card</option>
                 </select>
               </div>
+            </div>
+
+            {/* Amount — auto-fills from the service, editable for discounts */}
+            <div className="space-y-1">
+              <Label htmlFor="walkin-amount" className="text-[12px] text-zinc-300">
+                Amount (฿)
+              </Label>
+              <Input
+                id="walkin-amount"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={walkInForm.priceThb || ""}
+                onChange={(e) =>
+                  setWalkInForm((p) => ({ ...p, priceThb: Number(e.target.value) || 0 }))
+                }
+                placeholder="Auto-fills from the service"
+                className="h-11 bg-zinc-900 border-zinc-800 text-white"
+              />
             </div>
 
             {/* Already paid toggle */}
