@@ -78,6 +78,7 @@ export default function TodayTab({
     bookingTime: "",
     paymentMethod: "cash" as "cash" | "stripe",
     isPaid: true,
+    priceThb: 0,
   })
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
@@ -145,7 +146,7 @@ export default function TodayTab({
           booking_time: newBookingForm.bookingTime || null,
           payment_method: newBookingForm.paymentMethod,
           payment_status: newBookingForm.isPaid ? "paid" : "pending",
-          payment_amount_thb: selectedService.price_thb,
+          payment_amount_thb: newBookingForm.priceThb || selectedService.price_thb,
           payment_currency: "THB",
           status: "confirmed",
         }),
@@ -159,7 +160,7 @@ export default function TodayTab({
       setNewBookingForm({
         serviceId: "", guestName: "", guestEmail: "", guestPhone: "",
         bookingDate: getTodayInPaiTimezone(), bookingTime: "",
-        paymentMethod: "cash", isPaid: true,
+        paymentMethod: "cash", isPaid: true, priceThb: 0,
       })
       setIsNewBookingOpen(false)
       onFeedback("success", "Booking created successfully")
@@ -231,7 +232,10 @@ export default function TodayTab({
                 <Label htmlFor="service" className="text-neutral-200">Service *</Label>
                 <Select
                   value={newBookingForm.serviceId}
-                  onValueChange={(value) => setNewBookingForm((prev) => ({ ...prev, serviceId: value }))}
+                  onValueChange={(value) => {
+                    const svc = services.find((s) => s.id === value)
+                    setNewBookingForm((prev) => ({ ...prev, serviceId: value, priceThb: svc?.price_thb ?? prev.priceThb }))
+                  }}
                 >
                   <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white">
                     <SelectValue placeholder="Select service" />
@@ -313,6 +317,19 @@ export default function TodayTab({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="amount" className="text-neutral-200">Amount (฿)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  min="0"
+                  value={newBookingForm.priceThb || ""}
+                  onChange={(e) => setNewBookingForm((prev) => ({ ...prev, priceThb: Number(e.target.value) || 0 }))}
+                  placeholder="Auto-fills from the service"
+                  className="bg-neutral-800 border-neutral-700 text-white"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
