@@ -122,6 +122,30 @@ export default function TodayTab({
     }
   }
 
+  // One-tap check-in for the common walk-in: they showed up and paid.
+  const markArrivedPaid = async (bookingId: string) => {
+    setIsUpdating(bookingId)
+    try {
+      const response = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed", payment_status: "paid", org_id: orgId }),
+      })
+      if (response.ok) {
+        setBookings((prev) =>
+          prev.map((b) => (b.id === bookingId ? { ...b, status: "completed", payment_status: "paid" } : b)),
+        )
+        onFeedback("success", "Checked in & paid")
+      } else {
+        onFeedback("error", "Failed to update booking")
+      }
+    } catch {
+      onFeedback("error", "Network error — couldn't update booking")
+    } finally {
+      setIsUpdating(null)
+    }
+  }
+
   const handleCreateBooking = async () => {
     setBookingError("")
     if (!newBookingForm.serviceId) { setBookingError("Please select a service"); return }
@@ -439,17 +463,39 @@ export default function TodayTab({
                           : "Confirmed (ยืนยัน)"}
                   </Badge>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {booking.status !== "completed" && booking.status !== "no_show" && booking.status !== "cancelled" && (
                     <>
-                      <Button
-                        size="sm"
-                        onClick={() => updateBookingStatus(booking.id, "completed")}
-                        disabled={isUpdating === booking.id}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <UserCheck className="w-4 h-4 mr-1" /> Arrived (มาถึง)
-                      </Button>
+                      {booking.payment_status !== "paid" ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => markArrivedPaid(booking.id)}
+                            disabled={isUpdating === booking.id}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <UserCheck className="w-4 h-4 mr-1" /> Arrived + Paid
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateBookingStatus(booking.id, "completed")}
+                            disabled={isUpdating === booking.id}
+                            className="border-green-700 text-green-400 hover:bg-green-900/30"
+                          >
+                            <UserCheck className="w-4 h-4 mr-1" /> Arrived only
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => updateBookingStatus(booking.id, "completed")}
+                          disabled={isUpdating === booking.id}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <UserCheck className="w-4 h-4 mr-1" /> Arrived (มาถึง)
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -471,7 +517,7 @@ export default function TodayTab({
                       </InlineConfirm>
                     </>
                   )}
-                  {booking.payment_status !== "paid" && booking.payment_method === "cash" && booking.status !== "cancelled" && (
+                  {booking.payment_status !== "paid" && booking.payment_method === "cash" && booking.status === "completed" && (
                     <Button
                       size="sm"
                       variant="outline"
