@@ -42,8 +42,10 @@ import {
   List as LucideList,
   Award,
   ExternalLink,
+  Ban,
 } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 import NavButton from "@/components/ui/nav-button"
 import { Switch } from "@/components/ui/switch"
 import FightInvitationsCard from "@/components/trainer/fight-invitations-card"
@@ -250,7 +252,7 @@ export default function TrainerDashboardClient({
     router.push("/trainer/login")
   }
 
-  const handleMarkAttendance = async (bookingId: string, status: "completed" | "no_show") => {
+  const handleMarkAttendance = async (bookingId: string, status: "completed" | "no_show" | "cancelled") => {
     setIsLoading(true)
     try {
       const res = await fetch(`/api/admin/bookings/${bookingId}`, {
@@ -896,7 +898,7 @@ export default function TrainerDashboardClient({
   // Bookings needing attention (not fully complete)
   const needsAttentionBookings = sortedBookings.filter(b => {
     const isFullyComplete = (b.status === "completed" && b.payment_status === "paid") || b.status === "no_show"
-    return !isFullyComplete
+    return !isFullyComplete && b.status !== "cancelled"
   })
   
   // Fully completed bookings (arrived + paid OR no show)
@@ -1252,7 +1254,7 @@ export default function TrainerDashboardClient({
                                   )}
 
                                   {/* Cash collection button - only show if not paid online */}
-                                  {booking.payment_status !== "paid" && !isPaidOnline && (
+                                  {booking.payment_status !== "paid" && !isPaidOnline && booking.status !== "cancelled" && (
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -1263,6 +1265,19 @@ export default function TrainerDashboardClient({
                                       <DollarSign className="w-4 h-4 mr-1" />
                                       {needsCashCollection ? "Collect Cash (เก็บเงินสด)" : "Mark Paid (ชำระแล้ว)"}
                                     </Button>
+                                  )}
+
+                                  {booking.status === "confirmed" && (
+                                    <InlineConfirm
+                                      onConfirm={() => handleMarkAttendance(booking.id, "cancelled")}
+                                      disabled={isLoading}
+                                      title="Cancel booking"
+                                      confirmLabel="Cancel booking"
+                                      cancelLabel="Keep"
+                                      className="w-full mt-2 inline-flex items-center justify-center rounded-md py-1.5 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900"
+                                    >
+                                      <Ban className="w-3.5 h-3.5 mr-1" /> Cancel booking
+                                    </InlineConfirm>
                                   )}
                                 </CardContent>
                               </Card>
