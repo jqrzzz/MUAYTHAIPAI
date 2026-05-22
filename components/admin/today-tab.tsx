@@ -15,8 +15,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, UserCheck, UserX, Banknote, List, Users } from "lucide-react"
+import { Plus, UserCheck, UserX, Banknote, List, Users, Ban } from "lucide-react"
 import { getTodayInPaiTimezone } from "@/lib/timezone"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface Booking {
   id: string
@@ -407,18 +408,22 @@ export default function TodayTab({
                         ? "border-green-500 text-green-500"
                         : booking.status === "no_show"
                           ? "border-red-500 text-red-500"
-                          : "border-neutral-500"
+                          : booking.status === "cancelled"
+                            ? "border-neutral-700 text-neutral-500"
+                            : "border-neutral-500"
                     }
                   >
                     {booking.status === "completed"
                       ? "Arrived (มาถึง)"
                       : booking.status === "no_show"
                         ? "No Show (ไม่มา)"
-                        : "Confirmed (ยืนยัน)"}
+                        : booking.status === "cancelled"
+                          ? "Cancelled (ยกเลิก)"
+                          : "Confirmed (ยืนยัน)"}
                   </Badge>
                 </div>
                 <div className="flex gap-2">
-                  {booking.status !== "completed" && booking.status !== "no_show" && (
+                  {booking.status !== "completed" && booking.status !== "no_show" && booking.status !== "cancelled" && (
                     <>
                       <Button
                         size="sm"
@@ -437,9 +442,19 @@ export default function TodayTab({
                       >
                         <UserX className="w-4 h-4 mr-1" /> No Show (ไม่มา)
                       </Button>
+                      <InlineConfirm
+                        onConfirm={() => updateBookingStatus(booking.id, "cancelled")}
+                        disabled={isUpdating === booking.id}
+                        title="Cancel booking"
+                        confirmLabel="Cancel booking"
+                        cancelLabel="Keep"
+                        className="inline-flex h-9 items-center rounded-md border border-neutral-700 px-3 text-sm text-neutral-400 hover:bg-neutral-800 disabled:opacity-50"
+                      >
+                        <Ban className="w-4 h-4 mr-1" /> Cancel
+                      </InlineConfirm>
                     </>
                   )}
-                  {booking.payment_status !== "paid" && booking.payment_method === "cash" && (
+                  {booking.payment_status !== "paid" && booking.payment_method === "cash" && booking.status !== "cancelled" && (
                     <Button
                       size="sm"
                       variant="outline"
