@@ -153,6 +153,27 @@ export function ClientPage(): ReactElement {
     setCurrentDesktopSlide((prev) => Math.min(prev + 1, totalDesktopSlides - 1))
   }
 
+  // Keyboard navigation for desktop slider
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle on desktop
+      if (isMobile || isTablet) return
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        handlePrevDesktopSlide()
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault()
+        handleNextDesktopSlide()
+      } else if (e.key === "Escape" && selectedMember !== null) {
+        closeProfile()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isMobile, isTablet, selectedMember, totalDesktopSlides])
+
   if (!mounted) {
     return null
   }
@@ -649,8 +670,8 @@ export function ClientPage(): ReactElement {
                 </button>
               </div>
 
-              {/* Family Grid - Responsive */}
-              <div className={`grid ${isMobile ? "grid-cols-2" : "grid-cols-3"} gap-4`}>
+              {/* Family Grid - Responsive with scroll snap */}
+              <div className={`grid ${isMobile ? "grid-cols-2" : "grid-cols-3"} gap-4 scroll-smooth`}>
                 {familyMembers.map((member, index) => (
                   <motion.div
                     key={member.id}
@@ -763,14 +784,15 @@ export function ClientPage(): ReactElement {
             <div className="flex flex-col items-center mb-3">
               <button
                 onClick={handlePrevDesktopSlide}
-                className="backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
+                disabled={currentDesktopSlide === 0}
+                className="backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
                 aria-label="Previous family members"
               >
                 <ChevronUp className="w-5 h-5 text-orange-600 dark:text-amber-400" />
               </button>
             </div>
           )}
-          <div className="space-y-3">
+          <div className="space-y-3" role="tabpanel" aria-label="Family members">
             <AnimatePresence mode="wait">
               {familyMembers.slice(currentDesktopSlide * 4, currentDesktopSlide * 4 + 4).map((member, index) => (
                 <motion.div
@@ -838,10 +860,28 @@ export function ClientPage(): ReactElement {
             </AnimatePresence>
           </div>
           {totalDesktopSlides > 1 && (
-            <div className="flex flex-col items-center mt-3">
+            <div className="flex flex-col items-center mt-3 gap-2">
+              {/* Dot indicators */}
+              <div className="flex flex-col gap-1.5 mb-1" role="tablist" aria-label="Slide navigation">
+                {Array.from({ length: totalDesktopSlides }).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentDesktopSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      currentDesktopSlide === index
+                        ? "bg-orange-500 scale-125"
+                        : "bg-white/30 hover:bg-white/50"
+                    }`}
+                    role="tab"
+                    aria-selected={currentDesktopSlide === index}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
               <button
                 onClick={handleNextDesktopSlide}
-                className="backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
+                disabled={currentDesktopSlide === totalDesktopSlides - 1}
+                className="backdrop-blur-md rounded-full p-2 border transition-colors min-h-[44px] min-w-[44px] bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
                 aria-label="Next family members"
               >
                 <ChevronDown className="w-5 h-5 text-orange-600 dark:text-amber-400" />
