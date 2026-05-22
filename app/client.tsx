@@ -24,7 +24,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { BookingSection } from "@/components/booking-section"
-import { PlatformCtaSection } from "@/components/platform-cta-section"
 import { MarketingBottomNav, useMounted, EXPAND_COLLAPSE } from "@/components/marketing"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import { InstagramIcon, FacebookIcon, TikTokIcon } from "@/components/social-icons"
@@ -969,9 +968,6 @@ export function ClientPage(): ReactElement {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Network + SaaS CTA — pitches the platform to gym owners */}
-      <PlatformCtaSection />
 
       <MarketingBottomNav active="family" />
     </div>

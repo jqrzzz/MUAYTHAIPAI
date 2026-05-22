@@ -83,16 +83,6 @@ function LoginInner() {
           )
         })}
       </div>
-
-      <p className="mt-6 text-center text-[12px] text-zinc-500">
-        New gym?{" "}
-        <Link
-          href="/signup"
-          className="text-indigo-300 hover:text-indigo-200 font-medium"
-        >
-          List your gym — free 30-day trial
-        </Link>
-      </p>
     </AuthCard>
   )
 }

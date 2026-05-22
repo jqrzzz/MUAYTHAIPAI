@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowUpRight, Briefcase, GraduationCap, Sparkles } from "lucide-react"
+import { ArrowUpRight, Briefcase, GraduationCap, Sparkles, Wallet } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import TodayPanel from "@/components/platform-admin/today-panel"
 import PlatformCommandBar from "@/components/platform-admin/command-bar"
@@ -91,6 +91,24 @@ export default async function TodayHomePage() {
         <SignalsPanel />
 
         <TodayPanel />
+
+        {/* Finance — network revenue, Stripe payouts, platform net */}
+        <Link href="/platform-admin/finance" className="block group">
+          <Surface interactive>
+            <div className="px-4 py-3.5 flex items-center gap-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10 ring-1 ring-indigo-500/20 shrink-0">
+                <Wallet className="h-4 w-4 text-indigo-300" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-white">Finance</p>
+                <p className="text-[12px] text-zinc-500 truncate">
+                  Network revenue, Stripe payouts, and platform net
+                </p>
+              </div>
+              <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-indigo-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </div>
+          </Surface>
+        </Link>
 
         {/* Quick link to the Curriculum — keeps the network's
             cornerstone always one click away */}

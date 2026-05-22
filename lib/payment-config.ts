@@ -43,6 +43,21 @@ export function convertUsdToThb(usdCents: number): number {
   return Math.round((usdCents / 100) * THB_TO_USD_RATE)
 }
 
+// Unified THB value for a booking, whether it was paid in cash (THB) or
+// online (USD, charged at THB_TO_USD_RATE). Online bookings store
+// payment_amount_usd in dollars and leave payment_amount_thb null — so a
+// THB-only sum silently drops all card revenue. Use this everywhere a
+// booking's value is totalled.
+export function bookingAmountThb(row: {
+  payment_amount_thb?: number | null
+  payment_amount_usd?: number | null
+}): number {
+  if (row.payment_amount_usd != null) {
+    return Math.round(row.payment_amount_usd * THB_TO_USD_RATE)
+  }
+  return row.payment_amount_thb ?? 0
+}
+
 // Format USD amount from cents for display
 export function formatUsdAmount(usdCents: number): string {
   return `$${(usdCents / 100).toFixed(2)}`

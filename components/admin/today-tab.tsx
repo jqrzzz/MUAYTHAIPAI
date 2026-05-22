@@ -15,8 +15,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, UserCheck, UserX, Banknote, List, Users } from "lucide-react"
+import { Plus, UserCheck, UserX, Banknote, List, Users, Ban } from "lucide-react"
 import { getTodayInPaiTimezone } from "@/lib/timezone"
+import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface Booking {
   id: string
@@ -76,7 +77,8 @@ export default function TodayTab({
     bookingDate: getTodayInPaiTimezone(),
     bookingTime: "",
     paymentMethod: "cash" as "cash" | "stripe",
-    isPaid: false,
+    isPaid: true,
+    priceThb: 0,
   })
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
@@ -120,6 +122,30 @@ export default function TodayTab({
     }
   }
 
+  // One-tap check-in for the common walk-in: they showed up and paid.
+  const markArrivedPaid = async (bookingId: string) => {
+    setIsUpdating(bookingId)
+    try {
+      const response = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed", payment_status: "paid", org_id: orgId }),
+      })
+      if (response.ok) {
+        setBookings((prev) =>
+          prev.map((b) => (b.id === bookingId ? { ...b, status: "completed", payment_status: "paid" } : b)),
+        )
+        onFeedback("success", "Checked in & paid")
+      } else {
+        onFeedback("error", "Failed to update booking")
+      }
+    } catch {
+      onFeedback("error", "Network error — couldn't update booking")
+    } finally {
+      setIsUpdating(null)
+    }
+  }
+
   const handleCreateBooking = async () => {
     setBookingError("")
     if (!newBookingForm.serviceId) { setBookingError("Please select a service"); return }
@@ -144,7 +170,7 @@ export default function TodayTab({
           booking_time: newBookingForm.bookingTime || null,
           payment_method: newBookingForm.paymentMethod,
           payment_status: newBookingForm.isPaid ? "paid" : "pending",
-          payment_amount_thb: selectedService.price_thb,
+          payment_amount_thb: newBookingForm.priceThb || selectedService.price_thb,
           payment_currency: "THB",
           status: "confirmed",
         }),
@@ -158,7 +184,7 @@ export default function TodayTab({
       setNewBookingForm({
         serviceId: "", guestName: "", guestEmail: "", guestPhone: "",
         bookingDate: getTodayInPaiTimezone(), bookingTime: "",
-        paymentMethod: "cash", isPaid: false,
+        paymentMethod: "cash", isPaid: true, priceThb: 0,
       })
       setIsNewBookingOpen(false)
       onFeedback("success", "Booking created successfully")
@@ -230,7 +256,10 @@ export default function TodayTab({
                 <Label htmlFor="service" className="text-neutral-200">Service *</Label>
                 <Select
                   value={newBookingForm.serviceId}
-                  onValueChange={(value) => setNewBookingForm((prev) => ({ ...prev, serviceId: value }))}
+                  onValueChange={(value) => {
+                    const svc = services.find((s) => s.id === value)
+                    setNewBookingForm((prev) => ({ ...prev, serviceId: value, priceThb: svc?.price_thb ?? prev.priceThb }))
+                  }}
                 >
                   <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white">
                     <SelectValue placeholder="Select service" />
@@ -314,6 +343,19 @@ export default function TodayTab({
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="amount" className="text-neutral-200">Amount (฿)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  min="0"
+                  value={newBookingForm.priceThb || ""}
+                  onChange={(e) => setNewBookingForm((prev) => ({ ...prev, priceThb: Number(e.target.value) || 0 }))}
+                  placeholder="Auto-fills from the service"
+                  className="bg-neutral-800 border-neutral-700 text-white"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-neutral-200">Payment</Label>
@@ -342,7 +384,7 @@ export default function TodayTab({
                       onChange={(e) => setNewBookingForm((prev) => ({ ...prev, isPaid: e.target.checked }))}
                       className="w-4 h-4 rounded border-neutral-600 bg-neutral-800"
                     />
-                    <Label htmlFor="isPaid" className="text-neutral-300 text-sm">Already paid</Label>
+                    <Label htmlFor="isPaid" className="text-neutral-300 text-sm">Payment collected</Label>
                   </div>
                 </div>
               </div>
@@ -407,27 +449,53 @@ export default function TodayTab({
                         ? "border-green-500 text-green-500"
                         : booking.status === "no_show"
                           ? "border-red-500 text-red-500"
-                          : "border-neutral-500"
+                          : booking.status === "cancelled"
+                            ? "border-neutral-700 text-neutral-500"
+                            : "border-neutral-500"
                     }
                   >
                     {booking.status === "completed"
                       ? "Arrived (มาถึง)"
                       : booking.status === "no_show"
                         ? "No Show (ไม่มา)"
-                        : "Confirmed (ยืนยัน)"}
+                        : booking.status === "cancelled"
+                          ? "Cancelled (ยกเลิก)"
+                          : "Confirmed (ยืนยัน)"}
                   </Badge>
                 </div>
-                <div className="flex gap-2">
-                  {booking.status !== "completed" && booking.status !== "no_show" && (
+                <div className="flex gap-2 flex-wrap">
+                  {booking.status !== "completed" && booking.status !== "no_show" && booking.status !== "cancelled" && (
                     <>
-                      <Button
-                        size="sm"
-                        onClick={() => updateBookingStatus(booking.id, "completed")}
-                        disabled={isUpdating === booking.id}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <UserCheck className="w-4 h-4 mr-1" /> Arrived (มาถึง)
-                      </Button>
+                      {booking.payment_status !== "paid" ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => markArrivedPaid(booking.id)}
+                            disabled={isUpdating === booking.id}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <UserCheck className="w-4 h-4 mr-1" /> Arrived + Paid
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateBookingStatus(booking.id, "completed")}
+                            disabled={isUpdating === booking.id}
+                            className="border-green-700 text-green-400 hover:bg-green-900/30"
+                          >
+                            <UserCheck className="w-4 h-4 mr-1" /> Arrived only
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => updateBookingStatus(booking.id, "completed")}
+                          disabled={isUpdating === booking.id}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <UserCheck className="w-4 h-4 mr-1" /> Arrived (มาถึง)
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -437,9 +505,19 @@ export default function TodayTab({
                       >
                         <UserX className="w-4 h-4 mr-1" /> No Show (ไม่มา)
                       </Button>
+                      <InlineConfirm
+                        onConfirm={() => updateBookingStatus(booking.id, "cancelled")}
+                        disabled={isUpdating === booking.id}
+                        title="Cancel booking"
+                        confirmLabel="Cancel booking"
+                        cancelLabel="Keep"
+                        className="inline-flex h-9 items-center rounded-md border border-neutral-700 px-3 text-sm text-neutral-400 hover:bg-neutral-800 disabled:opacity-50"
+                      >
+                        <Ban className="w-4 h-4 mr-1" /> Cancel
+                      </InlineConfirm>
                     </>
                   )}
-                  {booking.payment_status !== "paid" && booking.payment_method === "cash" && (
+                  {booking.payment_status !== "paid" && booking.payment_method === "cash" && booking.status === "completed" && (
                     <Button
                       size="sm"
                       variant="outline"

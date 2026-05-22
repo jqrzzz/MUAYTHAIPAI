@@ -11,10 +11,10 @@ import {
   Search,
   BadgeCheck,
   Award,
-  Building2,
   ArrowRight,
 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
+import { ockockUrl } from "@/lib/ockock/url"
 
 interface Gym {
   id: string
@@ -68,7 +68,7 @@ export default function GymsListClient({ gyms, user }: GymsListClientProps) {
           </Link>
           <div className="flex items-center gap-3">
             <Link
-              href="/signup"
+              href={ockockUrl("/signup")}
               className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
             >
               List Your Gym
@@ -233,28 +233,6 @@ export default function GymsListClient({ gyms, user }: GymsListClientProps) {
           </div>
         </div>
 
-        {/* Gym Owner CTA */}
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 mb-12 text-center sm:p-8">
-          <Building2 className="h-8 w-8 text-emerald-400 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-white mb-2">
-            Own a Muay Thai Gym?
-          </h3>
-          <p className="text-sm text-neutral-400 mb-4 max-w-md mx-auto">
-            Get your gym online in minutes. Manage bookings, trainers, students,
-            and certifications. Join the only Muay Thai gym network with a
-            standardized ranking system.
-          </p>
-          <Link
-            href="/signup"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-white hover:bg-emerald-400 transition-colors"
-          >
-            Start Your Free Trial
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <p className="text-xs text-neutral-500 mt-3">
-            30 days free. No credit card required.
-          </p>
-        </div>
       </main>
 
       {/* Footer */}

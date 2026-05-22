@@ -164,5 +164,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     booking_id: bookingId,
   })
 
+  // Redeeming a credit against a booking IS payment — mark the booking paid
+  // so credit-covered sessions don't sit "pending". The credit_transactions
+  // row (with booking_id) records that it was settled via credit.
+  if (action === "deduct" && bookingId) {
+    await supabase
+      .from("bookings")
+      .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+      .eq("id", bookingId)
+      .eq("org_id", membership.org_id)
+  }
+
   return NextResponse.json({ success: true, newBalance })
 }
