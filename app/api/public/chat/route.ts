@@ -25,6 +25,7 @@ import {
 } from "@/lib/chat/ai/concierge"
 import { ensureChatGroups } from "@/lib/chat/bootstrap"
 import { NextResponse } from "next/server"
+import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -64,6 +65,22 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: `Message too long (max ${MAX_MESSAGE_LENGTH} chars)` },
       { status: 400 },
+    )
+  }
+
+  // Rate limit anonymous AI usage — by IP (cross-session abuse) and by
+  // session (one visitor hammering). Either tripping returns 429 with a
+  // friendly message the widget shows inline.
+  const ip = ipFromRequest(request)
+  const [ipGate, sessionGate] = await Promise.all([
+    checkLimit({ key: `chat:ip:${ip}`, max: 40 }),
+    checkLimit({ key: `chat:session:${sessionId}`, max: 30 }),
+  ])
+  const blocked = !ipGate.ok ? ipGate : !sessionGate.ok ? sessionGate : null
+  if (blocked) {
+    return NextResponse.json(
+      { error: "You're sending messages too quickly — please wait a moment and try again." },
+      { status: 429, headers: blocked.headers },
     )
   }
 

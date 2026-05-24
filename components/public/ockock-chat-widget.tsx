@@ -126,7 +126,7 @@ export default function OckOckChatWidget({ orgSlug, forceVisible = false }: OckO
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-orange-600 shadow-lg shadow-orange-600/30 flex items-center justify-center hover:scale-105 transition-transform"
+          className="fixed bottom-24 right-6 z-50 w-14 h-14 rounded-full bg-orange-600 shadow-lg shadow-orange-600/30 flex items-center justify-center hover:scale-105 transition-transform"
           aria-label="Chat with OckOck"
         >
           <Image
@@ -141,7 +141,7 @@ export default function OckOckChatWidget({ orgSlug, forceVisible = false }: OckO
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-0 right-0 sm:bottom-6 sm:right-6 z-50 w-full sm:w-[380px] h-[100dvh] sm:h-[520px] flex flex-col bg-neutral-900 sm:rounded-2xl border border-neutral-800 shadow-2xl">
+        <div className="fixed bottom-0 right-0 sm:bottom-24 sm:right-6 z-[60] w-full sm:w-[380px] h-[100dvh] sm:h-[520px] flex flex-col bg-neutral-900 sm:rounded-2xl border border-neutral-800 shadow-2xl">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-800 shrink-0">
             <Image
