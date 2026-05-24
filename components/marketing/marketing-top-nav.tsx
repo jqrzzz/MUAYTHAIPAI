@@ -11,7 +11,7 @@ interface MarketingTopNavProps {
 }
 
 const ROUND_BUTTON =
-  "backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
+  "inline-flex items-center justify-center backdrop-blur-md rounded-full p-3 border transition-colors bg-black/10 border-black/20 hover:bg-black/20 dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20"
 const ICON_COLOR = "w-5 h-5 text-orange-600 dark:text-amber-400"
 
 /**
