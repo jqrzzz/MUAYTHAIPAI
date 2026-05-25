@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Trophy, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
+import { MarketingBottomNav } from "@/components/marketing"
 
 interface Fighter {
   id: string | number
@@ -59,7 +60,7 @@ export default function FightersPageClient() {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2d1810] via-[#1a0f08] to-black">
+    <div className="min-h-screen bg-gradient-to-b from-[#2d1810] via-[#1a0f08] to-black pb-24">
       {/* Header */}
       <div className="pt-20 pb-12 px-4">
         <h1 className="text-4xl md:text-6xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 bg-clip-text text-transparent">
@@ -211,6 +212,8 @@ export default function FightersPageClient() {
           </div>
         </div>
       </div>
+
+      <MarketingBottomNav />
     </div>
   )
 }

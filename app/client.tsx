@@ -16,7 +16,6 @@ import {
   Maximize,
   Minimize,
   X,
-  ChevronUp,
   MapPin,
   Star,
 } from "lucide-react"
@@ -45,8 +44,6 @@ export function ClientPage(): ReactElement {
   const [muted, setMuted] = useState(true)
   const { theme, setTheme } = useTheme()
   const mounted = useMounted()
-  const [currentDesktopSlide, setCurrentDesktopSlide] = useState(0)
-  const totalDesktopSlides = Math.ceil(familyMembers.length / 4)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showFamilyOverlay, setShowFamilyOverlay] = useState(false)
   const [showWelcome, setShowWelcome] = useState(true)
@@ -772,7 +769,7 @@ export function ClientPage(): ReactElement {
       {/* Desktop Profile Sidebar */}
       {!isMobile && !isTablet && (
         <motion.div
-          className="fixed right-4 top-1/4 -translate-y-1/2 z-40 w-20"
+          className="fixed right-4 top-1/2 -translate-y-1/2 z-40 w-20 max-h-[85vh] overflow-y-auto scrollbar-hide py-2"
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{
@@ -780,6 +777,57 @@ export function ClientPage(): ReactElement {
             x: { delay: 2, duration: 1 },
           }}
         >
+          <div className="space-y-4">
+            {familyMembers.map((member, index) => (
+              <motion.div
+                key={member.id}
+                className={`text-center cursor-pointer transition-all duration-300 ${
+                  selectedMember === member.id ? "transform scale-105" : ""
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleProfileClick(member.id)}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: Math.min(index * 0.06, 0.5) }}
+              >
+                <div className="relative mx-auto w-16 h-16 mb-3">
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600"
+                    animate={{
+                      scale: [1, 1.15, 1],
+                      opacity:
+                        selectedMember === member.id || selectedMember === null
+                          ? [0.4, 0.7, 0.4]
+                          : theme === "dark"
+                            ? 0.2
+                            : 0.4,
+                    }}
+                    transition={{
+                      duration: 4,
+                      ease: "easeInOut",
+                      repeat: Number.POSITIVE_INFINITY,
+                      repeatType: "reverse",
+                    }}
+                  />
+                  <div
+                    className={`relative w-full h-full rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center border-2 z-10 ${
+                      selectedMember === member.id
+                        ? "border-orange-400 shadow-lg shadow-orange-400/50"
+                        : "border-gray-300 dark:border-white/20"
+                    }`}
+                  >
+                    {member.image ? (
+                      <Image
+                        src={member.image || "/placeholder.svg"}
+                        alt={`${member.name}'s profile photo`}
+                        fill
+                        sizes="64px"
+                        className="object-cover rounded-full"
+                      />
+                    ) : (
+                      <User className="text-white w-6 h-6" />
+                    )}
           {totalDesktopSlides > 1 && (
             <div className="flex flex-col items-center mb-3">
               <button
@@ -855,9 +903,17 @@ export function ClientPage(): ReactElement {
                     </h4>
                     <p className="text-orange-500 leading-tight text-xs">{member.role}</p>
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                </div>
+                <div className="space-y-1">
+                  <h4
+                    className={`font-semibold text-xs text-gray-800 dark:text-white ${selectedMember === member.id ? "text-orange-400" : ""}`}
+                  >
+                    {member.name}
+                  </h4>
+                  <p className="text-orange-500 leading-tight text-xs">{member.role}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
           {totalDesktopSlides > 1 && (
             <div className="flex flex-col items-center mt-3 gap-2">

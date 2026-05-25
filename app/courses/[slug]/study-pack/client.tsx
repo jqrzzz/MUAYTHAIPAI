@@ -271,10 +271,14 @@ export default function StudyPackClient({
                   </figure>
                 )}
 
-                {lesson.content_type === "video" && lesson.video_url && (
+                {lesson.content_type === "video" && (
                   <div className="mb-5 rounded-md bg-stone-100 border border-stone-200 p-4 text-[13px] text-stone-700">
                     <p className="font-medium">Demonstration video</p>
-                    <p className="text-[11px] text-stone-500 mt-1 break-all">{lesson.video_url}</p>
+                    {lesson.video_url ? (
+                      <p className="text-[11px] text-stone-500 mt-1 break-all">{lesson.video_url}</p>
+                    ) : (
+                      <p className="text-[11px] text-stone-500 mt-1">Watch in the online course (coming soon).</p>
+                    )}
                   </div>
                 )}
 

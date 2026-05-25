@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Heart, MessageCircle, BoxIcon as Boxing, Dumbbell, Menu } from "lucide-react"
@@ -26,13 +27,22 @@ interface MarketingBottomNavProps {
  */
 export function MarketingBottomNav({ active }: MarketingBottomNavProps) {
   const [showMore, setShowMore] = useState(false)
+
+  // Render through a portal to <body> so the fixed bar is positioned
+  // against the viewport no matter how the host page wraps it. Several
+  // marketing pages render this inside animated/overflow-clipped
+  // containers, and a transformed ancestor silently breaks
+  // `position: fixed` — which is why the bar misbehaved off the homepage.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   // Hide ourselves when a full-screen modal (booking, etc.) asks for
   // a clean canvas. Modals z-collide with us at z-50 and the user's
   // tap lands on the nav, not the modal's submit area behind it.
   const navLocked = useIsMarketingNavLocked()
-  if (navLocked) return null
+  if (navLocked || !mounted) return null
 
-  return (
+  return createPortal(
     <>
       <motion.div
         className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t bg-white/90 border-gray-200 dark:bg-black/80 dark:border-white/10"
@@ -72,6 +82,7 @@ export function MarketingBottomNav({ active }: MarketingBottomNavProps) {
         </div>
       </motion.div>
       <MoreMenu isOpen={showMore} onClose={() => setShowMore(false)} />
-    </>
+    </>,
+    document.body,
   )
 }

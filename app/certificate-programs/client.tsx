@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import { ContinueLearning } from "@/components/blog/continue-learning"
 import {
   PageBackground,
@@ -231,6 +232,42 @@ export default function CertificateProgramsClient() {
                 Learn authentic Muay Thai in Thailand. Train with experienced fighters, earn recognized certifications,
                 and take home skills that last a lifetime.
               </p>
+            </motion.section>
+
+            {/* How the path works */}
+            <motion.section
+              className="px-4 max-w-4xl mx-auto mb-14"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.1, duration: 0.6 }}
+            >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-orange-500/20 bg-orange-100/40 dark:bg-orange-950/20 p-5 text-center">
+                  <h4 className="text-amber-700 dark:text-amber-300 font-bold mb-1">A progressive path</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    Five levels — from the 3-day <span className="font-semibold">Naga</span> foundation to the
+                    one-month <span className="font-semibold">Garuda</span> mastery — each named for a Thai guardian
+                    and building on the last.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-orange-500/20 bg-orange-100/40 dark:bg-orange-950/20 p-5 text-center">
+                  <h4 className="text-amber-700 dark:text-amber-300 font-bold mb-1">Earned, not bought</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    Every level pairs hands-on training with study materials and evaluations, so your certificate
+                    reflects skills you can actually demonstrate.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-orange-500/20 bg-orange-100/40 dark:bg-orange-950/20 p-5 text-center">
+                  <h4 className="text-amber-700 dark:text-amber-300 font-bold mb-1">Yours to keep</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    Take home a recognized certificate, and keep training with our{" "}
+                    <Link href="/courses" className="text-amber-700 dark:text-amber-300 underline-offset-4 hover:underline">
+                      online courses
+                    </Link>{" "}
+                    between visits.
+                  </p>
+                </div>
+              </div>
             </motion.section>
 
             <motion.h3

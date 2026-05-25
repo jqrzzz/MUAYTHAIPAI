@@ -6,6 +6,7 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { SacredBackground } from "@/components/sacred-background"
 import { ContinueLearning } from "@/components/blog/continue-learning"
+import { familyMembers } from "@/lib/family-data"
 import {
   PageBackground,
   MarketingTopNav,
@@ -73,6 +74,16 @@ export default function GymPageClient() {
               <p className="text-lg text-amber-300/90 mt-2">No experience? No problem.</p>
             </div>
 
+            {/* CREDIBILITY */}
+            <div className="max-w-3xl mx-auto px-4 mt-6">
+              <p className="text-center text-gray-300 leading-relaxed">
+                A <span className="text-amber-300 font-semibold">third-generation family gym</span> in Pai, Thailand,
+                teaching traditional Muay Thai <span className="text-amber-300 font-semibold">since 1975</span> and
+                featured in <span className="text-amber-300 font-semibold">National Geographic</span>. Led by Kru
+                Wisarut and the whole family.
+              </p>
+            </div>
+
             {/* IMAGE CAROUSEL */}
             <div className="relative w-full max-w-4xl mx-auto h-64 md:h-96 mt-10 rounded-xl overflow-hidden shadow-lg">
               <AnimatePresence initial={false} mode="wait">
@@ -114,6 +125,27 @@ export default function GymPageClient() {
                     <h3 className="text-md font-semibold text-amber-200">{a.name}</h3>
                   </motion.div>
                 ))}
+              </div>
+
+              {/* MEET THE FAMILY */}
+              <div className="mt-14 pt-8 border-t border-amber-500/20">
+                <h2 className="text-3xl font-bold text-amber-300 mb-2">Meet the family</h2>
+                <p className="text-gray-300 mb-8">The people who&apos;ll train you — three generations under one roof.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {familyMembers.map((member) => (
+                    <div key={member.id} className="flex flex-col items-center">
+                      <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-amber-500/30 bg-amber-950/40 flex items-center justify-center mb-2">
+                        {member.image ? (
+                          <Image src={member.image} alt={member.name} fill className="object-cover" sizes="80px" />
+                        ) : (
+                          <span className="text-2xl">🥊</span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-semibold text-amber-200">{member.name}</h3>
+                      <p className="text-xs text-gray-400 text-center leading-tight">{member.role}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-12 pt-8 border-t border-amber-500/20">
