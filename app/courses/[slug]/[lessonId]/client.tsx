@@ -300,25 +300,30 @@ export default function LessonPlayerClient({
               </div>
             )}
 
-            {/* Video lesson — replaced with poster + link in reading mode */}
-            {lesson.content_type === "video" && lesson.video_url && (
-              readingMode ? (
-                <a
-                  href={lesson.video_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mb-6 block rounded-xl border border-stone-200 bg-stone-100 p-4 text-stone-700 hover:bg-stone-200 transition-colors"
-                >
-                  <div className="flex items-center gap-2 text-sm">
-                    <Play className="h-4 w-4" />
-                    <span>Watch the demonstration online</span>
-                  </div>
-                  <p className="text-[11px] text-stone-500 mt-1 truncate">
-                    {lesson.video_url}
-                  </p>
-                </a>
+            {/* Video lesson — real embed when we have a URL, a clean
+                placeholder when the demo hasn't been recorded yet. */}
+            {lesson.content_type === "video" && (
+              lesson.video_url ? (
+                readingMode ? (
+                  <a
+                    href={lesson.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mb-6 block rounded-xl border border-stone-200 bg-stone-100 p-4 text-stone-700 hover:bg-stone-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <Play className="h-4 w-4" />
+                      <span>Watch the demonstration online</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 mt-1 truncate">
+                      {lesson.video_url}
+                    </p>
+                  </a>
+                ) : (
+                  <VideoPlayer url={lesson.video_url} />
+                )
               ) : (
-                <VideoPlayer url={lesson.video_url} />
+                <VideoPlaceholder readingMode={readingMode} />
               )
             )}
 
@@ -575,6 +580,27 @@ export default function LessonPlayerClient({
 // ============================================
 // Video Player
 // ============================================
+
+function VideoPlaceholder({ readingMode }: { readingMode: boolean }) {
+  return (
+    <div
+      className={`aspect-video rounded-xl border flex flex-col items-center justify-center text-center gap-3 ${
+        readingMode
+          ? "border-stone-200 bg-stone-100 text-stone-500"
+          : "border-white/10 bg-black/40 text-neutral-400"
+      }`}
+    >
+      <div
+        className={`flex h-14 w-14 items-center justify-center rounded-full ${
+          readingMode ? "bg-stone-200" : "bg-white/5"
+        }`}
+      >
+        <Play className="h-6 w-6" />
+      </div>
+      <p className="text-sm font-medium">Demonstration video coming soon</p>
+    </div>
+  )
+}
 
 function VideoPlayer({ url }: { url: string }) {
   // Detect platform and render appropriate embed
