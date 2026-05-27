@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
   const jar = await cookies()
   jar.set(IMPERSONATION_COOKIE, JSON.stringify({ type, orgId, userId, label }), {
-    httpOnly: false, // banner reads this client-side to render the exit button
+    httpOnly: true, // not readable from JS; banner reads its state via /impersonation/active instead
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 4, // 4h — long enough for a working session, not forever

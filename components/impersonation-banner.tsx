@@ -2,9 +2,11 @@
 
 /**
  * Banner shown across /admin, /trainer, /student when the actor is a
- * platform admin currently "viewing as" someone. Reads the
- * mtp_impersonate cookie client-side; the server-side gates have
- * already verified the cookie maps to a real platform-admin actor.
+ * platform admin currently "viewing as" someone. The impersonation
+ * cookie is httpOnly (so an XSS in an embedded widget can't read who
+ * you're impersonating), so this component fetches its state from
+ * /api/platform-admin/impersonation/active — which server-side
+ * re-verifies the caller is a real platform admin every request.
  *
  * Not sticky — sits above the page's own sticky header so it scrolls
  * away once the operator is engaged with the surface. The chrome shift
@@ -14,38 +16,30 @@ import { useEffect, useState } from "react"
 import { Eye, X, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-interface ImpersonationCookie {
+interface ImpersonationState {
   type: "gym_admin" | "trainer" | "student"
   orgId?: string | null
   userId?: string | null
   label: string
 }
 
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") return null
-  const m = document.cookie.match(
-    new RegExp(
-      "(?:^|; )" + name.replace(/[.$?*|{}()[\]\\/+^]/g, "\\$&") + "=([^;]*)",
-    ),
-  )
-  return m ? decodeURIComponent(m[1]) : null
-}
-
 export default function ImpersonationBanner() {
   const router = useRouter()
-  const [state, setState] = useState<ImpersonationCookie | null>(null)
+  const [state, setState] = useState<ImpersonationState | null>(null)
   const [exiting, setExiting] = useState(false)
 
   useEffect(() => {
-    const raw = readCookie("mtp_impersonate")
-    if (!raw) {
-      setState(null)
-      return
-    }
-    try {
-      setState(JSON.parse(raw))
-    } catch {
-      setState(null)
+    let cancelled = false
+    fetch("/api/platform-admin/impersonation/active", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { active: null }))
+      .then((j: { active: ImpersonationState | null }) => {
+        if (!cancelled) setState(j.active ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setState(null)
+      })
+    return () => {
+      cancelled = true
     }
   }, [])
 
