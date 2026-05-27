@@ -28,6 +28,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing gymId or status" }, { status: 400 })
   }
 
+  // Cancellation goes through the dedicated cancel endpoint so it
+  // captures a reason, audits, and actually tells Stripe. This toggle
+  // is for status flips that don't have a money side-effect.
+  if (status === "cancelled" || status === "inactive") {
+    return NextResponse.json(
+      {
+        error:
+          "Use /api/platform-admin/subscriptions/cancel to cancel a subscription — that endpoint captures a reason, writes audit, and cancels the Stripe sub.",
+      },
+      { status: 400 },
+    )
+  }
+
   if (!ALLOWED_STATUSES.has(status)) {
     return NextResponse.json(
       {

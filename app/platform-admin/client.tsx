@@ -213,6 +213,12 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
   const [payoutLoading, setPayoutLoading] = useState(false)
   const [selectedGymPayout, setSelectedGymPayout] = useState<GymPayout | null>(null)
   const [showMarkPaid, setShowMarkPaid] = useState(false)
+  // Subscription cancellation — captured reason flows to the audit log
+  // via /api/platform-admin/subscriptions/cancel, which also tells Stripe.
+  const [cancelTarget, setCancelTarget] = useState<{ gymId: string; gymName: string } | null>(null)
+  const [cancelReason, setCancelReason] = useState("")
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
   const [exchangeRate, setExchangeRate] = useState("35.0")
   const [payoutNotes, setPayoutNotes] = useState("")
 
@@ -441,6 +447,37 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
       console.error("Error toggling subscription:", error)
     } finally {
       setSubscriptionLoading(null)
+    }
+  }
+
+  const submitCancel = async () => {
+    if (!cancelTarget) return
+    const reason = cancelReason.trim()
+    if (!reason) {
+      setCancelError("Please enter a reason.")
+      return
+    }
+    setCancelling(true)
+    setCancelError(null)
+    try {
+      const res = await fetch("/api/platform-admin/subscriptions/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gymId: cancelTarget.gymId, reason }),
+      })
+      const json = await res.json().catch(() => ({} as { error?: string }))
+      if (!res.ok) {
+        setCancelError(json.error || "Couldn't cancel. Please try again.")
+        setCancelling(false)
+        return
+      }
+      setCancelTarget(null)
+      setCancelReason("")
+      router.refresh()
+    } catch {
+      setCancelError("Network error. Please try again.")
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -674,33 +711,41 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                       </div>
                       <div className="flex items-center gap-2 text-right text-xs text-zinc-500">
                         <p>Added {new Date(gym.created_at).toLocaleDateString()}</p>
-                        {/* Subscribe/Unsubscribe — a billing action, hidden for partner platform admins */}
+                        {/* Subscribe/Cancel — a billing action, hidden for partner platform admins.
+                            Cancel routes through the dedicated /subscriptions/cancel endpoint
+                            (captures reason + audits + tells Stripe). The Subscribe path keeps
+                            the simpler toggle for trial->active marking. */}
                         {!isPartner &&
                           (gym.gym_subscriptions ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              toggleSubscription(
-                                gym.id,
-                                gym.gym_subscriptions.status === "active" ? "inactive" : "active",
-                              )
-                            }
-                            className={`border-zinc-700 text-xs ${
-                              gym.gym_subscriptions.status === "active"
-                                ? "text-red-500 hover:text-red-600"
-                                : "text-green-500 hover:text-green-600"
-                            }`}
-                            disabled={subscriptionLoading === gym.id}
-                          >
-                            {subscriptionLoading === gym.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : gym.gym_subscriptions.status === "active" ? (
-                              "Unsubscribe"
-                            ) : (
-                              "Subscribe"
-                            )}
-                          </Button>
+                          gym.gym_subscriptions.status === "active" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCancelTarget({ gymId: gym.id, gymName: gym.name })
+                                setCancelReason("")
+                                setCancelError(null)
+                              }}
+                              className="border-zinc-700 text-xs text-red-500 hover:text-red-600"
+                              disabled={subscriptionLoading === gym.id}
+                            >
+                              Cancel…
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleSubscription(gym.id, "active")}
+                              className="border-zinc-700 text-xs text-green-500 hover:text-green-600"
+                              disabled={subscriptionLoading === gym.id}
+                            >
+                              {subscriptionLoading === gym.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                "Subscribe"
+                              )}
+                            </Button>
+                          )
                         ) : (
                           <Button
                             variant="outline"
