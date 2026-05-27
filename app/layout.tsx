@@ -8,6 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/react"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import OckOckChatWidget from "@/components/public/ockock-chat-widget"
+import { headers } from "next/headers"
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
 const cormorant = Cormorant_Garamond({
@@ -88,6 +89,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Host-conditional widget mount: OckOckChatWidget represents one
+  // specific gym (the Wisarut Family demo); it belongs on muaythaipai.com,
+  // not on the OckOck product domain. Without this, ockock.app visitors
+  // chat with the MTP concierge.
+  const host = headers().get("host") ?? ""
+  const isOckOckProduct = host.endsWith("ockock.app")
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -284,7 +292,7 @@ export default function RootLayout({
       <body className={`${cinzel.variable} ${cormorant.variable} ${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
-          <OckOckChatWidget orgSlug="wisarut-family-gym" />
+          {!isOckOckProduct && <OckOckChatWidget orgSlug="wisarut-family-gym" />}
         </ThemeProvider>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-KM47GH0T7J"
