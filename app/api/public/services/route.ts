@@ -10,7 +10,10 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const gymSlug = searchParams.get("gym") || "wisarut-family-gym"
+    const gymSlug = searchParams.get("gym")
+    if (!gymSlug) {
+      return NextResponse.json({ error: "Missing required `gym` param" }, { status: 400 })
+    }
 
     // Get the organization
     const { data: org, error: orgError } = await supabase

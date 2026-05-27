@@ -66,7 +66,11 @@ export default function CoursesClient() {
   useEffect(() => {
     async function load() {
       setLoading(true)
+      // /courses on muaythaipai.com is the MTP gym's course catalog.
+      // /api/public/courses requires an explicit `gym` so it never
+      // silently returns cross-gym data.
       const params = new URLSearchParams()
+      params.set("gym", "wisarut-family-gym")
       if (category) params.set("category", category)
       if (difficulty) params.set("difficulty", difficulty)
 
