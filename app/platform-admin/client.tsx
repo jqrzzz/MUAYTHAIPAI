@@ -55,6 +55,7 @@ import HealthCard from "@/components/platform-admin/health-card"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import { PLAN } from "@/lib/ockock/product"
 
 interface GymPayout {
   gym: {
@@ -336,7 +337,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
       await navigator.clipboard.writeText(statement)
       // Per-row "Copied" state with a short timeout so the button can
       // flip back to its normal label. No alert popup.
-      setCopiedStatementGymId(gymPayout.gym_id)
+      setCopiedStatementGymId(gymPayout.gym.id)
       setTimeout(() => setCopiedStatementGymId(null), 2500)
     } catch {
       // Clipboard denied (rare on https) — silent; the user will retry.
@@ -624,10 +625,14 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                   Monthly recurring revenue
                 </p>
                 <p className="text-[32px] font-semibold tracking-tight text-white tabular-nums">
-                  ฿{(stats.activeSubscriptions * 999).toLocaleString()}
+                  ฿{(stats.activeSubscriptions * PLAN.priceTHB).toLocaleString()}
                 </p>
                 <p className="text-[12px] text-zinc-500 mt-0.5">
-                  {stats.activeSubscriptions} gyms × ฿999/month
+                  {stats.activeSubscriptions} gyms × ฿{PLAN.priceTHB}/month
+                  {/* NOTE: approximation while every active sub is on the
+                      standard plan. Once we have custom-priced subs,
+                      switch to summing gym_subscriptions.monthly_price_*
+                      like the Subscriptions tab already does. */}
                 </p>
               </div>
             )}
@@ -892,12 +897,12 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                                 size="sm"
                                 onClick={() => copyStatement(gymPayout)}
                                 title={
-                                  copiedStatementGymId === gymPayout.gym_id
+                                  copiedStatementGymId === gymPayout.gym.id
                                     ? "Statement copied"
                                     : "Copy statement"
                                 }
                                 className={`border-zinc-700 ${
-                                  copiedStatementGymId === gymPayout.gym_id
+                                  copiedStatementGymId === gymPayout.gym.id
                                     ? "text-emerald-300 border-emerald-700"
                                     : ""
                                 }`}

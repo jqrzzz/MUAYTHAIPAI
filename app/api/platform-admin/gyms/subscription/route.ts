@@ -1,6 +1,17 @@
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
 
+// Allowed values for gym_subscriptions.status when set manually by a
+// platform admin. Anything else gets a 400 — previously this endpoint
+// accepted ANY string and wrote garbage into the column.
+const ALLOWED_STATUSES = new Set([
+  "trial",
+  "active",
+  "past_due",
+  "cancelled",
+  "paused",
+])
+
 // Manually toggle gym subscription status (for platform admin)
 export async function POST(request: Request) {
   const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
@@ -15,6 +26,15 @@ export async function POST(request: Request) {
 
   if (!gymId || !status) {
     return NextResponse.json({ error: "Missing gymId or status" }, { status: 400 })
+  }
+
+  if (!ALLOWED_STATUSES.has(status)) {
+    return NextResponse.json(
+      {
+        error: `Invalid status "${status}". Allowed: ${[...ALLOWED_STATUSES].join(", ")}.`,
+      },
+      { status: 400 },
+    )
   }
 
   // Update subscription status

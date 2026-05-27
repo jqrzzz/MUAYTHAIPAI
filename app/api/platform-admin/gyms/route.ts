@@ -62,8 +62,15 @@ export async function POST(request: Request) {
     invited_by: user.id,
   })
 
-  // Send invite email
-  const inviteUrl = `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || "https://pai-muay-thai.vercel.app"}/invite/${token}`
+  // Send invite email — match the signup endpoint's site-URL priority
+  // (NEXT_PUBLIC_SITE_URL → dev redirect → muaythaipai.com). The previous
+  // code reached for a dev-only env var first with a stale vercel
+  // fallback, which would email a real customer a dead-deploy link.
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+    "https://muaythaipai.com"
+  const inviteUrl = `${siteUrl}/invite/${token}`
 
   try {
     await resend.emails.send({
