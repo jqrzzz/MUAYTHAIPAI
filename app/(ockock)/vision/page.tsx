@@ -308,7 +308,7 @@ export default function VisionPage() {
       {/* ═════════════════ 9. THREE STEPS ═════════════════ */}
       <Section className="bg-gradient-to-b from-transparent via-amber-500/[0.025] to-transparent">
         <Eyebrow>Getting started</Eyebrow>
-        <H2>Three steps. Most gyms take their first booking the same day.</H2>
+        <H2>Three steps. You can be live the same day.</H2>
 
         <ol className="mt-12 space-y-3">
           {[

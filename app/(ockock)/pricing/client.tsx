@@ -67,7 +67,7 @@ export default function PricingClient() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...FADE, delay: 0.08 }}
         >
-          One plan. Everything included.
+          One plan to run your Muay Thai gym.
         </motion.h1>
 
         <motion.p
