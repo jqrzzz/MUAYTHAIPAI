@@ -1323,6 +1323,71 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={!!cancelTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCancelTarget(null)
+            setCancelReason("")
+            setCancelError(null)
+          }
+        }}
+      >
+        <DialogContent className="bg-zinc-900 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Cancel subscription</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-zinc-400">
+            Cancel{" "}
+            <span className="text-white font-semibold">{cancelTarget?.gymName}</span>
+            &apos;s Stripe subscription immediately and mark the gym as
+            cancelled. A reason is required for the audit log.
+          </p>
+          <div className="space-y-2 pt-2">
+            <Label htmlFor="cancel-reason" className="text-zinc-300">
+              Reason
+            </Label>
+            <Textarea
+              id="cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Why are you cancelling? (e.g. requested by owner, payment failures, gym closing)"
+              className="bg-zinc-950 border-zinc-700 text-white"
+              rows={3}
+            />
+          </div>
+          {cancelError && (
+            <p className="text-sm text-red-400">{cancelError}</p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelTarget(null)
+                setCancelReason("")
+                setCancelError(null)
+              }}
+              disabled={cancelling}
+              className="border-zinc-700"
+            >
+              Back
+            </Button>
+            <Button
+              variant="outline"
+              onClick={submitCancel}
+              disabled={cancelling || !cancelReason.trim()}
+              className="border-red-700 text-red-400 hover:bg-red-600/10"
+            >
+              {cancelling ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Cancel subscription"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showMarkPaid} onOpenChange={setShowMarkPaid}>
         <DialogContent className="border-zinc-800 bg-zinc-900 text-white">
           <DialogHeader>
