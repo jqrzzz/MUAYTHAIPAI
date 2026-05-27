@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     "Muay Thai, Thai Boxing, Pai Thailand, Martial Arts Training, Wisarut Family, Traditional Muay Thai, Thailand Training Camp, Authentic Thai Boxing, Muay Thai Classes, Fight Training",
   authors: [{ name: "Wisarut Family" }],
   creator: "Muay Thai Pai",
-  publisher: "Wisarut Family Gym",
+  publisher: "Muay Thai Pai",
   robots: "index, follow",
   alternates: {
     canonical: "https://muaythaipai.com",
@@ -201,7 +201,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "SportsActivityLocation",
               "@id": "https://muaythaipai.com/#gym",
-              name: "Muay Thai Pai - Wisarut Family Gym",
+              name: "Muay Thai Pai",
               description:
                 "Authentic Muay Thai training gym in Pai, Thailand, run by the legendary Wisarut Family. Third-generation masters teaching traditional Thai boxing.",
               url: "https://muaythaipai.com",

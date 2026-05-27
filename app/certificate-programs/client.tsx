@@ -27,7 +27,7 @@ const certificates = [
       "A foundational 3-day certificate to begin your Muay Thai journey with core skills and discipline.",
     title: "3-Day Participation Certificate: 'The Journey of the Naga's Path'",
     image: "/images/naga-level1.png",
-    alt: "Naga Level 1 certificate - 3-day foundational Muay Thai training program at Wisarut Family Gym",
+    alt: "Naga Level 1 certificate - 3-day foundational Muay Thai training program at Muay Thai Pai",
     theme:
       "The Naga (serpent deity) is a symbol of protection and guidance in Thai culture. This program marks the beginning of a student's journey under the principles of Muay Thai, with introductory study materials and evaluations.",
     focus: ["Foundational techniques", "Basic stances & movements", "Discipline & respect", "Introductory evaluations"],
@@ -67,7 +67,7 @@ const certificates = [
       "A rigorous 10-day course to forge powerful techniques, cultivate a fearless spirit, and undergo comprehensive evaluations.",
     title: "10-Day Participation Certificate: 'The Roar of Singha'",
     image: "/images/ratchasi-level3.png",
-    alt: "Singha Level 3 certificate - 10-day advanced Muay Thai warrior training at Wisarut Family Gym",
+    alt: "Singha Level 3 certificate - 10-day advanced Muay Thai warrior training at Muay Thai Pai",
     theme:
       "Singha, the mythical Thai lion, embodies strength, courage, and leadership. This program is designed to forge powerful techniques and cultivate a fearless spirit, with comprehensive study materials and rigorous evaluations.",
     focus: [
@@ -113,7 +113,7 @@ const certificates = [
       "A 1-month elite certification program to achieve the pinnacle of mastery and spiritual connection.",
     title: "1-Month Elite Certification: 'The Path of the Garuda'",
     image: "/images/garuda-level5.png",
-    alt: "Garuda Level 5 certificate - 1-month elite Muay Thai master certification at Wisarut Family Gym",
+    alt: "Garuda Level 5 certificate - 1-month elite Muay Thai master certification at Muay Thai Pai",
     theme:
       "The Garuda (mythical bird) is known for its agility, strength, and loyalty. This elite program represents the pinnacle of mastery, focusing on spiritual connection and advanced application of Muay Thai principles, culminating in comprehensive study and final evaluations.",
     focus: [

@@ -114,7 +114,7 @@ export function GymLocation() {
               {[
                 {
                   src: "/images/group-training-pads.jpeg",
-                  alt: "Muay Thai pad training - Students practicing authentic Thai boxing techniques at Wisarut Family Gym in Pai, Thailand",
+                  alt: "Muay Thai pad training - Students practicing authentic Thai boxing techniques at Muay Thai Pai in Pai, Thailand",
                 },
                 {
                   src: "/images/membership-fighters-smiling.jpeg",
