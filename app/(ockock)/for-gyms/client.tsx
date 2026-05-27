@@ -366,7 +366,7 @@ export default function ForGymsClient() {
         <div className="mb-4 text-5xl">🐃</div>
         <h2 className="mb-4 text-2xl font-semibold tracking-tight text-white md:text-3xl">Ready to meet OckOck?</h2>
         <p className="mx-auto mb-8 max-w-md text-[15px] text-zinc-400">
-          Ask OckOck anything up top — or just sign up. Most gyms take their first booking the same day.
+          Ask OckOck anything up top — or just sign up. You can be live the same day.
         </p>
         <OckOckCta href="/signup" size="lg">
           List your gym — free {PLAN.trialDays}-day trial
