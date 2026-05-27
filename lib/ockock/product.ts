@@ -18,6 +18,10 @@ export const OCKOCK = {
 export const PLAN = {
   priceTHB: 999,
   priceUSDApprox: 28,
+  /** Exact Stripe charge in USD cents. Single source of truth for any
+   * Stripe checkout / subscription line items + the DB column
+   * gym_subscriptions.monthly_price_usd_cents. */
+  priceUSDCents: 2900,
   trialDays: 30,
   creditCardRequired: false,
 } as const
