@@ -282,7 +282,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
       const res = await fetch("/api/platform-admin/payouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.JSONStringify({
+        body: JSON.stringify({
           orgId: selectedGymPayout.gym.id,
           periodStart: payoutData.period.start,
           periodEnd: payoutData.period.end,
