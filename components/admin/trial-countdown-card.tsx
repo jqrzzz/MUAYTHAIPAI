@@ -4,17 +4,21 @@
  * Trial countdown card — top of the admin Today tab.
  *
  * Shows the gym owner exactly where they stand: how many days are left
- * on the trial, what happens when it ends, and how to reach out about
- * keeping the lights on. We don't have self-serve checkout for gyms
- * yet (Big Dog handles billing manually), so the CTA is a mailto.
+ * on the trial, what happens when it ends, and how to keep the lights on.
  *
  * Hidden when:
  *   - No subscription row exists (older gyms set up manually)
  *   - Status is "cancelled" (no point nagging)
  *   - Status is "active" AND > 14 days until renewal (not actionable)
+ *
+ * Trial states get a self-serve "Subscribe" button that mints a Stripe
+ * Checkout session via /api/admin/subscriptions/checkout. Active states
+ * keep the support mailto for now (real subscription-management lives
+ * in a future platform-admin pass).
  */
 import { useEffect, useState } from "react"
-import { Clock, Mail, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Clock, Mail, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react"
+import { PLAN } from "@/lib/ockock/product"
 
 interface SubData {
   status: "trial" | "active" | "cancelled" | "missing" | string
@@ -25,6 +29,8 @@ interface SubData {
 
 export default function TrialCountdownCard() {
   const [data, setData] = useState<SubData | null>(null)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch("/api/admin/subscription")
@@ -32,6 +38,32 @@ export default function TrialCountdownCard() {
       .then(setData)
       .catch(() => {})
   }, [])
+
+  async function startCheckout() {
+    setCheckoutLoading(true)
+    setCheckoutError(null)
+    try {
+      const res = await fetch("/api/admin/subscriptions/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnUrl: "/admin" }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string }
+      if (!res.ok || !json.url) {
+        setCheckoutError(
+          json.error || "Couldn't start checkout. Email support@paimuaythai.com.",
+        )
+        setCheckoutLoading(false)
+        return
+      }
+      window.location.href = json.url
+    } catch {
+      setCheckoutError(
+        "Couldn't reach checkout. Email support@paimuaythai.com.",
+      )
+      setCheckoutLoading(false)
+    }
+  }
 
   if (!data) return null
 
@@ -97,14 +129,35 @@ export default function TrialCountdownCard() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className={`text-sm font-semibold ${accent.text}`}>{headline}</p>
-            <a
-              href={supportMail}
-              className={`inline-flex items-center gap-1 text-[11px] ${accent.text} hover:underline`}
-            >
-              <Mail className="h-3 w-3" />
-              support@paimuaythai.com
-            </a>
+            {isTrial ? (
+              <button
+                type="button"
+                onClick={startCheckout}
+                disabled={checkoutLoading}
+                className={`inline-flex items-center gap-1 text-[11px] font-medium ${accent.text} hover:underline disabled:opacity-50`}
+              >
+                {checkoutLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                {checkoutLoading
+                  ? "Opening Stripe…"
+                  : ended
+                    ? `Continue — ฿${PLAN.priceTHB}/mo`
+                    : `Subscribe — ฿${PLAN.priceTHB}/mo`}
+              </button>
+            ) : (
+              <a
+                href={supportMail}
+                className={`inline-flex items-center gap-1 text-[11px] ${accent.text} hover:underline`}
+              >
+                <Mail className="h-3 w-3" />
+                support@paimuaythai.com
+              </a>
+            )}
           </div>
+          {checkoutError && (
+            <p className="mt-2 text-[11px] text-rose-300">{checkoutError}</p>
+          )}
           <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
             {body}
           </p>
