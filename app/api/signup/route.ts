@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { ensureChatGroups } from "@/lib/chat/bootstrap"
 import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
+import { PLAN } from "@/lib/ockock/product"
 
 // Use service role to create orgs (no auth required for signup)
 const supabase = createClient(
@@ -155,11 +156,16 @@ export async function POST(request: Request) {
         .in("status", ["sent", "opened", "clicked"])
     }
 
-    // Create trial subscription
+    // Create trial subscription. trial_starts_at, trial_ends_at, plan,
+    // and status default at the DB layer (now(), now()+30d, 'standard',
+    // 'trial'). We set the prices explicitly from PLAN so the new gym
+    // lands on the canonical ฿999 / $29 and downstream code (trial
+    // countdown, Stripe checkout) has real values to work with.
     await supabase.from("gym_subscriptions").insert({
       org_id: org.id,
       status: "trial",
-      price_thb: 0,
+      price_thb: PLAN.priceTHB,
+      monthly_price_usd_cents: PLAN.priceUSDCents,
     })
 
     // Bootstrap the OckOck chat groups (public_inbox + owner_assist) so

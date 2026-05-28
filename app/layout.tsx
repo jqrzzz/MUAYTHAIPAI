@@ -8,6 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/react"
 import { SOCIAL_LINKS } from "@/lib/socials"
 import OckOckChatWidget from "@/components/public/ockock-chat-widget"
+import { headers } from "next/headers"
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" })
 const cormorant = Cormorant_Garamond({
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
     "Muay Thai, Thai Boxing, Pai Thailand, Martial Arts Training, Wisarut Family, Traditional Muay Thai, Thailand Training Camp, Authentic Thai Boxing, Muay Thai Classes, Fight Training",
   authors: [{ name: "Wisarut Family" }],
   creator: "Muay Thai Pai",
-  publisher: "Wisarut Family Gym",
+  publisher: "Muay Thai Pai",
   robots: "index, follow",
   alternates: {
     canonical: "https://muaythaipai.com",
@@ -88,6 +89,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Host-conditional widget mount: OckOckChatWidget represents one
+  // specific gym (the Wisarut Family demo); it belongs on muaythaipai.com,
+  // not on the OckOck product domain. Without this, ockock.app visitors
+  // chat with the MTP concierge.
+  const host = headers().get("host") ?? ""
+  const isOckOckProduct = host.endsWith("ockock.app")
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -201,7 +209,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "SportsActivityLocation",
               "@id": "https://muaythaipai.com/#gym",
-              name: "Muay Thai Pai - Wisarut Family Gym",
+              name: "Muay Thai Pai",
               description:
                 "Authentic Muay Thai training gym in Pai, Thailand, run by the legendary Wisarut Family. Third-generation masters teaching traditional Thai boxing.",
               url: "https://muaythaipai.com",
@@ -284,7 +292,7 @@ export default function RootLayout({
       <body className={`${cinzel.variable} ${cormorant.variable} ${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
-          <OckOckChatWidget orgSlug="wisarut-family-gym" />
+          {!isOckOckProduct && <OckOckChatWidget orgSlug="wisarut-family-gym" />}
         </ThemeProvider>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-KM47GH0T7J"

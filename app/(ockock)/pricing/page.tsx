@@ -19,8 +19,8 @@ export default function PricingPage() {
     <>
       <BreadcrumbSchema
         items={[
-          { name: "Home", url: "https://muaythaipai.com" },
-          { name: "Pricing", url: "https://muaythaipai.com/pricing" },
+          { name: "Home", url: "https://ockock.app" },
+          { name: "Pricing", url: "https://ockock.app/pricing" },
         ]}
       />
       <PricingClient />

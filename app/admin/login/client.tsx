@@ -71,12 +71,12 @@ function AdminLoginInner() {
         options: {
           shouldCreateUser: false,
           // After the user clicks the magic link, /auth/callback finishes
-          // auth and forwards them to ?next= — pass our safe redirectTo
-          // so they end up on /ockock/promoter (or wherever) and not the
-          // generic /admin dashboard.
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+          // auth and forwards them to ?next=. Always use the current host
+          // so a shared-Supabase project (scootscoot, ramos etc. live
+          // alongside OckOck) can't silently bounce us to a sibling — a
+          // `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` env var used to be
+          // checked first here and could point at the wrong host.
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
         },
       })
       if (error) throw error

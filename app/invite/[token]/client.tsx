@@ -60,6 +60,11 @@ export default function InviteAcceptClient({
         email: email.toLowerCase().trim(),
         options: {
           shouldCreateUser: true,
+          // Critical: explicitly redirect back to THIS invite page on the
+          // current host. Without an emailRedirectTo, Supabase falls back
+          // to the project's Site URL — which on a shared Supabase project
+          // (scootscoot, ramos, etc all live here) may not be ours.
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/invite/${invite.token}`)}`,
         },
       })
 

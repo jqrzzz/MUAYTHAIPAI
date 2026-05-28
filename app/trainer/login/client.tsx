@@ -44,9 +44,7 @@ export default function TrainerLoginClient() {
         email,
         options: {
           shouldCreateUser: false, // Trainers must be invited first
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/auth/callback?next=/trainer`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/trainer`,
         },
       })
       if (error) throw error

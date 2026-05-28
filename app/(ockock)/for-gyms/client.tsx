@@ -318,7 +318,7 @@ export default function ForGymsClient() {
         <div className="mb-12 text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Three steps to live</h2>
           <p className="mx-auto mt-2 max-w-xl text-[14px] text-zinc-500">
-            Most gyms are taking bookings the same day they sign up.
+            You can be taking bookings the same day.
           </p>
         </div>
         <div className="grid gap-8 sm:grid-cols-3">
@@ -366,7 +366,7 @@ export default function ForGymsClient() {
         <div className="mb-4 text-5xl">🐃</div>
         <h2 className="mb-4 text-2xl font-semibold tracking-tight text-white md:text-3xl">Ready to meet OckOck?</h2>
         <p className="mx-auto mb-8 max-w-md text-[15px] text-zinc-400">
-          Ask OckOck anything up top — or just sign up. Most gyms take their first booking the same day.
+          Ask OckOck anything up top — or just sign up. You can be live the same day.
         </p>
         <OckOckCta href="/signup" size="lg">
           List your gym — free {PLAN.trialDays}-day trial

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import StudentLoginClient from "./client"
 
 export const metadata: Metadata = {
-  title: "Student Login | Muay Thai Thailand Network",
+  title: "Student Login | MUAYTHAIPAI",
   description: "Access your training history, certificates, and book at any gym across Thailand.",
 }
 

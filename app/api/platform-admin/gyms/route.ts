@@ -1,6 +1,7 @@
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
+import { PLAN } from "@/lib/ockock/product"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -34,11 +35,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: orgError.message }, { status: 400 })
   }
 
-  // Create subscription (30 day trial)
+  // Create subscription (30 day trial). trial_starts_at/trial_ends_at/
+  // plan/status are set by the DB defaults; pricing comes from PLAN
+  // (single source of truth — see lib/ockock/product.ts).
   await supabase.from("gym_subscriptions").insert({
     org_id: org.id,
     status: "trial",
-    price_thb: 999,
+    price_thb: PLAN.priceTHB,
+    monthly_price_usd_cents: PLAN.priceUSDCents,
   })
 
   // Create org settings
@@ -58,8 +62,15 @@ export async function POST(request: Request) {
     invited_by: user.id,
   })
 
-  // Send invite email
-  const inviteUrl = `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || "https://pai-muay-thai.vercel.app"}/invite/${token}`
+  // Send invite email — match the signup endpoint's site-URL priority
+  // (NEXT_PUBLIC_SITE_URL → dev redirect → muaythaipai.com). The previous
+  // code reached for a dev-only env var first with a stale vercel
+  // fallback, which would email a real customer a dead-deploy link.
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+    "https://muaythaipai.com"
+  const inviteUrl = `${siteUrl}/invite/${token}`
 
   try {
     await resend.emails.send({

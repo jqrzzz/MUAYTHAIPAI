@@ -28,8 +28,8 @@ export default function ForGymsPage() {
     <>
       <BreadcrumbSchema
         items={[
-          { name: "Home", url: "https://muaythaipai.com" },
-          { name: "For Gym Owners", url: "https://muaythaipai.com/for-gyms" },
+          { name: "Home", url: "https://ockock.app" },
+          { name: "For Gym Owners", url: "https://ockock.app/for-gyms" },
         ]}
       />
       <ForGymsClient />

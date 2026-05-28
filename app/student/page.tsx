@@ -5,7 +5,7 @@ import StudentDashboardClient from "./client"
 import { getActiveImpersonation } from "@/lib/impersonation"
 
 export const metadata: Metadata = {
-  title: "My Training | Muay Thai Thailand Network",
+  title: "My Training | MUAYTHAIPAI",
   description: "View your training history, certificates, and upcoming bookings.",
 }
 
