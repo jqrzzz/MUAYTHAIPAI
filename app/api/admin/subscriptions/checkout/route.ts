@@ -3,6 +3,28 @@ import { stripe } from "@/lib/stripe"
 import { requireGymOwner } from "@/lib/auth-helpers"
 import { PLAN } from "@/lib/ockock/product"
 
+// Whitelist of post-checkout destinations. Mirrors safeRedirect() in
+// app/admin/login/client.tsx. Without this, a crafted returnUrl like
+// "http://evil.com" would slip through the old `absolute()` helper —
+// money still goes to our Stripe account (price + customer + org_id
+// are server-pinned), but the user lands on an attacker page after
+// payment, perfect for a fake "subscription confirmed, log in again"
+// phishing flow. Restrict to same-origin paths under the surfaces
+// that legitimately punt people through Stripe and back.
+function safeReturnPath(raw: unknown): string {
+  if (typeof raw !== "string") return "/admin"
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/admin"
+  const allowed = ["/admin", "/onboarding"]
+  if (
+    allowed.some(
+      (p) => raw === p || raw.startsWith(`${p}/`) || raw.startsWith(`${p}?`),
+    )
+  ) {
+    return raw
+  }
+  return "/admin"
+}
+
 /**
  * POST /api/admin/subscriptions/checkout
  *
@@ -28,9 +50,9 @@ export async function POST(request: Request) {
   const { supabase, user, orgId } = auth
 
   // returnUrl defaults to /admin so the gym always lands back somewhere
-  // sane after Stripe.
+  // sane after Stripe. Allowlisted via safeReturnPath above.
   const body = await request.json().catch(() => ({} as { returnUrl?: string }))
-  const returnUrl = body?.returnUrl ?? "/admin"
+  const returnUrl = safeReturnPath(body?.returnUrl)
 
   const { data: org } = await supabase
     .from("organizations")
@@ -83,9 +105,9 @@ export async function POST(request: Request) {
 
   // Build absolute return URLs so Stripe sends users to the right host
   // regardless of where the request originated (preview, prod, local).
+  // safeReturnPath guarantees returnUrl is same-origin starting with "/",
+  // so a simple concat is safe — no need to re-check for absolute URLs.
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
-  const absolute = (path: string) =>
-    path.startsWith("http") ? path : `${baseUrl}${path}`
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -104,8 +126,8 @@ export async function POST(request: Request) {
         quantity: 1,
       },
     ],
-    success_url: `${absolute(returnUrl)}?subscription=success`,
-    cancel_url: `${absolute(returnUrl)}?subscription=cancelled`,
+    success_url: `${baseUrl}${returnUrl}?subscription=success`,
+    cancel_url: `${baseUrl}${returnUrl}?subscription=cancelled`,
     metadata: {
       org_id: org.id,
     },
