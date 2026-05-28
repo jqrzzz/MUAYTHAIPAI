@@ -151,6 +151,30 @@ const OCKOCK_MARKETING_PATHS = [
   "/privacy",
 ] as const
 
+// OckOck SaaS product surfaces — login, dashboards, onboarding, invites,
+// magic-link callback. These only live on ockock.app. On muaythaipai.com
+// they 301 over so the brand boundary is real: muaythaipai.com is the
+// Pai gym + network site; ockock.app is the product. Putting auth on one
+// host also keeps magic-link redirects self-contained (no more confusion
+// from a shared Supabase project trying to bounce users between hosts).
+const OCKOCK_PRODUCT_PATHS = [
+  "/admin",
+  "/trainer",
+  "/student",
+  "/onboarding",
+  "/invite",
+  "/auth/callback",
+  "/platform-admin",
+  "/signup",
+  "/login",
+] as const
+
+function isOckOckProductPath(pathname: string): boolean {
+  return OCKOCK_PRODUCT_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  )
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname.toLowerCase()
   const host = request.headers.get("host") ?? ""
@@ -207,6 +231,16 @@ export async function middleware(request: NextRequest) {
     if ((OCKOCK_MARKETING_PATHS as readonly string[]).includes(pathname)) {
       return NextResponse.redirect(`https://ockock.app${pathname}${request.nextUrl.search}`, 301)
     }
+    // Product surfaces (login, dashboards, invites, auth callback) —
+    // 301 to ockock.app so all auth stays on one host. Preserves the
+    // path + query string, so magic-link callbacks (?code=...&next=...)
+    // and ?redirect=... values arrive intact on the other side.
+    if (isOckOckProductPath(pathname)) {
+      return NextResponse.redirect(
+        `https://ockock.app${pathname}${request.nextUrl.search}`,
+        301,
+      )
+    }
   }
 
   // Paths owned by the OckOck product. On ockock.app these always
@@ -217,7 +251,8 @@ export async function middleware(request: NextRequest) {
   // Note: on muaythaipai.com the OckOck-branded paths above have
   // already been redirected to ockock.app, so this set is effectively
   // only used for ockock.app traffic + preview deployments.
-  const isOckOckOwned = onOckOckApp || pathname.startsWith("/ockock/")
+  const isOckOckOwned =
+    onOckOckApp || pathname.startsWith("/ockock/") || isOckOckProductPath(pathname)
 
   // Handle redirects first. Skip self-redirects so a stale entry can't
   // create an infinite 301 loop that takes the page down. Also skip
