@@ -1,10 +1,9 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, User, GraduationCap, Building2 } from "lucide-react"
+import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, GraduationCap } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
-import { ockockUrl } from "@/lib/ockock/url"
 
 interface MoreMenuProps {
   isOpen: boolean
@@ -73,21 +72,6 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
       label: "FAQ",
       href: "/faq",
       description: "Frequently asked questions",
-    },
-  ]
-
-  const loginItems = [
-    {
-      icon: Building2,
-      label: "For Gym Owners",
-      href: ockockUrl("/for-gyms"),
-      description: "Run your Muay Thai gym with OckOck — free 30-day trial",
-    },
-    {
-      icon: User,
-      label: "Sign in",
-      href: "/login",
-      description: "Students, trainers, and gym admins",
     },
   ]
 
@@ -168,51 +152,6 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
                   </Link>
                 </motion.div>
               ))}
-            </div>
-
-            {/* Login Section */}
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3
-                className={`text-sm font-semibold mb-3 ${resolvedTheme === "dark" ? "text-gray-400" : "text-gray-500"}`}
-              >
-                Account Access
-              </h3>
-              <div className="grid gap-3">
-                {loginItems.map((item, index) => (
-                  <motion.div
-                    key={item.href}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: (menuItems.length + index) * 0.05 }}
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={onClose}
-                      className={`flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 min-h-[72px] ${
-                        resolvedTheme === "dark"
-                          ? "bg-orange-500/10 hover:bg-orange-500/20 text-white border border-orange-500/20"
-                          : "bg-orange-50 hover:bg-orange-100 text-gray-800 border border-orange-200"
-                      }`}
-                    >
-                      <div
-                        className={`rounded-full p-3 ${
-                          resolvedTheme === "dark"
-                            ? "bg-orange-500/30 text-orange-400"
-                            : "bg-orange-200 text-orange-600"
-                        }`}
-                      >
-                        <item.icon className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{item.label}</h3>
-                        <p className={`text-sm ${resolvedTheme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                          {item.description}
-                        </p>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
             </div>
 
             {/* Footer */}
