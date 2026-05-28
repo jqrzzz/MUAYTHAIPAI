@@ -4,7 +4,7 @@ import type React from "react"
 import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2, Mail, CheckCircle2 } from "lucide-react"
+import { Loader2, Mail } from "lucide-react"
 import { AuthCard, SaasButton, SaasInput } from "@/components/saas"
 import { SocialSignupButtons } from "@/components/ockock/social-signup-buttons"
 
@@ -13,8 +13,9 @@ function StudentLoginInner() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [fullName, setFullName] = useState("")
+  const [code, setCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [step, setStep] = useState<"email" | "sent">("email")
+  const [step, setStep] = useState<"email" | "code">("email")
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -33,15 +34,21 @@ function StudentLoginInner() {
     checkSession()
   }, [router])
 
-  const handleSendMagicLink = async (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
 
     const supabase = createClient()
     try {
+      // Supabase's default OTP email contains BOTH a 6-digit code and
+      // a magic link. We drive the UI off the code (typed on this
+      // page, no URL redirect required — works the same across hosts
+      // on a shared Supabase project). emailRedirectTo is kept so the
+      // link, if a user clicks it instead, still lands on the right
+      // host with the right ?next= destination.
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: email.toLowerCase().trim(),
         options: {
           shouldCreateUser: true,
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/student`,
@@ -49,7 +56,7 @@ function StudentLoginInner() {
         },
       })
       if (error) throw error
-      setStep("sent")
+      setStep("code")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -57,25 +64,82 @@ function StudentLoginInner() {
     }
   }
 
-  if (step === "sent") {
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    const supabase = createClient()
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.toLowerCase().trim(),
+        token: code,
+        type: "email",
+      })
+      if (error) throw error
+      // Hard nav so the server picks up the freshly-set auth cookie
+      // and renders /student with the right user state.
+      window.location.href = "/student"
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid code")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (step === "code") {
     return (
       <AuthCard
         title="Check your email"
-        subtitle={`We sent a sign-in link to ${email}. Click it to continue.`}
+        subtitle={`We sent a 6-digit code to ${email}. Enter it below to continue.`}
         footnote="One account for every Muay Thai gym in Thailand"
       >
-        <div className="rounded-xl ring-1 ring-emerald-500/20 bg-emerald-500/[0.06] p-4 flex items-start gap-3">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 shrink-0 mt-0.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
-          </span>
-          <div className="text-[13px] text-emerald-100/90 leading-relaxed">
-            Magic link delivered. Open it on this device to stay signed in.
-            You can close this page once it&apos;s sent.
+        <form onSubmit={handleVerifyCode} className="space-y-4">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="code"
+              className="text-[12px] font-medium text-zinc-300"
+            >
+              Sign-in code
+            </label>
+            <SaasInput
+              id="code"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              placeholder="000000"
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="text-center text-base tracking-[0.4em]"
+              required
+              autoFocus
+            />
           </div>
-        </div>
+
+          {error && (
+            <div className="rounded-lg ring-1 ring-red-500/20 bg-red-500/10 px-3 py-2.5 text-[12px] text-red-300">
+              {error}
+            </div>
+          )}
+
+          <SaasButton
+            type="submit"
+            variant="primary"
+            loading={isLoading}
+            disabled={code.length !== 6}
+            className="w-full"
+          >
+            {isLoading ? "Verifying…" : "Verify code"}
+          </SaasButton>
+        </form>
         <button
+          type="button"
           onClick={() => {
             setStep("email")
+            setCode("")
             setError(null)
           }}
           className="mt-5 w-full text-center text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors"
@@ -99,7 +163,7 @@ function StudentLoginInner() {
           or sign in with email
         </p>
       </div>
-      <form onSubmit={handleSendMagicLink} className="space-y-4">
+      <form onSubmit={handleSendCode} className="space-y-4">
         <div className="space-y-1.5">
           <label
             htmlFor="email"
@@ -149,7 +213,7 @@ function StudentLoginInner() {
           className="w-full"
         >
           {!isLoading && <Mail className="h-3.5 w-3.5" />}
-          {isLoading ? "Sending link…" : "Email me a sign-in link"}
+          {isLoading ? "Sending code…" : "Email me a sign-in code"}
         </SaasButton>
       </form>
     </AuthCard>
