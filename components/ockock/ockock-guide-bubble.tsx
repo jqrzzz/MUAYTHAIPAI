@@ -3,8 +3,11 @@
 /**
  * OckOckGuideBubble — the floating "Ask OckOck" chat on the OckOck product
  * site. Talks to /api/landing/chat (the product-guide AI), bilingual.
- * Mounted in app/(ockock)/layout.tsx. Hidden on /for-gyms, where the hero
- * already has an inline OckOck chat (two on one page would be confusing).
+ * Mounted in app/(ockock)/layout.tsx. Hidden on /for-gyms (where the hero
+ * already has an inline OckOck chat — two on one page would be confusing)
+ * AND on ockock.app's root "/" path, which the middleware rewrites
+ * internally to /for-gyms. usePathname() sees the public "/" not the
+ * rewritten target, so we need both rules.
  *
  * Self-contained on purpose — small enough that sharing state with the hero
  * chat wouldn't pay for the indirection.
@@ -19,6 +22,10 @@ const AVATAR = "/images/ockock-avatar.png"
 const GREETING =
   "Sawadee! I'm OckOck 🐃 — ask me anything about the software, the pricing, or getting your gym set up. (เขียนภาษาไทยก็ได้นะ.)"
 const HIDE_ON_PREFIXES = ["/for-gyms"]
+// Exact-match hides. "/" on ockock.app rewrites to /for-gyms (see
+// middleware.ts) so the inline hero chat is already on screen — adding
+// the floating bubble doubles up.
+const HIDE_ON_EXACT = ["/"]
 
 type Msg = { role: "user" | "assistant"; content: string }
 
@@ -84,6 +91,7 @@ export function OckOckGuideBubble() {
   }, [open])
 
   if (HIDE_ON_PREFIXES.some((p) => pathname?.startsWith(p))) return null
+  if (pathname && HIDE_ON_EXACT.includes(pathname)) return null
 
   return (
     <div className="print:hidden">
