@@ -5,7 +5,7 @@ import TrainerDashboardClient from "./client"
 import { getActiveImpersonation } from "@/lib/impersonation"
 
 export const metadata: Metadata = {
-  title: "Trainer Dashboard | Muay Thai Thailand Network",
+  title: "Trainer Dashboard | MUAYTHAIPAI",
   description: "Manage your classes, students, and profile.",
 }
 

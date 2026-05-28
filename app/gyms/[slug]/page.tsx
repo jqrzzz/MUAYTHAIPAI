@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: GymPageProps): Promise<Metada
   return {
     title:
       site?.seo_title ||
-      `${gym.name} | Muay Thai Thailand Network`,
+      `${gym.name} | MUAYTHAIPAI`,
     description:
       site?.seo_description ||
       gym.description ||
