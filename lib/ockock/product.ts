@@ -8,7 +8,6 @@
 export const OCKOCK = {
   name: "OckOck",
   thaiName: "อ๊อกอ๊อก",
-  network: "MUAYTHAIPAI",
   contactEmail: "hello@muaythaipai.com",
   /** One-line "what is this" for cold visitors. */
   oneLiner:
@@ -50,7 +49,7 @@ export const FEATURES: ReadonlyArray<{ title: string; desc: string }> = [
   },
   {
     title: "Network membership",
-    desc: "Listed on the MUAYTHAIPAI network. Travelers find you. Cert students bring their progress with them.",
+    desc: "A public page on muaythaipai.com — the network where travelers and students discover Muay Thai gyms in Thailand. Your cert students' progress travels with them.",
   },
 ]
 
@@ -65,7 +64,7 @@ export const INCLUDED: ReadonlyArray<string> = [
   "Trainer skill signoff from any phone",
   "Online courses authoring",
   "Stripe payments + cash tracking",
-  "Public gym page on the MUAYTHAIPAI network",
+  "Public gym page on muaythaipai.com (the discovery portal)",
   "Promoter tools (fight events, tickets, fighters)",
   "Inbox: WhatsApp, LINE, email in one place",
   "Reports — students, certs, revenue, top trainers",

@@ -346,7 +346,7 @@ export default function ForGymsClient() {
         <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Simple, friendly pricing</h2>
         <p className="mb-8 mt-2 text-[14px] text-zinc-500">One plan. Everything included. Free to start.</p>
         <Surface accent="indigo" className="mx-auto max-w-md p-8">
-          <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.14em] text-amber-400">MUAYTHAIPAI network</p>
+          <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.14em] text-amber-400">OckOck plan</p>
           <div className="mb-1 flex items-baseline justify-center gap-1">
             <span className="text-5xl font-semibold tracking-tight text-white">฿{PLAN.priceTHB}</span>
             <span className="text-[16px] text-zinc-500">/month</span>
