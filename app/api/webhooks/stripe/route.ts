@@ -6,14 +6,7 @@ import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
 import { notifyTicketSold } from "@/lib/notifications"
 import { ockockUrl } from "@/lib/ockock/url"
-
-// Stripe SDK 18.x typed for the 2025-04-30.basil API. We're pinned to
-// 2024-06-20 (some fields stay at the root level there). Cast the
-// apiVersion to bypass the TS literal-type check; runtime behaviour
-// is unaffected.
-const stripe = new Stripe(env.stripe.secretKey(), {
-  apiVersion: "2024-06-20" as Stripe.LatestApiVersion,
-})
+import { stripe } from "@/lib/stripe"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
