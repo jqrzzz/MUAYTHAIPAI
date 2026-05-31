@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Calendar, Users, Award, Plane, BookOpen, Phone, HelpCircle, PenTool, GraduationCap } from "lucide-react"
+import { X, Calendar, Users, Award, BookOpen, Phone, HelpCircle, PenTool, GraduationCap, MapPin } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 
@@ -19,6 +19,12 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
   }, [])
 
   const menuItems = [
+    {
+      icon: MapPin,
+      label: "Find Gyms",
+      href: "/gyms",
+      description: "Muay Thai gyms across Thailand — one account",
+    },
     {
       icon: Calendar,
       label: "Train & Stay",
@@ -42,12 +48,6 @@ export function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
       label: "Apprenticeship",
       href: "/apprenticeship",
       description: "Intensive training programs",
-    },
-    {
-      icon: Plane,
-      label: "Education Visas",
-      href: "/education-visas",
-      description: "Study visa assistance",
     },
     {
       icon: BookOpen,

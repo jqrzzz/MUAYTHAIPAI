@@ -2,8 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { Resend } from "resend"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 // Generate a secure random token
 function generateToken(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -151,6 +149,7 @@ export async function POST(request: NextRequest) {
   const inviteUrl = `${siteUrl}/invite/${token}`
 
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
       from: `MUAYTHAIPAI <noreply@${new URL(siteUrl).hostname}>`,
       to: email.toLowerCase().trim(),
@@ -257,6 +256,7 @@ export async function PATCH(request: NextRequest) {
   const inviteUrl = `${siteUrl}/invite/${invite.token}`
 
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
       from: `MUAYTHAIPAI <noreply@${new URL(siteUrl).hostname}>`,
       to: invite.email,

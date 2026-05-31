@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useSearchParams } from "next/navigation"
 import {
   Search,
   Loader2,
@@ -56,7 +57,14 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   "all-levels": "bg-blue-500/15 text-blue-400",
 }
 
-export default function CoursesClient() {
+function CoursesInner() {
+  const searchParams = useSearchParams()
+  // /courses on muaythaipai.com is MTP's catalog by default, but an
+  // explicit ?gym= override renders any gym's published catalog at
+  // /courses?gym=their-slug — same default+override pattern as /book.
+  // The API requires the slug and resolves it exactly, so this can
+  // never silently leak cross-gym data.
+  const gymSlug = searchParams.get("gym") || "wisarut-family-gym"
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -66,11 +74,8 @@ export default function CoursesClient() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      // /courses on muaythaipai.com is the MTP gym's course catalog.
-      // /api/public/courses requires an explicit `gym` so it never
-      // silently returns cross-gym data.
       const params = new URLSearchParams()
-      params.set("gym", "wisarut-family-gym")
+      params.set("gym", gymSlug)
       if (category) params.set("category", category)
       if (difficulty) params.set("difficulty", difficulty)
 
@@ -82,7 +87,7 @@ export default function CoursesClient() {
       setLoading(false)
     }
     load()
-  }, [category, difficulty])
+  }, [category, difficulty, gymSlug])
 
   const filtered = search
     ? courses.filter(
@@ -228,6 +233,20 @@ const CERT_ICON: Record<string, string> = {
   singha: "🦁",
   hanuman: "🐒",
   garuda: "🦅",
+}
+
+export default function CoursesClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-neutral-950">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        </div>
+      }
+    >
+      <CoursesInner />
+    </Suspense>
+  )
 }
 
 function CourseCard({ course, featured }: { course: Course; featured?: boolean }) {

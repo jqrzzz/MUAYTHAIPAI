@@ -4,16 +4,9 @@ import Stripe from "stripe"
 import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
-import { notifyTicketSold } from "@/lib/notifications"
+import { notifyNewBooking, notifyTicketSold } from "@/lib/notifications"
 import { ockockUrl } from "@/lib/ockock/url"
-
-// Stripe SDK 18.x typed for the 2025-04-30.basil API. We're pinned to
-// 2024-06-20 (some fields stay at the root level there). Cast the
-// apiVersion to bypass the TS literal-type check; runtime behaviour
-// is unaffected.
-const stripe = new Stripe(env.stripe.secretKey(), {
-  apiVersion: "2024-06-20" as Stripe.LatestApiVersion,
-})
+import { stripe } from "@/lib/stripe"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
@@ -257,8 +250,21 @@ export async function POST(request: NextRequest) {
             }
             const emailService = EmailService.getInstance()
             const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
-            const staffEmailSent = await emailService.sendStaffNotification(bookingData)
-            console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
+            console.log(`Customer confirmation sent: ${customerEmailSent}`)
+
+            // Bell ping + per-org staff email. Fire-and-forget so a
+            // notification failure can't break the webhook ack.
+            notifyNewBooking({
+              orgId: booking.org_id,
+              customerName: metadata.customer_name,
+              customerEmail: metadata.customer_email,
+              serviceName: service,
+              bookingDate: metadata.booking_date || "TBD",
+              bookingTime: metadata.booking_time,
+              amount: paymentIntent.amount / 100,
+              paymentMethod: "stripe",
+              paymentStatus: "paid",
+            }).catch((err) => console.error("[notifications] Failed:", err))
           }
         } else {
           console.warn("Missing required booking details in metadata, skipping emails")
@@ -481,8 +487,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         }
         const emailService = EmailService.getInstance()
         const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
-        const staffEmailSent = await emailService.sendStaffNotification(bookingData)
-        console.log(`Emails sent - Customer: ${customerEmailSent}, Staff: ${staffEmailSent}`)
+        console.log(`Customer confirmation sent: ${customerEmailSent}`)
+
+        // Bell ping + per-org staff email. Fire-and-forget so a
+        // notification failure can't break the webhook ack.
+        notifyNewBooking({
+          orgId: booking.org_id,
+          customerName: metadata.customer_name,
+          customerEmail,
+          serviceName: service,
+          bookingDate: metadata.booking_date || "TBD",
+          bookingTime: metadata.booking_time,
+          amount: session.amount_total ? session.amount_total / 100 : 0,
+          paymentMethod: "stripe",
+          paymentStatus: "paid",
+        }).catch((err) => console.error("[notifications] Failed:", err))
       }
     } else {
       console.warn("Missing booking details in session metadata")

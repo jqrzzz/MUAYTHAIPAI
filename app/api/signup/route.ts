@@ -182,11 +182,22 @@ export async function POST(request: Request) {
       token,
     })
 
-    // Send magic link via Supabase Auth
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-      "https://muaythaipai.com"
+    // Send magic link via Supabase Auth. Derive the site URL from the
+    // request host first — on a shared Supabase project (scootscoot,
+    // ramos etc. share this auth pool) a stale NEXT_PUBLIC_SITE_URL or
+    // a leftover NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL pointing at a
+    // sibling product would otherwise hijack the redirect. The host
+    // header is whatever the user actually typed (ockock.app, a
+    // preview, or localhost), so the invite link always comes back
+    // here. Production fallback is ockock.app since gym-owner signup
+    // lives on the product brand, not the marketing site.
+    const requestHost = request.headers.get("host")
+    const requestProto =
+      request.headers.get("x-forwarded-proto") ??
+      (requestHost?.startsWith("localhost") ? "http" : "https")
+    const siteUrl = requestHost
+      ? `${requestProto}://${requestHost}`
+      : process.env.NEXT_PUBLIC_SITE_URL || "https://ockock.app"
 
     const { error: authError } = await supabase.auth.admin.inviteUserByEmail(
       ownerEmail,
