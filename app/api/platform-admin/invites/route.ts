@@ -13,8 +13,6 @@ import { requirePlatformAdmin } from "@/lib/auth-helpers"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 function generateToken(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
   let token = ""
@@ -80,6 +78,7 @@ export async function POST(request: NextRequest) {
 
   let emailSent = false
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
       from: `MUAYTHAIPAI <noreply@${new URL(siteUrl).hostname}>`,
       to: email,

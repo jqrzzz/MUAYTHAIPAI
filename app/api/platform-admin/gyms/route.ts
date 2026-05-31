@@ -3,8 +3,6 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { PLAN } from "@/lib/ockock/product"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(request: Request) {
   const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
   if (!user) {
@@ -73,6 +71,7 @@ export async function POST(request: Request) {
   const inviteUrl = `${siteUrl}/invite/${token}`
 
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
       from: "Muay Thai Network <noreply@paimuaythai.com>",
       to: ownerEmail,
