@@ -357,7 +357,7 @@ function SectionEditor({
             onChange={(e) => updateLocal("title", e.target.value)}
             onBlur={commit}
             disabled={saving}
-            placeholder="Authentic Muay Thai in Pai"
+            placeholder="e.g. Authentic Muay Thai in your city"
           />
         </Field>
         <Field label="Subtitle">
@@ -366,7 +366,7 @@ function SectionEditor({
             onChange={(e) => updateLocal("subtitle", e.target.value)}
             onBlur={commit}
             disabled={saving}
-            placeholder="Train with the legendary Wisarut family"
+            placeholder="e.g. Train with our experienced team"
           />
         </Field>
         <Field label="Hero image URL">

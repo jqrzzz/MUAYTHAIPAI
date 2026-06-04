@@ -417,7 +417,7 @@ export default function MarketingTab({ orgId }: { orgId: string }) {
             <textarea
               value={leadMessage}
               onChange={(e) => setLeadMessage(e.target.value)}
-              placeholder="e.g. Hi, how much for private lessons? I'm in Pai next week"
+              placeholder="e.g. Hi, how much for private lessons? I'm visiting next week"
               rows={3}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-indigo-500/50 resize-none"
             />

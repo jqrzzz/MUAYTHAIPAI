@@ -534,7 +534,7 @@ function GroupPanel({
                 className="bg-neutral-800 border-neutral-700 text-white"
               />
               <Input
-                placeholder="Label (optional — e.g. Pai Office LINE)"
+                placeholder="Label (optional — e.g. Front desk LINE)"
                 value={formLabel}
                 onChange={(e) => setFormLabel(e.target.value)}
                 className="bg-neutral-800 border-neutral-700 text-white"
