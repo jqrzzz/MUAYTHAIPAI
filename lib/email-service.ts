@@ -3,6 +3,7 @@ import { Resend } from "resend"
 import QRCode from "qrcode"
 import { env, hasEnv } from "@/lib/env"
 import { formatBookingDateTime } from "@/lib/timezone"
+import { NETWORK } from "@/lib/network-identity"
 
 export interface OrgEmailContext {
   orgName: string
@@ -10,15 +11,14 @@ export interface OrgEmailContext {
   staffEmail?: string
 }
 
-// Network-level sender — the MUAYTHAIPAI *network* identity, NOT any single
-// gym. Used only as a last-resort fallback when a tenant email is sent with
-// no org context. A gym's mail must never wear another gym's identity (that's
-// the multi-tenant leak this replaces). Live booking paths resolve the real
-// org via getOrgEmailContext() in lib/notifications.ts and never hit this.
-const NETWORK_FROM_EMAIL = "noreply@muaythaipai.com"
+// Last-resort sender when a tenant email is sent with no org context — the
+// MUAYTHAIPAI *network* identity, NOT any single gym. A gym's mail must never
+// wear another gym's identity (the multi-tenant leak this replaces). Live
+// booking paths resolve the real org via getOrgEmailContext() and never hit
+// this. The network identity itself lives in lib/network-identity.ts.
 export const NETWORK_FALLBACK: OrgEmailContext = {
-  orgName: "MUAYTHAIPAI",
-  orgEmail: NETWORK_FROM_EMAIL,
+  orgName: NETWORK.name,
+  orgEmail: NETWORK.fromEmail,
   staffEmail: undefined, // falls back to env.email.staffNotification()
 }
 
@@ -171,7 +171,7 @@ export class EmailService {
       const template = this.generateBookingConfirmationTemplate(data)
 
       if (this.resend) {
-        const fromEmail = org.orgEmail || NETWORK_FROM_EMAIL
+        const fromEmail = org.orgEmail || NETWORK.fromEmail
         const result = await this.resend.emails.send({
           from: `${org.orgName} <${fromEmail}>`,
           to: data.customerEmail,
@@ -211,7 +211,7 @@ export class EmailService {
       console.log("[v0] Attempting to send staff notification to:", staffEmail)
 
       if (this.resend) {
-        const fromEmail = org.orgEmail || NETWORK_FROM_EMAIL
+        const fromEmail = org.orgEmail || NETWORK.fromEmail
         const result = await this.resend.emails.send({
           from: `${org.orgName} <${fromEmail}>`,
           to: staffEmail,
@@ -250,7 +250,7 @@ export class EmailService {
         // Cert is a MUAYTHAIPAI network credential — sender is the
         // network, not the specific issuing gym, so the email reads
         // consistently across all member gyms.
-        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        from: NETWORK.from,
         to: data.studentEmail,
         subject: template.subject,
         html: template.html,
@@ -344,7 +344,7 @@ What to do next:
       const result = await this.resend.emails.send({
         // The gym just issued its first MUAYTHAIPAI credential — the
         // sender is the network, signed by "The MUAYTHAIPAI team."
-        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        from: NETWORK.from,
         to: data.ownerEmail,
         subject,
         html,
@@ -379,7 +379,7 @@ What to do next:
         // Course completion advances the student up the MUAYTHAIPAI
         // network's cert ladder — network-branded sender keeps the
         // story consistent with the cert email.
-        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        from: NETWORK.from,
         to: data.studentEmail,
         subject: template.subject,
         html: template.html,
@@ -411,7 +411,7 @@ What to do next:
         return false
       }
 
-      const fromEmail = org.orgEmail || NETWORK_FROM_EMAIL
+      const fromEmail = org.orgEmail || NETWORK.fromEmail
 
       // Send confirmation to customer
       const customerResult = await this.resend.emails.send({
@@ -911,7 +911,7 @@ What to do next:
 
               <div class="footer">
                 <p>Keep training hard — the next level awaits!</p>
-                <p>Muay Thai Pai</p>
+                <p>${NETWORK.name}</p>
               </div>
             </div>
           </div>
@@ -938,7 +938,7 @@ ${data.verificationUrl}
 
 Keep training hard — the next level awaits!
 
-Muay Thai Pai
+${NETWORK.name}
     `.trim()
 
     return { subject, html, text }
@@ -999,7 +999,7 @@ Muay Thai Pai
 
               <div class="footer">
                 <p>You're one step closer to your ${data.levelName} certification!</p>
-                <p>Muay Thai Pai</p>
+                <p>${NETWORK.name}</p>
               </div>
             </div>
           </div>
@@ -1022,7 +1022,7 @@ View your progress: ${data.siteUrl}/student
 
 You're one step closer to your ${data.levelName} certification!
 
-Muay Thai Pai
+${NETWORK.name}
     `.trim()
 
     return { subject, html, text }
@@ -1085,12 +1085,12 @@ Muay Thai Pai
         return false
       }
       const result = await this.resend.emails.send({
-        from: `MUAYTHAIPAI Support <support@paimuaythai.com>`,
+        from: NETWORK.supportFrom,
         to: toEmail,
         subject: emailSubject,
         html,
         text,
-        replyTo: "support@paimuaythai.com",
+        replyTo: NETWORK.supportEmail,
       })
       if (result.error) {
         console.error("[support email] Resend error:", result.error)
@@ -1151,7 +1151,7 @@ Muay Thai Pai
         console.warn("[email sequence] Resend not configured — skipping")
         return { ok: false, messageId: null, error: "resend_not_configured" }
       }
-      const from = `${fromName} <${fromEmail || "noreply@paimuaythai.com"}>`
+      const from = `${fromName} <${fromEmail || NETWORK.fromEmail}>`
       const result = await this.resend.emails.send({
         from,
         to: toEmail,
@@ -1278,7 +1278,7 @@ Fight card: ${data.eventUrl}
 — The MUAYTHAIPAI team`
 
       const result = await this.resend.emails.send({
-        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        from: NETWORK.from,
         to: data.buyerEmail,
         subject,
         html,
@@ -1398,7 +1398,7 @@ Fight card: ${data.eventUrl}
 — The MUAYTHAIPAI team`
 
       const result = await this.resend.emails.send({
-        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        from: NETWORK.from,
         to: data.buyerEmail,
         subject,
         html,
@@ -1500,7 +1500,7 @@ The promoter can't book you until you accept.
 — The MUAYTHAIPAI team`
 
       const result = await this.resend.emails.send({
-        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        from: NETWORK.from,
         to: data.fighterEmail,
         subject,
         html,
@@ -1591,7 +1591,7 @@ Open the event editor: ${data.editorUrl}
 — The MUAYTHAIPAI team`
 
       const result = await this.resend.emails.send({
-        from: `MUAYTHAIPAI <noreply@muaythaipai.com>`,
+        from: NETWORK.from,
         to: data.promoterEmail,
         subject,
         html,
