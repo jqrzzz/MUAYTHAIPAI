@@ -3,7 +3,7 @@
  * based on each gym's notification preferences in org_settings.
  */
 import { createClient } from "@supabase/supabase-js"
-import { EmailService } from "@/lib/email-service"
+import { EmailService, NETWORK_FALLBACK, type OrgEmailContext } from "@/lib/email-service"
 
 const serviceClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -65,6 +65,23 @@ function getRecipientEmails(settings: Record<string, unknown> | null, orgEmail?:
   }
 
   return [...emails]
+}
+
+/**
+ * Resolve a tenant's email identity — sender name, sender address, and the
+ * staff recipient — from its org + settings. The booking-confirmation paths
+ * call this so every gym's mail wears its OWN identity instead of the
+ * network fallback. Never throws: missing rows degrade to the network name +
+ * undefined address (which the email service then fills from NETWORK_FALLBACK).
+ */
+export async function getOrgEmailContext(orgId: string): Promise<OrgEmailContext> {
+  const { settings, org } = await getOrgNotificationConfig(orgId)
+  const recipients = getRecipientEmails(settings, org?.email)
+  return {
+    orgName: org?.name || NETWORK_FALLBACK.orgName,
+    orgEmail: org?.email || undefined,
+    staffEmail: recipients[0],
+  }
 }
 
 /**

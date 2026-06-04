@@ -4,15 +4,21 @@ import QRCode from "qrcode"
 import { env, hasEnv } from "@/lib/env"
 import { formatBookingDateTime } from "@/lib/timezone"
 
-interface OrgEmailContext {
+export interface OrgEmailContext {
   orgName: string
   orgEmail?: string
   staffEmail?: string
 }
 
-const DEFAULT_ORG: OrgEmailContext = {
-  orgName: "Muay Thai Pai",
-  orgEmail: "info@paimuaythai.com",
+// Network-level sender — the MUAYTHAIPAI *network* identity, NOT any single
+// gym. Used only as a last-resort fallback when a tenant email is sent with
+// no org context. A gym's mail must never wear another gym's identity (that's
+// the multi-tenant leak this replaces). Live booking paths resolve the real
+// org via getOrgEmailContext() in lib/notifications.ts and never hit this.
+const NETWORK_FROM_EMAIL = "noreply@muaythaipai.com"
+export const NETWORK_FALLBACK: OrgEmailContext = {
+  orgName: "MUAYTHAIPAI",
+  orgEmail: NETWORK_FROM_EMAIL,
   staffEmail: undefined, // falls back to env.email.staffNotification()
 }
 
@@ -160,12 +166,12 @@ export class EmailService {
 
   async sendBookingConfirmation(data: BookingEmailData): Promise<boolean> {
     try {
-      const org = data.org || DEFAULT_ORG
+      const org = data.org || NETWORK_FALLBACK
       console.log("[v0] Attempting to send customer confirmation to:", data.customerEmail)
       const template = this.generateBookingConfirmationTemplate(data)
 
       if (this.resend) {
-        const fromEmail = org.orgEmail || "info@paimuaythai.com"
+        const fromEmail = org.orgEmail || NETWORK_FROM_EMAIL
         const result = await this.resend.emails.send({
           from: `${org.orgName} <${fromEmail}>`,
           to: data.customerEmail,
@@ -198,14 +204,14 @@ export class EmailService {
 
   async sendStaffNotification(data: BookingEmailData): Promise<boolean> {
     try {
-      const org = data.org || DEFAULT_ORG
+      const org = data.org || NETWORK_FALLBACK
       const template = this.generateStaffNotificationTemplate(data)
       const staffEmail = org.staffEmail || env.email.staffNotification()
 
       console.log("[v0] Attempting to send staff notification to:", staffEmail)
 
       if (this.resend) {
-        const fromEmail = org.orgEmail || "info@paimuaythai.com"
+        const fromEmail = org.orgEmail || NETWORK_FROM_EMAIL
         const result = await this.resend.emails.send({
           from: `${org.orgName} <${fromEmail}>`,
           to: staffEmail,
@@ -395,7 +401,7 @@ What to do next:
 
   async sendContactFormEmail(data: ContactFormData): Promise<boolean> {
     try {
-      const org = data.org || DEFAULT_ORG
+      const org = data.org || NETWORK_FALLBACK
       console.log("[v0] Attempting to send contact form email from:", data.email)
       const customerTemplate = this.generateContactFormCustomerTemplate(data)
       const staffTemplate = this.generateContactFormStaffTemplate(data)
@@ -405,7 +411,7 @@ What to do next:
         return false
       }
 
-      const fromEmail = org.orgEmail || "info@paimuaythai.com"
+      const fromEmail = org.orgEmail || NETWORK_FROM_EMAIL
 
       // Send confirmation to customer
       const customerResult = await this.resend.emails.send({
@@ -447,7 +453,7 @@ What to do next:
   }
 
   private generateBookingConfirmationTemplate(data: BookingEmailData): EmailTemplate {
-    const org = data.org || DEFAULT_ORG
+    const org = data.org || NETWORK_FALLBACK
     const isCashPayment = data.paymentMethod === "cash"
     const formattedDateTime = formatBookingDateTime(data.bookingDate, data.bookingTime)
     const subject = isCashPayment
@@ -705,7 +711,7 @@ What to do next:
   }
 
   private generateContactFormCustomerTemplate(data: ContactFormData): EmailTemplate {
-    const org = data.org || DEFAULT_ORG
+    const org = data.org || NETWORK_FALLBACK
     const subject = `We received your message - ${org.orgName}`
 
     const html = `

@@ -4,7 +4,7 @@ import Stripe from "stripe"
 import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
-import { notifyNewBooking, notifyTicketSold } from "@/lib/notifications"
+import { getOrgEmailContext, notifyNewBooking, notifyTicketSold } from "@/lib/notifications"
 import { ockockUrl } from "@/lib/ockock/url"
 import { stripe } from "@/lib/stripe"
 
@@ -249,7 +249,11 @@ export async function POST(request: NextRequest) {
               paymentId: paymentIntent.id,
             }
             const emailService = EmailService.getInstance()
-            const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
+            // Resolve the booking's gym so the confirmation comes FROM that
+            // gym, not the network fallback. Defensive: a lookup failure
+            // degrades to the network sender rather than failing the webhook.
+            const orgCtx = await getOrgEmailContext(booking.org_id).catch(() => undefined)
+            const customerEmailSent = await emailService.sendBookingConfirmation({ ...bookingData, org: orgCtx })
             console.log(`Customer confirmation sent: ${customerEmailSent}`)
 
             // Bell ping + per-org staff email. Fire-and-forget so a
@@ -486,7 +490,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           paymentId: (session.payment_intent as string) || session.id,
         }
         const emailService = EmailService.getInstance()
-        const customerEmailSent = await emailService.sendBookingConfirmation(bookingData)
+        // Resolve the booking's gym so the confirmation comes FROM that gym,
+        // not the network fallback. Defensive: a lookup failure degrades to
+        // the network sender rather than failing the webhook.
+        const orgCtx = await getOrgEmailContext(booking.org_id).catch(() => undefined)
+        const customerEmailSent = await emailService.sendBookingConfirmation({ ...bookingData, org: orgCtx })
         console.log(`Customer confirmation sent: ${customerEmailSent}`)
 
         // Bell ping + per-org staff email. Fire-and-forget so a

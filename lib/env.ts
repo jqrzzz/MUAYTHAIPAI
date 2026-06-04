@@ -98,7 +98,7 @@ export const env = {
 
   // Server - Optional with defaults
   email: {
-    staffNotification: () => getOptionalEnv("STAFF_NOTIFICATION_EMAIL", "info@paimuaythai.com"),
+    staffNotification: () => getOptionalEnv("STAFF_NOTIFICATION_EMAIL", "hello@muaythaipai.com"),
   },
 
   // Validation
