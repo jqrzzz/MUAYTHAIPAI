@@ -76,7 +76,7 @@ address). They're identity-only — **none touch the charge.**
 
 | # | Location | What leaks | Fix |
 |---|---|---|---|
-| L7 | `public/manifest.json:2-3` | PWA name `"Muay Thai Pai - Wisarut Family Gym"` served on **both** hosts → installing from ockock.app says "Muay Thai Pai" | Host-aware manifest, or accept (the PWA is really the MTP storefront app). |
+| L7 | `public/manifest.json:2-3` | PWA name `"Muay Thai Pai - Wisarut Family Gym"` served on **both** hosts → installing from ockock.app says "Muay Thai Pai" | **ACCEPTED — won't fix now** (decision 2026-06-04). There is **no service worker** (`app/layout.tsx:102` just links a static manifest), so this isn't a real installable PWA — only "Add to Home Screen" metadata for the rare manual install. A host-aware manifest would need OckOck-branded 192/512 **maskable icons that don't exist** (only `ockock-avatar.png`, a chat avatar); shipping the OckOck name on MTP's warrior icon would be worse than leaving it. The PWA is effectively the MTP storefront app — consistent with "MTP storefront is allowed to be special." **Revisit when** OckOck ships real app icons + wants installability: convert to a host-aware `app/manifest.ts`. |
 | L8 | `components/admin/trainers-tab.tsx:419` | Placeholder `e.g. Kru Wisarut` in shared admin | Generic ("e.g. Head Coach"). Borderline — an example, not an assertion. |
 
 ### Network identity hardcoded to the gym's domain (resolve when the network gets its own home)
@@ -138,7 +138,10 @@ the `bookings` upsert. They are identity-string changes only.
    per-tenant seed packs. Acceptable today because MTP is the only live tenant;
    revisit before another gym gains access to the Seed button (gate it behind the
    gym's onboarding state, or replace `SEED_FAQS` with a per-org pack lookup).
-5. **L7** — decide manifest policy.
+5. **L7** — **ACCEPTED, won't-fix** (decision 2026-06-04). No service worker, no
+   real install flow, and no OckOck app icons to do a host-aware manifest cleanly.
+   The PWA is the MTP storefront app. Revisit when OckOck ships real icons +
+   installability (convert to a host-aware `app/manifest.ts`).
 
 ---
 
@@ -150,10 +153,14 @@ the `bookings` upsert. They are identity-string changes only.
 - ✅ **L5/L8 (full sweep)** — six MTP-specific admin placeholders neutralized
   across website/trainers/settings/channels/marketing tabs (`2f5c1f9`, 2026-06-04)
 - 🅿️ **L6** — deferred by design (see #4 above)
-- ⬜ **L7** — open
+- 🅿️ **L7** — accepted / won't-fix by design (see #5 above)
 - ⬜ **Network-domain follow-ups** — `platform-admin/gyms` invite (name
   inconsistency: "Muay Thai Network" vs "MUAYTHAIPAI" in body), `product.ts`
   (OckOck-product identity, distinct from network), UI `mailto:` links.
+
+**Audit pass status (2026-06-04): COMPLETE.** Every LEAK is shipped (L1–L5, L8)
+or a recorded, reasoned deferral (L6, L7). The only remaining purity work is the
+optional network-domain follow-ups above — cosmetic until the network re-domains.
 
 **Net:** MTP stays a fully bespoke storefront (KEEP list untouched), but every
 *operational* path stops asserting "Muay Thai Pai" and starts reading the tenant —
