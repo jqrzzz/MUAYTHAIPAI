@@ -70,7 +70,7 @@ address). They're identity-only — **none touch the charge.**
 |---|---|---|---|
 | L4 | `lib/email-service.ts:908,935,996,1019` | Footer hardcodes `Muay Thai Pai` in cert / booking templates, even though "Issued By" correctly uses `${data.gymName}` two lines up | Use `${data.gymName}` (tenant) or the network name; never the literal. |
 | L5 | `components/admin/website-tab.tsx:369` | Placeholder shown to **every** gym owner: *"Train with the legendary Wisarut family"* | Generic placeholder ("Train with our team in …"). |
-| L6 | `lib/chat/seed-faqs.ts:23,63` | Seed FAQ text names "Muay Thai Pai" (*"Do I need experience to train at Muay Thai Pai?"*) | **Verify first:** if these seed onto new gyms at onboarding, template the gym name; if MTP-only seeding, label it so. |
+| L6 | `lib/chat/seed-faqs.ts` | **Confirmed leak** (investigated 2026-06-04): all 18 `SEED_FAQS` are MTP content (Wisarut family, Pai, MTP's prices/hours/ED-visa), and `POST /api/admin/faqs/seed` writes them into the *logged-in owner's* gym — surfaced by the "Seed from website FAQ" button in the Train OckOck tab (`components/admin/train-ockock-tab.tsx:277`), shown to every gym owner. A non-MTP owner who clicks it teaches their AI concierge MTP's facts. | **DEFERRED — intentional.** Decision 2026-06-04: keep the one-click seed feature; the long-term shape is per-tenant seed packs (each gym's onboarding pre-populates its own canonical FAQs). Acceptable today because MTP is the only live tenant; revisit before gym #2 has access to the Seed button. |
 
 ### LOW — cosmetic / global
 
@@ -131,8 +131,29 @@ the `bookings` upsert. They are identity-string changes only.
 2. **Extract `lib/network-identity.ts`** and route all network-level sends + the
    footer (L4) through it. Folds in the "network domain hardcoded" list.
 3. **L5, L8** — de-MTP the admin placeholders.
-4. **L6** — verify seed-FAQ scope; template the gym name if it seeds new gyms.
+4. **L6** — **DEFERRED** (decision 2026-06-04). Investigated and confirmed as a
+   real leak (the Seed button writes MTP's facts into any gym's `gym_faqs`), but
+   the seed feature itself is healthy product behavior — every future client will
+   want a one-click "populate my AI's knowledge" affordance. Long-term shape:
+   per-tenant seed packs. Acceptable today because MTP is the only live tenant;
+   revisit before another gym gains access to the Seed button (gate it behind the
+   gym's onboarding state, or replace `SEED_FAQS` with a per-org pack lookup).
 5. **L7** — decide manifest policy.
+
+---
+
+## Shipped (running tally)
+
+- ✅ **L1–L3** — tenant email identity, network as fallback (`dbf9735`, 2026-06-04)
+- ✅ **L4 + `lib/network-identity.ts`** — network identity centralized; cert/course
+  footers fixed (`31892f5`, 2026-06-04)
+- ✅ **L5/L8 (full sweep)** — six MTP-specific admin placeholders neutralized
+  across website/trainers/settings/channels/marketing tabs (`2f5c1f9`, 2026-06-04)
+- 🅿️ **L6** — deferred by design (see #4 above)
+- ⬜ **L7** — open
+- ⬜ **Network-domain follow-ups** — `platform-admin/gyms` invite (name
+  inconsistency: "Muay Thai Network" vs "MUAYTHAIPAI" in body), `product.ts`
+  (OckOck-product identity, distinct from network), UI `mailto:` links.
 
 **Net:** MTP stays a fully bespoke storefront (KEEP list untouched), but every
 *operational* path stops asserting "Muay Thai Pai" and starts reading the tenant —
