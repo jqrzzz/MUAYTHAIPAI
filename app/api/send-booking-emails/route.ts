@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import { EmailService } from "@/lib/email-service"
 import { getPaymentSummary } from "@/lib/payment-config"
+import { getOrgEmailContext } from "@/lib/notifications"
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    const { customerName, customerEmail, serviceType, bookingDate, bookingTime, amount, paymentMethod, userId } = body
+    const { customerName, customerEmail, serviceType, bookingDate, bookingTime, amount, paymentMethod, userId, orgId } = body
 
     if (!customerName || !customerEmail || !serviceType || !bookingDate || !amount) {
       console.error("Missing required fields:", { customerName, customerEmail, serviceType, bookingDate, amount })
@@ -17,6 +18,10 @@ export async function POST(request: Request) {
 
     const paymentSummary = getPaymentSummary(amount)
 
+    // Send customer + staff mail FROM the booking's gym (the widget already
+    // passes orgId). Falls back to the network sender if absent.
+    const org = orgId ? await getOrgEmailContext(orgId).catch(() => undefined) : undefined
+
     const bookingData = {
       customerName,
       customerEmail,
@@ -26,6 +31,7 @@ export async function POST(request: Request) {
       amount,
       paymentId: paymentMethod === "cash" ? `CASH-${Date.now()}` : `ONLINE-${Date.now()}`,
       paymentMethod: paymentMethod || "card",
+      ...(org && { org }),
       ...(paymentMethod !== "cash" && {
         amountThb: paymentSummary.thb,
         amountUsd: paymentSummary.usd,

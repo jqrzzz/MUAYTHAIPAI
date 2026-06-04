@@ -23,6 +23,29 @@
 
 ## Headline BLOCKERs (these are real bugs sitting in prod right now)
 
+> **Live verification (2026-06-04) — DB blockers #1, #2, #4 are CLOSED for MTP/OckOck.**
+> Checked against prod (`mdamwgtdtrvvnskqdoon`) via the security advisor + `pg_policies`:
+> - **#1 social_posts** — the wide-open `"Authenticated users can manage social
+>   posts"` policy is **gone** from `public.social_posts`; the 5 remaining policies
+>   are all org- or role-scoped, so the OR-merge no longer leaks. *(A same-named open
+>   policy still exists on `scoot.social_posts` — a **different app** sharing this
+>   database, not MTP/OckOck.)*
+> - **#2 make_wisarut_owner** — the trigger **and** function **no longer exist**.
+> - **#4 bookings/payments INSERT** — no longer `WITH CHECK true`; both now require
+>   `org_id ∈ active organizations`.
+>
+> The only ERROR-level advisor finding (`security_definer_view`) is on
+> `northcrest_*` — another app. The remaining `public`-schema `rls_policy_always_true`
+> warnings are all **INSERT-only** (activity_logs, conversations, gym_notifications,
+> student_subscriptions) or intended-public (ticket_interest) — write-hygiene, **not**
+> the cross-tenant *read* leak #1 was; legit writes go through the service role
+> (which bypasses RLS). Tightening them is a low-severity follow-up that needs each
+> table's write-path verified first — **not done here.**
+>
+> ⚠️ **Discovery:** this Supabase project is **shared by several apps** (scoot,
+> northcrest, soscommand, shop, rides, factory…). Those apps' security posture
+> (e.g. the open `scoot.social_posts`) is out of MTP/OckOck scope, but worth knowing.
+
 ### 1. `social_posts` RLS policy is wide-open
 A policy named `"Authenticated users can manage social posts"` is `qual=true, with_check=true, cmd=ALL, roles=authenticated`. **Any logged-in user from any gym can read AND modify any other gym's social posts** — drafts, scheduled, published. The other org-scoped policies are useless because Postgres OR-merges them. **Drop the policy.**
 

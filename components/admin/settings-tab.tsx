@@ -426,7 +426,7 @@ export default function SettingsTab({ organization, orgSettings, orgId }: Settin
               <Input
                 value={settingsForm.city}
                 onChange={(e) => setSettingsForm((prev) => ({ ...prev, city: e.target.value }))}
-                placeholder="Pai"
+                placeholder="e.g. Chiang Mai"
                 className="bg-neutral-800 border-neutral-700 text-white"
               />
             </div>

@@ -416,7 +416,7 @@ export default function TrainersTab({ initialTrainers, orgId, onFeedback }: Trai
                     <Input
                       value={trainerForm.display_name}
                       onChange={(e) => setTrainerForm((prev) => ({ ...prev, display_name: e.target.value }))}
-                      placeholder="e.g. Kru Wisarut"
+                      placeholder="e.g. Kru Somchai"
                       className="bg-neutral-800 border-neutral-700 text-white"
                     />
                   </div>

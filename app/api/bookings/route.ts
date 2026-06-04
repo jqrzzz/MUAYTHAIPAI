@@ -45,17 +45,41 @@ export async function POST(request: Request) {
     const finalPaymentAmountThb = paymentAmountThb || payment_amount_thb
     const finalPaymentStatus = payment_status || paymentStatus
 
-    // Resolve org_id: use provided value, or look up from the service
+    // Resolve org_id. The normal booking UI always sends the gym's id
+    // (gymInfo.id from /api/public/services), and the cash + Stripe
+    // flows carry it through — so this is almost always a direct hit.
     let resolvedOrgId = orgId || org_id
 
+    // Fallback ONLY when no org was given: resolve from the service
+    // name. Critically, refuse to guess if that name matches services
+    // in more than one gym. A silent cross-gym match is the worst
+    // booking bug on a multi-tenant platform — the customer thinks
+    // they're booked, but the row lands under the wrong gym and the
+    // real gym never sees it. Better to fail loudly and make the
+    // caller name the gym. (With a single gym today this resolves to
+    // exactly one org, so nothing changes for Muay Thai Pai.)
     if (!resolvedOrgId && serviceName) {
-      const { data: serviceMatch } = await supabase
+      const { data: serviceMatches } = await supabase
         .from("services")
         .select("org_id")
         .ilike("name", `%${serviceName}%`)
-        .limit(1)
-        .single()
-      resolvedOrgId = serviceMatch?.org_id
+        .limit(5)
+
+      const distinctOrgs = Array.from(
+        new Set((serviceMatches ?? []).map((s) => s.org_id)),
+      )
+
+      if (distinctOrgs.length === 1) {
+        resolvedOrgId = distinctOrgs[0]
+      } else if (distinctOrgs.length > 1) {
+        return NextResponse.json(
+          {
+            error:
+              "Couldn't tell which gym this booking is for. Please book from the gym's own page so we file it correctly.",
+          },
+          { status: 400 },
+        )
+      }
     }
 
     if (!resolvedOrgId) {
