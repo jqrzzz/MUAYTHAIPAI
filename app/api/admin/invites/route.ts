@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { Resend } from "resend"
+import { NETWORK } from "@/lib/network-identity"
 
 // Generate a secure random token
 function generateToken(): string {
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
-      from: `MUAYTHAIPAI <noreply@${new URL(siteUrl).hostname}>`,
+      from: NETWORK.from,
       to: email.toLowerCase().trim(),
       subject: `You're invited to join ${org.name}`,
       html: `
@@ -258,7 +259,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
-      from: `MUAYTHAIPAI <noreply@${new URL(siteUrl).hostname}>`,
+      from: NETWORK.from,
       to: invite.email,
       subject: `Reminder: You're invited to join ${org?.name || "a gym"}`,
       html: `
