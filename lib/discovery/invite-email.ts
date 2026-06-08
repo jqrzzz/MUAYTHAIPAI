@@ -46,7 +46,7 @@ export async function sendDiscoveryInvite(data: DiscoveryInviteEmail): Promise<{
 
   const resend = new Resend(env.resend.apiKey())
   const fromName = data.fromName || "MUAYTHAIPAI Network"
-  const fromAddress = data.fromAddress || "network@muaythaipai.com"
+  const fromAddress = data.fromAddress || "network@paimuaythai.com"
 
   const locationLine = [data.city, data.province].filter(Boolean).join(", ")
 

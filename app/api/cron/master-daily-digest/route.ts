@@ -286,7 +286,7 @@ export async function GET(request: NextRequest) {
   const resend = new Resend(apiKey)
   const fromAddress =
     process.env.RESEND_FROM_ADDRESS ||
-    "MUAYTHAIPAI <hello@muaythaipai.com>"
+    "MUAYTHAIPAI <hello@paimuaythai.com>"
 
   const supabase = getServiceClient()
 

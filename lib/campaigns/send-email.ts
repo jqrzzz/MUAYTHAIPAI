@@ -26,7 +26,7 @@ export async function sendCampaignEmail(input: CampaignEmailInput): Promise<{
 
   const resend = new Resend(env.resend.apiKey())
   const fromName = input.fromName || "MUAYTHAIPAI Network"
-  const fromEmail = input.fromEmail || "network@muaythaipai.com"
+  const fromEmail = input.fromEmail || "network@paimuaythai.com"
 
   const html = renderHtml(input.bodyMarkdown)
 

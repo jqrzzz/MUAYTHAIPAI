@@ -114,7 +114,7 @@ export const sendAnnouncementHandler: ActionHandler = {
     const resend = new Resend(apiKey)
     const fromAddress =
       process.env.RESEND_FROM_ADDRESS ||
-      `${gymName} <hello@muaythaipai.com>`
+      `${gymName} <hello@paimuaythai.com>`
 
     let sent = 0
     let failed = 0

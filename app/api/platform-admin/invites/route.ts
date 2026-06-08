@@ -8,6 +8,7 @@
  */
 import { type NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
+import { NETWORK } from "@/lib/network-identity"
 import { requirePlatformAdmin } from "@/lib/auth-helpers"
 
 export const runtime = "nodejs"
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
-      from: `MUAYTHAIPAI <noreply@${new URL(siteUrl).hostname}>`,
+      from: NETWORK.from,
       to: email,
       subject: "You've been invited to OckOck — partner access",
       html: `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>

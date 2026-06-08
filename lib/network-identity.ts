@@ -6,16 +6,16 @@
  *
  * Centralized so a future re-domain is one edit, not a repo-wide sweep.
  *
- * IMPORTANT: these are the CURRENT production values, preserved exactly —
- * including the historical domain split (outbound sending uses
- * muaythaipai.com; the support/reply inbox is support@paimuaythai.com).
- * Consolidating onto a single domain is a deliberate follow-up that depends on
- * which mailboxes exist and which domains are Resend-verified. Do NOT change an
- * address here without confirming that, or mail will silently bounce.
+ * SENDING DOMAIN: paimuaythai.com is the Resend-verified domain (confirmed with
+ * the owner, June 2026) — every outbound `from:` address here lives on it.
+ * muaythaipai.com is the public/brand URL only and is NOT verified in Resend,
+ * so it must never appear in a sender address or mail silently bounces. Do NOT
+ * move a sending address off paimuaythai.com without verifying the new domain
+ * in Resend first.
  */
 const NAME = "MUAYTHAIPAI"
-const FROM_EMAIL = "noreply@muaythaipai.com" // Resend-verified sending domain
-const SUPPORT_EMAIL = "support@paimuaythai.com" // monitored reply inbox — preserve
+const FROM_EMAIL = "noreply@paimuaythai.com" // Resend-verified sending domain
+const SUPPORT_EMAIL = "support@paimuaythai.com" // monitored reply inbox
 
 export const NETWORK = {
   name: NAME,
