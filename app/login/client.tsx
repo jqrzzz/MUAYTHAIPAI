@@ -48,7 +48,7 @@ function LoginInner() {
   return (
     <AuthCard
       title="Sign in"
-      subtitle="Pick the option that fits — we'll email you a 6-digit sign-in code."
+      subtitle="Pick the option that fits — then sign in with your password or a one-time code."
     >
       {errorMessage && (
         <div
