@@ -42,9 +42,11 @@ function AdminLoginInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState(searchParams.get("email") ?? "")
+  const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState<"email" | "code">("email")
+  const [mode, setMode] = useState<"code" | "password">("code")
   const [error, setError] = useState<string | null>(null)
   const redirectTo = safeRedirect(searchParams.get("redirect"))
   const contextMessage = errorMessageFor(searchParams.get("error"))
@@ -90,6 +92,33 @@ function AdminLoginInner() {
       } else {
         setError(err instanceof Error ? err.message : "An error occurred")
       }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePasswordSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    const supabase = createClient()
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase().trim(),
+        password,
+      })
+      if (error) throw error
+      // Hard nav so the server picks up the freshly-set auth cookie.
+      window.location.href = redirectTo
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error && /invalid/i.test(err.message)
+          ? "Email or password not recognized. If you haven't set a password, use the code option instead."
+          : err instanceof Error
+            ? err.message
+            : "Could not sign in",
+      )
     } finally {
       setIsLoading(false)
     }
@@ -184,7 +213,7 @@ function AdminLoginInner() {
   return (
     <AuthCard
       title="Sign in to your gym"
-      subtitle="Code-based sign-in for owners, admins, and trainers."
+      subtitle="Sign in with a code or your password — owners, admins, and trainers."
       footnote="For gym staff, trainers, and platform admins"
     >
       {contextMessage && (
@@ -199,7 +228,10 @@ function AdminLoginInner() {
           or sign in with email
         </p>
       </div>
-      <form onSubmit={handleSendCode} className="space-y-4">
+      <form
+        onSubmit={mode === "password" ? handlePasswordSignIn : handleSendCode}
+        className="space-y-4"
+      >
         <div className="space-y-1.5">
           <label
             htmlFor="email"
@@ -217,6 +249,26 @@ function AdminLoginInner() {
           />
         </div>
 
+        {mode === "password" && (
+          <div className="space-y-1.5">
+            <label
+              htmlFor="password"
+              className="text-[12px] font-medium text-zinc-300"
+            >
+              Password
+            </label>
+            <SaasInput
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+        )}
+
         {error && (
           <div className="rounded-lg ring-1 ring-red-500/20 bg-red-500/10 px-3 py-2.5 text-[12px] text-red-300">
             {error}
@@ -229,10 +281,28 @@ function AdminLoginInner() {
           loading={isLoading}
           className="w-full"
         >
-          {!isLoading && <Mail className="h-3.5 w-3.5" />}
-          {isLoading ? "Sending code…" : "Email me a sign-in code"}
+          {!isLoading && mode === "code" && <Mail className="h-3.5 w-3.5" />}
+          {isLoading
+            ? mode === "password"
+              ? "Signing in…"
+              : "Sending code…"
+            : mode === "password"
+              ? "Sign in"
+              : "Email me a sign-in code"}
         </SaasButton>
       </form>
+      <button
+        type="button"
+        onClick={() => {
+          setMode(mode === "password" ? "code" : "password")
+          setError(null)
+        }}
+        className="mt-4 w-full text-center text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors"
+      >
+        {mode === "password"
+          ? "Email me a sign-in code instead"
+          : "Sign in with a password instead"}
+      </button>
     </AuthCard>
   )
 }
