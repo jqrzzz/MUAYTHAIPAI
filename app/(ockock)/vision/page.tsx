@@ -157,7 +157,7 @@ export default function VisionPage() {
             {
               icon: MessageCircle,
               title: "One inbox",
-              body: "LINE, WhatsApp, Instagram, web — every customer message in one place.",
+              body: "LINE, WhatsApp, Telegram, web — every customer message in one place.",
             },
             {
               icon: Sparkles,
