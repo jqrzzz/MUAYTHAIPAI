@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requirePlatformAdmin } from "@/lib/auth-helpers"
 import { THB_TO_USD_RATE } from "@/lib/payment-config"
+import { serviceRoleClient } from "@/lib/supabase/service-role"
 
 // "What does OckOck actually keep?" — net reconciliation across the two
 // income streams, in USD (the settlement currency):
@@ -27,9 +28,13 @@ export async function GET() {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
   const { supabase } = auth
+  // bookings has no platform-admin RLS policy — read it network-wide via the
+  // service-role client (this route is billing-gated, so partners can't reach
+  // it). The subscription-invoice table below has its own admin policy.
+  const db = serviceRoleClient()
 
   // Commission + gym liability — uses columns that always exist.
-  const { data: bookings, error: bErr } = await supabase
+  const { data: bookings, error: bErr } = await db
     .from("bookings")
     .select("commission_amount_usd, payment_amount_usd")
     .eq("payment_status", "paid")
@@ -52,7 +57,7 @@ export async function GET() {
   let bookingFeesUsd = 0
   let feesAvailable = true
   {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("bookings")
       .select("stripe_fee_cents")
       .eq("payment_status", "paid")

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requirePlatformAdmin } from "@/lib/auth-helpers"
 import { bookingAmountThb } from "@/lib/payment-config"
+import { serviceRoleClient } from "@/lib/supabase/service-role"
 
 // Network-wide revenue + bookings for the super-admin view. Mirrors the
 // per-gym analytics, aggregated across every gym on the platform. THB.
@@ -28,10 +29,13 @@ export async function GET() {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
   const { supabase } = auth
+  // bookings has no platform-admin RLS policy — read it network-wide via the
+  // service-role client (organizations is readable under RLS, so it stays).
+  const db = serviceRoleClient()
 
   const [{ data: gyms }, { data: bookings }] = await Promise.all([
     supabase.from("organizations").select("id, name, slug, status, gym_subscriptions(status)"),
-    supabase.from("bookings").select("org_id, booking_date, status, payment_status, payment_amount_thb, payment_amount_usd"),
+    db.from("bookings").select("org_id, booking_date, status, payment_status, payment_amount_thb, payment_amount_usd"),
   ])
 
   const gymList = (gyms as GymRow[]) || []

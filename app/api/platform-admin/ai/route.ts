@@ -3,6 +3,7 @@ import { generateText, stepCountIs } from "ai"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { checkLimit } from "@/lib/rate-limit"
 import { buildPlatformTools } from "@/lib/platform-admin/ai-tools"
+import { serviceRoleClient } from "@/lib/supabase/service-role"
 
 const MODEL = "openai/gpt-4o-mini"
 const MAX_TOOL_STEPS = 6
@@ -34,7 +35,7 @@ General rules:
 - Be short. The operator is on mobile.`
 
 export async function POST(request: Request) {
-  const { supabase, user, isPlatformAdmin } = await getPlatformAdmin()
+  const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
   if (!isPlatformAdmin || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
@@ -56,7 +57,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "query is required" }, { status: 400 })
   }
 
-  const tools = buildPlatformTools(supabase)
+  // Full admins get a service-role client so the AI answers network-wide
+  // (bookings/users/certs have no platform-admin RLS policy). Partners keep the
+  // RLS-scoped client so they can't extract data beyond their own scope.
+  const tools = buildPlatformTools(
+    role === "partner" ? supabase : (serviceRoleClient() as typeof supabase),
+  )
   const messages = [
     ...(body.history || []).slice(-10),
     { role: "user" as const, content: query },

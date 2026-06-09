@@ -19,6 +19,7 @@
  */
 import { NextResponse } from "next/server"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
+import { serviceRoleClient } from "@/lib/supabase/service-role"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -61,13 +62,18 @@ export async function GET(request: Request) {
   const from = url.searchParams.get("from") ?? firstOfMonth
   const to = url.searchParams.get("to") ?? todayStr
 
+  // bookings has no platform-admin RLS policy, so the request-scoped client
+  // would return only gyms the operator belongs to. Read network-wide data
+  // with the service-role client (the route is gated to full admins above).
+  const db = serviceRoleClient()
+
   // Pull gyms + bookings + payouts in parallel
   const [gymsRes, bookingsRes, payoutsRes] = await Promise.all([
     supabase
       .from("organizations")
       .select("id, name, slug, status, gym_subscriptions(status), stripe_account_id, stripe_onboarded")
       .order("name"),
-    supabase
+    db
       .from("bookings")
       .select(`
         id, org_id, booking_date, status, payment_method, payment_status,

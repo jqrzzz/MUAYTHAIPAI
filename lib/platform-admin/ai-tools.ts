@@ -749,7 +749,7 @@ export function buildPlatformTools(supabase: SupabaseClient) {
             payment_status: b.payment_status,
             payment_method: b.payment_method,
             amount_thb: b.payment_amount_thb,
-            amount_usd_cents: b.payment_amount_usd,
+            amount_usd: b.payment_amount_usd,
             stripe_pi: b.stripe_payment_intent_id,
           }
         })
