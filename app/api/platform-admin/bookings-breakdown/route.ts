@@ -85,7 +85,7 @@ export async function GET(request: Request) {
       .limit(5000), // hard cap; sane at any near-term scale
     supabase
       .from("gym_payouts")
-      .select("org_id, amount_usd, status, period_start, period_end, paid_at")
+      .select("org_id, payout_usd, status, period_start, period_end, paid_at")
       .gte("period_end", from)
       .lte("period_start", to),
   ])
@@ -158,7 +158,9 @@ export async function GET(request: Request) {
 
     const method = b.payment_method ?? "unspecified"
     const thb = b.payment_amount_thb ?? 0
-    const usdCents = b.payment_amount_usd ?? 0
+    // payment_amount_usd is stored as WHOLE DOLLARS (the webhook writes
+    // paymentIntent.amount / 100). The rollup + UI work in cents, so convert.
+    const usdCents = Math.round((b.payment_amount_usd ?? 0) * 100)
     const commissionCents = Math.round((b.commission_amount_usd ?? 0) * 100)
 
     if (method === "stripe" && b.payment_status === "paid") {
@@ -191,8 +193,8 @@ export async function GET(request: Request) {
     const slot = buckets.get(p.org_id)
     if (!slot) continue
     if (p.status === "paid") {
-      // amount_usd is stored as dollars (decimal). Convert to cents for the rollup.
-      slot.payouts_paid_usd_cents += Math.round((p.amount_usd ?? 0) * 100)
+      // payout_usd is stored as dollars (decimal). Convert to cents for the rollup.
+      slot.payouts_paid_usd_cents += Math.round((p.payout_usd ?? 0) * 100)
     }
   }
 
@@ -261,7 +263,8 @@ export async function GET(request: Request) {
       payment_status: b.payment_status,
       payment_currency: b.payment_currency,
       payment_amount_thb: b.payment_amount_thb,
-      payment_amount_usd: b.payment_amount_usd,
+      // Emit cents (whole dollars × 100) — the UI divides by 100 to display.
+      payment_amount_usd: b.payment_amount_usd == null ? null : b.payment_amount_usd * 100,
       stripe_payment_intent_id: b.stripe_payment_intent_id,
       stripe_fee_cents: b.stripe_fee_cents,
       stripe_net_cents: b.stripe_net_cents,
