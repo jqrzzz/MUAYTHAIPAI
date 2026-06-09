@@ -155,7 +155,27 @@ export async function notifyNewBooking(data: BookingNotifyData) {
 
   // Send email if enabled
   if (isNotificationEnabled(settings, "new_booking")) {
-    const recipients = getRecipientEmails(settings, org?.email)
+    const recipientSet = new Set(getRecipientEmails(settings, org?.email))
+
+    // Always include the gym's active owners/admins so booking alerts reach
+    // the people who run the gym even if no notification email was ever
+    // configured. Deduped via the Set — being both an owner and a configured
+    // recipient never double-sends.
+    const { data: staff } = await serviceClient
+      .from("org_members")
+      .select("users:user_id(email)")
+      .eq("org_id", data.orgId)
+      .eq("status", "active")
+      .in("role", ["owner", "admin"])
+    for (const m of (staff ?? []) as Array<{
+      users: { email?: string } | { email?: string }[] | null
+    }>) {
+      const u = m.users
+      const email = Array.isArray(u) ? u[0]?.email : u?.email
+      if (email) recipientSet.add(email)
+    }
+
+    const recipients = [...recipientSet]
     if (recipients.length === 0) return
 
     const emailService = EmailService.getInstance()
