@@ -7,6 +7,7 @@ import { SaasShell, SaasHeader, StatusDot } from "@/components/saas"
 import NetworkAnalytics from "@/components/platform-admin/network-analytics"
 import StripeFinance from "@/components/platform-admin/stripe-finance"
 import PlatformNet from "@/components/platform-admin/platform-net"
+import GymPayoutsSummary from "@/components/platform-admin/gym-payouts-summary"
 
 export const metadata: Metadata = {
   title: "Finance — MUAYTHAIPAI",
@@ -73,6 +74,7 @@ export default async function PlatformFinancePage() {
         {/* Money surfaces — full platform admins only (partners excluded). */}
         {role === "full" && <StripeFinance />}
         {role === "full" && <PlatformNet />}
+        {role === "full" && <GymPayoutsSummary />}
       </main>
 
       <footer className="mx-auto max-w-5xl px-5 py-10 text-center">

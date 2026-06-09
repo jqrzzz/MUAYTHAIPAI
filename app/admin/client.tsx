@@ -29,6 +29,7 @@ import CoursesTab from "@/components/admin/courses-tab"
 import WebsiteTab from "@/components/admin/website-tab"
 import SocialTab from "@/components/admin/social-tab"
 import PayoutsTab from "@/components/admin/payouts-tab"
+import PaymentsTab from "@/components/admin/payments-tab"
 import RetentionTab from "@/components/admin/retention-tab"
 import NotificationBell from "@/components/admin/notification-bell"
 import HelpButton from "@/components/admin/help-button"
@@ -54,6 +55,7 @@ import {
   ChevronRight,
   MoreHorizontal,
   Megaphone,
+  CreditCard,
   Inbox,
   Link2,
   Globe,
@@ -219,7 +221,7 @@ export default function AdminDashboardClient({
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social" | "payouts" | "retention"
+    "today" | "recent" | "services" | "trainers" | "reports" | "settings" | "ockock" | "students" | "certificates" | "time-slots" | "profile" | "train-ockock" | "marketing" | "inbox" | "channels" | "courses" | "packages" | "website" | "social" | "payouts" | "payments" | "retention"
   >("today")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -333,6 +335,7 @@ export default function AdminDashboardClient({
         { id: "time-slots" as const, label: "Time Slots", labelTh: "ช่วงเวลา", icon: Clock },
         { id: "trainers" as const, label: "Trainers", labelTh: "ครูมวย", icon: Users },
         { id: "payouts" as const, label: "Payouts", labelTh: "การจ่ายเงิน", icon: DollarSign },
+        { id: "payments" as const, label: "Payments", labelTh: "การชำระเงิน", icon: CreditCard },
         { id: "website" as const, label: "Website", labelTh: "เว็บไซต์", icon: Globe },
       ],
     },
@@ -667,6 +670,8 @@ export default function AdminDashboardClient({
           )}
 
           {activeTab === "recent" && <RecentTab bookings={initialRecentBookings} />}
+
+          {activeTab === "payments" && <PaymentsTab />}
 
           {activeTab === "reports" && (
             <ReportsTab analyticsBookings={analyticsBookings} todayDate={todayDate} />

@@ -120,7 +120,7 @@ export async function GET(request: Request) {
             status: existingPayout.status,
             paidAt: existingPayout.paid_at,
             exchangeRate: existingPayout.exchange_rate,
-            amountThb: existingPayout.amount_thb,
+            amountThb: existingPayout.payout_thb,
           }
         : null,
     }
@@ -187,11 +187,11 @@ export async function POST(request: Request) {
         org_id: orgId,
         period_start: periodStart,
         period_end: periodEnd,
-        total_online_usd: amountUsd + commissionUsd,
+        total_collected_usd: amountUsd + commissionUsd,
         commission_usd: commissionUsd,
-        amount_owed_usd: amountUsd,
+        payout_usd: amountUsd,
         exchange_rate: exchangeRate,
-        amount_thb: amountThb,
+        payout_thb: amountThb,
         status: "paid",
         paid_at: new Date().toISOString(),
         paid_by: user.id,
