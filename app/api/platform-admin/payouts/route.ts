@@ -1,6 +1,7 @@
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit-log"
+import { serviceRoleClient } from "@/lib/supabase/service-role"
 
 export async function GET(request: Request) {
   const { supabase, user, isPlatformAdmin, role } = await getPlatformAdmin()
@@ -10,6 +11,11 @@ export async function GET(request: Request) {
   if (!isPlatformAdmin || role === "partner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+
+  // bookings has no platform-admin RLS policy — read it network-wide via the
+  // service-role client (route is partner-gated above). organizations +
+  // gym_payouts have admin policies and stay on the RLS client.
+  const db = serviceRoleClient()
 
   // Get query params for period
   const { searchParams } = new URL(request.url)
@@ -58,12 +64,12 @@ export async function GET(request: Request) {
     .order("name")
 
   // Fetch all online bookings (USD) in the period
-  const { data: bookings } = await supabase
+  const { data: bookings } = await db
     .from("bookings")
     .select(`
       id,
       org_id,
-      customer_name,
+      guest_name,
       payment_amount_usd,
       commission_rate,
       commission_amount_usd,
@@ -102,7 +108,7 @@ export async function GET(request: Request) {
       },
       bookings: gymBookings.map((b) => ({
         id: b.id,
-        customerName: b.customer_name,
+        customerName: b.guest_name,
         service: b.services?.name || "Unknown",
         amountUsd: b.payment_amount_usd,
         commissionUsd: b.commission_amount_usd,
