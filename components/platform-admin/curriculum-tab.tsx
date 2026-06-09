@@ -292,6 +292,85 @@ function LevelDetailView({
     }
   }
 
+  // Course management — publish/unpublish, edit details, delete. The
+  // platform courses API supports all of this; it just wasn't surfaced.
+  const [publishing, setPublishing] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [form, setForm] = useState({ title: "", short_description: "", price_thb: 0, is_free: false })
+
+  async function patchCourse(updates: Record<string, unknown>) {
+    if (!course) return
+    const res = await fetch("/api/platform-admin/courses", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: course.id, ...updates }),
+    })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      throw new Error(d?.error || "Save failed")
+    }
+  }
+
+  async function togglePublish() {
+    if (!course) return
+    setPublishing(true)
+    setActionError(null)
+    try {
+      const next = course.status === "published" ? "draft" : "published"
+      await patchCourse({
+        status: next,
+        published_at: next === "published" ? new Date().toISOString() : null,
+      })
+      onRefresh()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  async function saveDetails() {
+    setSaving(true)
+    setActionError(null)
+    try {
+      await patchCourse({
+        title: form.title.trim() || course?.title,
+        short_description: form.short_description.trim() || null,
+        is_free: form.is_free,
+        price_thb: form.is_free ? 0 : Math.max(0, Math.round(form.price_thb) || 0),
+      })
+      setEditing(false)
+      onRefresh()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deleteCourse() {
+    if (!course) return
+    setDeleting(true)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/platform-admin/courses?id=${course.id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d?.error || "Delete failed")
+      }
+      setConfirmDelete(false)
+      onRefresh()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <button
@@ -433,6 +512,109 @@ function LevelDetailView({
               </div>
               <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-zinc-400 group-hover:translate-x-0.5 transition-all shrink-0" />
             </button>
+
+            {/* Manage — publish, edit details, delete */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-zinc-900/80 px-4 py-2.5">
+              <SaasButton size="sm" onClick={togglePublish} loading={publishing}>
+                {course.status === "published" ? "Unpublish" : "Publish"}
+              </SaasButton>
+              <button
+                onClick={() => {
+                  setActionError(null)
+                  setForm({
+                    title: course.title,
+                    short_description: course.short_description ?? "",
+                    price_thb: course.price_thb,
+                    is_free: course.is_free,
+                  })
+                  setEditing((v) => !v)
+                }}
+                className="rounded-lg px-3 py-1.5 text-[12px] text-zinc-300 ring-1 ring-zinc-800 transition-colors hover:bg-zinc-900/60 hover:text-white"
+              >
+                {editing ? "Close" : "Edit details"}
+              </button>
+              <div className="flex-1" />
+              {confirmDelete ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={deleteCourse}
+                    disabled={deleting}
+                    className="rounded-lg bg-red-600 px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-red-500 disabled:opacity-60"
+                  >
+                    {deleting ? "Deleting…" : "Confirm delete"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="px-2 py-1.5 text-[12px] text-zinc-400 hover:text-zinc-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="rounded-lg px-3 py-1.5 text-[12px] text-zinc-500 ring-1 ring-zinc-800 transition-colors hover:text-red-300 hover:ring-red-900/60"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+            {actionError && (
+              <p className="px-4 pb-2.5 text-[11px] text-red-400">{actionError}</p>
+            )}
+            {editing && (
+              <div className="space-y-2.5 border-t border-zinc-900/80 px-4 py-3">
+                <div>
+                  <label className="text-[11px] text-zinc-500">Title</label>
+                  <input
+                    value={form.title}
+                    onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                    className="mt-1 w-full rounded-lg bg-zinc-950 px-3 py-2 text-[13px] text-zinc-100 ring-1 ring-zinc-800 focus:outline-none focus:ring-indigo-500/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-zinc-500">Short description</label>
+                  <input
+                    value={form.short_description}
+                    onChange={(e) => setForm((p) => ({ ...p, short_description: e.target.value }))}
+                    className="mt-1 w-full rounded-lg bg-zinc-950 px-3 py-2 text-[13px] text-zinc-100 ring-1 ring-zinc-800 focus:outline-none focus:ring-indigo-500/40"
+                  />
+                </div>
+                <div className="flex items-end gap-4">
+                  <div className="flex-1">
+                    <label className="text-[11px] text-zinc-500">Price (฿)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.price_thb}
+                      disabled={form.is_free}
+                      onChange={(e) => setForm((p) => ({ ...p, price_thb: Number(e.target.value) }))}
+                      className="mt-1 w-full rounded-lg bg-zinc-950 px-3 py-2 text-[13px] text-zinc-100 ring-1 ring-zinc-800 focus:outline-none focus:ring-indigo-500/40 disabled:opacity-50"
+                    />
+                  </div>
+                  <label className="inline-flex items-center gap-2 pb-2 text-[13px] text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={form.is_free}
+                      onChange={(e) => setForm((p) => ({ ...p, is_free: e.target.checked }))}
+                      className="h-4 w-4"
+                    />
+                    Free
+                  </label>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    onClick={() => setEditing(false)}
+                    className="px-3 py-1.5 text-[12px] text-zinc-400 hover:text-zinc-200"
+                  >
+                    Cancel
+                  </button>
+                  <SaasButton size="sm" onClick={saveDetails} loading={saving}>
+                    Save
+                  </SaasButton>
+                </div>
+              </div>
+            )}
           </Surface>
         ) : (
           <Surface>
