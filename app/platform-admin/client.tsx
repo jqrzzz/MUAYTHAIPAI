@@ -37,6 +37,7 @@ import {
   Receipt,
   LifeBuoy,
   Activity,
+  Bell,
   Menu,
   Wallet,
   ExternalLink,
@@ -228,6 +229,15 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
 
   const [subscriptionLoading, setSubscriptionLoading] = useState<string | null>(null)
 
+  // Per-gym notification settings editor — lets an operator set a gym's
+  // booking-alert email without the "View as gym admin" detour.
+  const [settingsTarget, setSettingsTarget] = useState<{ gymId: string; gymName: string } | null>(null)
+  const [settingsEmail, setSettingsEmail] = useState("")
+  const [settingsNotify, setSettingsNotify] = useState(true)
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsMsg, setSettingsMsg] = useState<string | null>(null)
+
   useEffect(() => {
     if (activeTab === "payouts") {
       fetchPayouts()
@@ -252,6 +262,52 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
       console.error("Error fetching payouts:", error)
     }
     setPayoutLoading(false)
+  }
+
+  const openGymSettings = async (gymId: string, gymName: string) => {
+    setSettingsTarget({ gymId, gymName })
+    setSettingsMsg(null)
+    setSettingsEmail("")
+    setSettingsNotify(true)
+    setSettingsLoading(true)
+    try {
+      const res = await fetch(`/api/platform-admin/gyms/${gymId}/settings`)
+      if (res.ok) {
+        const d = await res.json()
+        setSettingsEmail(d.notification_email || "")
+        setSettingsNotify(d.notify_on_booking_email !== false)
+      }
+    } catch {
+      /* leave defaults; the save still works */
+    } finally {
+      setSettingsLoading(false)
+    }
+  }
+
+  const saveGymSettings = async () => {
+    if (!settingsTarget) return
+    setSettingsSaving(true)
+    setSettingsMsg(null)
+    try {
+      const res = await fetch(`/api/platform-admin/gyms/${settingsTarget.gymId}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notification_email: settingsEmail.trim(),
+          notify_on_booking_email: settingsNotify,
+        }),
+      })
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}))
+        throw new Error(e.error || "Couldn't save")
+      }
+      setSettingsMsg("Saved")
+      setTimeout(() => setSettingsTarget(null), 800)
+    } catch (e) {
+      setSettingsMsg(e instanceof Error ? e.message : "Couldn't save")
+    } finally {
+      setSettingsSaving(false)
+    }
   }
 
   const handlePeriodNav = (direction: "prev" | "next") => {
@@ -728,51 +784,6 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
         </div>
       </aside>
 
-      {/* Old top tab strip — replaced by the left sidebar; hidden. */}
-      <div className="hidden">
-        <div className="mx-auto max-w-6xl px-5 overflow-x-auto">
-          <div className="flex gap-0.5 min-w-max">
-            {[
-              { id: "overview", label: "Overview", icon: Building2, billing: false },
-              { id: "command", label: "Command", icon: Sparkles, billing: false },
-              { id: "network", label: "Network", icon: Map, billing: false },
-              { id: "campaigns", label: "Campaigns", icon: Megaphone, billing: false },
-              { id: "students", label: "Students", icon: GraduationCap, billing: false },
-              { id: "trainers", label: "Trainers", icon: UserCheck, billing: false },
-              { id: "gyms", label: "Gyms", icon: Users, billing: false },
-              { id: "courses", label: "Curriculum", icon: BookOpen, billing: false },
-              { id: "adoption", label: "Adoption", icon: TrendingUp, billing: false },
-              { id: "bookings", label: "Bookings", icon: Receipt, billing: true },
-              { id: "subscriptions", label: "Subscriptions", icon: CreditCard, billing: true },
-              { id: "support", label: "Support", icon: LifeBuoy, billing: false },
-              { id: "audit", label: "Audit", icon: Activity, billing: false },
-              { id: "payouts", label: "Payouts", icon: DollarSign, billing: true },
-              { id: "blacklist", label: "Blacklist", icon: Shield, billing: false },
-              { id: "ockock", label: "OckOck", icon: MessageSquare, billing: true },
-            ]
-              .filter((tab) => !(isPartner && tab.billing))
-              .map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[12px] font-medium transition-[color,border-color,background-color] duration-150 focus-visible:outline-none focus-visible:bg-zinc-900/50 ${
-                  activeTab === tab.id
-                    ? "border-indigo-400 text-white"
-                    : "border-transparent text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40"
-                }`}
-              >
-                {tab.id === "ockock" ? (
-                  <Image src="/images/ockock-avatar.png" alt="OckOck" width={16} height={16} className="rounded-full" />
-                ) : (
-                  <tab.icon className="h-3.5 w-3.5" />
-                )}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Content — keyed wrapper so each tab change replays a quick fade */}
       <main key={activeTab} className="p-4 animate-in fade-in duration-200 md:pl-56">
         {/* Command Tab — AI command bar over the network */}
@@ -878,6 +889,15 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                       </div>
                       <div className="flex items-center gap-2 text-right text-xs text-zinc-500">
                         <p>Added {new Date(gym.created_at).toLocaleDateString()}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openGymSettings(gym.id, gym.name)}
+                          className="border-zinc-700 text-xs text-zinc-300 hover:text-white"
+                        >
+                          <Bell className="mr-1 h-3 w-3" />
+                          Alerts
+                        </Button>
                         {/* Subscribe/Cancel — a billing action, hidden for partner platform admins.
                             Cancel routes through the dedicated /subscriptions/cancel endpoint
                             (captures reason + audits + tells Stripe). The Subscribe path keeps
@@ -1360,7 +1380,69 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
         )}
       </main>
 
-      {/* Add Gym Dialog */}
+      {/* Per-gym booking-alert settings — operator can set the gym's
+          notification email without "View as gym admin". */}
+      <Dialog open={!!settingsTarget} onOpenChange={(o) => !o && setSettingsTarget(null)}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+          <DialogHeader>
+            <DialogTitle>Booking alerts — {settingsTarget?.gymName}</DialogTitle>
+          </DialogHeader>
+          {settingsLoading ? (
+            <div className="py-6 text-center text-sm text-zinc-500">
+              <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+              Loading…
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-xs text-zinc-500">
+                Where this gym&apos;s new-booking emails are sent. The gym&apos;s owner is always
+                alerted at their login email too.
+              </p>
+              <div className="space-y-1.5">
+                <Label className="text-zinc-200">Notification email</Label>
+                <Input
+                  type="email"
+                  value={settingsEmail}
+                  onChange={(e) => setSettingsEmail(e.target.value)}
+                  placeholder="owner@gym.com"
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={settingsNotify}
+                  onChange={(e) => setSettingsNotify(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
+                />
+                Email on every new booking
+              </label>
+              {settingsMsg && (
+                <p className={`text-xs ${settingsMsg === "Saved" ? "text-emerald-400" : "text-red-400"}`}>
+                  {settingsMsg}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSettingsTarget(null)}
+                  className="border-zinc-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={saveGymSettings}
+                  disabled={settingsSaving}
+                  className="bg-indigo-500 hover:bg-indigo-400"
+                >
+                  {settingsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showAddGym} onOpenChange={setShowAddGym}>
         <DialogContent className="border-zinc-800 bg-zinc-900 text-white">
           <DialogHeader>
