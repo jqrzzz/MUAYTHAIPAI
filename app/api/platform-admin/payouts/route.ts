@@ -67,6 +67,7 @@ export async function GET(request: Request) {
       payment_amount_usd,
       commission_rate,
       commission_amount_usd,
+      stripe_net_cents,
       payment_currency,
       payment_method,
       created_at,
@@ -89,7 +90,17 @@ export async function GET(request: Request) {
     const gymBookings = (bookings || []).filter((b) => b.org_id === gym.id)
     const totalCollected = gymBookings.reduce((sum, b) => sum + (b.payment_amount_usd || 0), 0)
     const totalCommission = gymBookings.reduce((sum, b) => sum + (b.commission_amount_usd || 0), 0)
-    const amountOwed = totalCollected - totalCommission
+    // Pure-SaaS: we take 0% — the gym is owed its full Stripe net (gross minus
+    // Stripe's own card fee). Historical rows with no captured net fall back to
+    // collected − stored commission.
+    const amountOwed = gymBookings.reduce(
+      (sum, b) =>
+        sum +
+        (b.stripe_net_cents != null
+          ? b.stripe_net_cents / 100
+          : (b.payment_amount_usd || 0) - (b.commission_amount_usd || 0)),
+      0,
+    )
 
     const existingPayout = (existingPayouts || []).find((p) => p.org_id === gym.id)
 

@@ -105,8 +105,8 @@ PLATFORM STATS:
 THIS MONTH'S ONLINE BOOKINGS:
 - Total Online Bookings: ${onlineBookings.length}
 - Total Collected: $${totalCollectedUsd.toFixed(2)} USD
-- Your Commission (15%): $${totalCommissionUsd.toFixed(2)} USD
-- Owed to Gyms: $${totalOwedToGyms.toFixed(2)} USD
+- Platform commission (we take 0% — pure SaaS): $${totalCommissionUsd.toFixed(2)} USD
+- Owed to Gyms (we pass through 100%): $${totalOwedToGyms.toFixed(2)} USD
 
 LAST MONTH COMPARISON:
 - Last Month Commission: $${lastMonthCommission.toFixed(2)} USD
@@ -153,7 +153,7 @@ Common questions you should handle:
       let response = `Hey boss! 🦬 Here's the platform overview:\n\n`
       response += `**This Month**: ${onlineBookings.length} online bookings\n`
       response += `**Collected**: $${totalCollectedUsd.toFixed(2)} USD\n`
-      response += `**Your Commission**: $${totalCommissionUsd.toFixed(2)} USD\n`
+      response += `**Platform commission (0%)**: $${totalCommissionUsd.toFixed(2)} USD\n`
       response += `**Owe to Gyms**: $${totalOwedToGyms.toFixed(2)} USD\n\n`
       response += `**Active Gyms**: ${activeSubscriptions} paying (฿${activeSubscriptions * 999}/month)\n`
 

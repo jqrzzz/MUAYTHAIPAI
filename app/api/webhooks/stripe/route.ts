@@ -6,6 +6,7 @@ import { env, hasEnv } from "@/lib/env"
 import { createClient } from "@supabase/supabase-js"
 import { getOrgEmailContext, notifyNewBooking, notifyTicketSold } from "@/lib/notifications"
 import { ockockUrl } from "@/lib/ockock/url"
+import { PLATFORM_BOOKING_COMMISSION_RATE } from "@/lib/ockock/product"
 import { stripe } from "@/lib/stripe"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -115,7 +116,9 @@ async function saveBookingToDatabase(data: {
       }
     }
 
-    const commissionRate = 0.15
+    // Pure-SaaS: the platform takes 0% of bookings. The gym keeps 100% of the
+    // Stripe net; we only ever deduct Stripe's own card fee (captured below).
+    const commissionRate = PLATFORM_BOOKING_COMMISSION_RATE
     const commissionAmount = Math.round(data.paymentAmountUsd * commissionRate * 100) / 100
 
     // Capture Stripe's actual fee + net so the dashboard tells the truth

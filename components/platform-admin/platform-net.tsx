@@ -110,7 +110,7 @@ export default function PlatformNet() {
           icon={Receipt}
           label="Booking commission"
           value={usd(bookings.netUsd)}
-          sub={bookings.feesAvailable ? "after Stripe fees" : "gross of fees"}
+          sub="we take 0% of bookings"
           accent={CHART_COLORS.indigo}
         />
         <KpiCard icon={Banknote} label="Owed to gyms" value={usd(owedToGymsUsd)} sub={thbHint(owedToGymsUsd, rate)} accent={CHART_COLORS.pending} />
@@ -119,11 +119,11 @@ export default function PlatformNet() {
       <Card className="bg-neutral-900/50 border-neutral-800">
         <CardHeader className="pb-1">
           <CardTitle className="text-white text-base">How it&apos;s computed</CardTitle>
-          <CardDescription>Subscription net + booking commission (net of fees)</CardDescription>
+          <CardDescription>Platform revenue is your subscriptions — we take 0% of bookings.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <Line label="Subscription revenue (net)" value={saas.available ? usd(saas.netUsd) : "—"} />
-          <Line label="Booking commission" value={usd(bookings.commissionUsd)} />
+          <Line label="Booking commission (0%)" value={usd(bookings.commissionUsd)} />
           <Line
             label="Stripe fees on bookings"
             value={bookings.feesAvailable ? `− ${usd(bookings.feesUsd)}` : "pending"}

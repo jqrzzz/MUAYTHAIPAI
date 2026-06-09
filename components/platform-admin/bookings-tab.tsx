@@ -183,7 +183,7 @@ export default function BookingsTab() {
         "Stripe net (USD)",
         "Stripe bookings",
         "Platform commission (USD)",
-        "Real take (USD)",
+        "Platform take (0%, USD)",
         "Cash paid (THB)",
         "Cash paid bookings",
         "Cash pending (THB)",
@@ -314,9 +314,9 @@ export default function BookingsTab() {
             />
             <StatCard
               icon={TrendingUp}
-              label="Your commission"
+              label="Booking commission"
               value={`$${(data.totals.platform_commission_usd_cents / 100).toFixed(2)}`}
-              sub={`Real take: $${Math.max(0, (data.totals.platform_commission_usd_cents - data.totals.stripe_fee_usd_cents) / 100).toFixed(2)}`}
+              sub="We take 0% — gyms keep 100%"
               tone="indigo"
             />
           </div>
@@ -628,7 +628,7 @@ function GymDrawer({ row, recent }: { row: GymRow; recent: RecentRow[] }) {
   const items = recent.filter((r) => r.gym_name === row.gym_name).slice(0, 20)
   return (
     <div className="bg-zinc-950/60 px-4 py-3 space-y-3 border-t border-zinc-900/60">
-      {/* Stripe accounting strip — gross / fees / net / your real take */}
+      {/* Stripe accounting strip — gross / fees / net / platform take (0%) */}
       {row.stripe_paid_count > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
           <Stat
@@ -653,9 +653,9 @@ function GymDrawer({ row, recent }: { row: GymRow; recent: RecentRow[] }) {
             tone="indigo"
           />
           <Stat
-            label="Your real take"
-            value={`$${Math.max(0, (row.platform_commission_usd_cents - row.stripe_fee_usd_cents) / 100).toFixed(2)}`}
-            sub={`After fees, before payout to gym`}
+            label="Platform take"
+            value={`$${(row.platform_commission_usd_cents / 100).toFixed(2)}`}
+            sub="We take 0% of bookings"
             tone="indigo"
           />
         </div>
@@ -672,8 +672,7 @@ function GymDrawer({ row, recent }: { row: GymRow; recent: RecentRow[] }) {
         } sub="@ ฿35 / $1" />
         <Stat label="Owed to gym (USD)" value={
           `$${(
-            (row.stripe_paid_usd_cents -
-              row.platform_commission_usd_cents -
+            (row.stripe_net_usd_cents -
               row.payouts_paid_usd_cents) /
             100
           ).toFixed(2)}`
