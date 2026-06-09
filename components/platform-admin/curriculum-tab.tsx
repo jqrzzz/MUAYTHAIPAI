@@ -5,14 +5,14 @@
  *
  * Shows the full Naga–Garuda ladder as the cornerstone of the
  * MUAYTHAIPAI network. Click any level to drop into a per-level editor:
- *   - Skills (assessment criteria) — read-only, sourced from
- *     lib/certification-levels.ts. Editing them is a code change.
+ *   - Skills (assessment criteria) — reword in place via CertSkillsEditor
+ *     (/api/platform-admin/cert-skills). Code defaults seed the DB; reword is
+ *     text-only, so skill_index and historical sign-offs stay aligned.
  *   - Course content (modules + lessons) — full CRUD via the existing
  *     CourseModulesView, scoped to /api/platform-admin/courses.
  *
- * Skills stay in code (typed, git-versioned, redeploy-required) while
- * course content is DB-driven (editable from this UI). Decided
- * deliberately — we maintain the Naga–Garuda assessment standard.
+ * Adding / removing / reordering skills is intentionally not yet supported —
+ * that must migrate the issuance count + the sign-off UI together.
  */
 import { useEffect, useState } from "react"
 import {
@@ -23,7 +23,7 @@ import {
   Clock,
   GraduationCap,
   Loader2,
-  Lock,
+  Pencil,
   Plus,
 } from "lucide-react"
 import { CERTIFICATION_LEVELS, type CertificationLevel } from "@/lib/certification-levels"
@@ -34,6 +34,7 @@ import {
   SaasButton,
 } from "@/components/saas"
 import CourseModulesView from "@/components/admin/course-modules-view"
+import CertSkillsEditor from "@/components/platform-admin/cert-skills-editor"
 
 interface PlatformCourse {
   id: string
@@ -343,30 +344,12 @@ function LevelDetailView({
           subtitle={`The ${level.skills.length} criteria a trainer signs off before a student earns the ${level.name} certificate.`}
           action={
             <span className="inline-flex items-center gap-1 text-[11px] text-zinc-600">
-              <Lock className="h-3 w-3" />
-              Code-managed
+              <Pencil className="h-3 w-3" />
+              Reword network-wide
             </span>
           }
         />
-        <Surface>
-          <ul className="divide-y divide-zinc-900/80">
-            {level.skills.map((skill, idx) => (
-              <li
-                key={idx}
-                className="flex items-start gap-3 px-4 py-2.5 text-[13px]"
-              >
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-zinc-800 ring-1 ring-zinc-700/60 text-zinc-500 text-[10px] font-semibold tabular-nums shrink-0 mt-0.5">
-                  {idx + 1}
-                </span>
-                <span className="text-zinc-200">{skill}</span>
-              </li>
-            ))}
-          </ul>
-        </Surface>
-        <p className="text-[11px] text-zinc-600 px-1">
-          Skills live in <code className="text-zinc-500">lib/certification-levels.ts</code>
-          — to add, remove, or reword, change the file and redeploy.
-        </p>
+        <CertSkillsEditor levelId={level.id} />
       </div>
 
       {/* Course content — full CRUD if it exists */}

@@ -1,24 +1,37 @@
 import { NextResponse } from "next/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { getCertSkillsMap } from "@/lib/cert-skills"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 // GET /api/public/certification-levels
 // Returns all certification level definitions. Public, no auth.
+// Skills are DB-backed (operator-reworded) with a code fallback.
 export async function GET() {
-  const levels = CERTIFICATION_LEVELS.map((l) => ({
-    id: l.id,
-    number: l.number,
-    name: l.name,
-    creature: l.creature,
-    icon: l.icon,
-    duration: l.duration,
-    priceTHB: l.priceTHB,
-    skillCount: l.skills.length,
-    skills: l.skills,
-    color: l.color,
-    bgGradient: l.bgGradient,
-  }))
+  const db = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const skillsMap = await getCertSkillsMap(db)
+
+  const levels = CERTIFICATION_LEVELS.map((l) => {
+    const skills = skillsMap[l.id] ?? l.skills
+    return {
+      id: l.id,
+      number: l.number,
+      name: l.name,
+      creature: l.creature,
+      icon: l.icon,
+      duration: l.duration,
+      priceTHB: l.priceTHB,
+      skillCount: skills.length,
+      skills,
+      color: l.color,
+      bgGradient: l.bgGradient,
+    }
+  })
 
   return NextResponse.json({ levels })
 }

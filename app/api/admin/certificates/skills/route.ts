@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { getLevelById, CERTIFICATION_LEVELS } from "@/lib/certification-levels"
+import { getCertSkillsMap } from "@/lib/cert-skills"
 import { notifyCourseCompleted } from "@/lib/notifications"
 
 const serviceClient = createServiceClient(
@@ -47,6 +48,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid level" }, { status: 400 })
   }
 
+  // Skill labels come from the DB (operator-reworded), code fallback. Reword
+  // never changes count/order, so skill_index and totals stay aligned.
+  const skillsMap = await getCertSkillsMap(supabase)
+  const levelSkills = skillsMap[level] ?? levelConfig.skills
+
   const { data: signoffs } = await supabase
     .from("skill_signoffs")
     .select("skill_index, signed_off_by, notes, signed_off_at")
@@ -56,7 +62,7 @@ export async function GET(request: Request) {
 
   const signedSet = new Set((signoffs ?? []).map((s: { skill_index: number }) => s.skill_index))
 
-  const skills = levelConfig.skills.map((name, index) => {
+  const skills = levelSkills.map((name, index) => {
     const signoff = (signoffs ?? []).find((s: { skill_index: number }) => s.skill_index === index)
     return {
       index,
@@ -73,8 +79,8 @@ export async function GET(request: Request) {
     levelName: levelConfig.name,
     skills,
     completedCount: signedSet.size,
-    totalCount: levelConfig.skills.length,
-    allComplete: signedSet.size >= levelConfig.skills.length,
+    totalCount: levelSkills.length,
+    allComplete: signedSet.size >= levelSkills.length,
   })
 }
 
