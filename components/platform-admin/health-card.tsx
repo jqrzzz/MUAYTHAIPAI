@@ -164,9 +164,9 @@ export default function HealthCard() {
               )
             })}
             <div className="pt-2 text-xs text-zinc-500">
-              Migrations live in{" "}
-              <code className="text-zinc-400">scripts/RUN-PLATFORM-ADMIN.sql</code>{" "}
-              — paste into Supabase SQL editor and run once.
+              Missing pieces are usually unapplied migrations — run{" "}
+              <code className="text-zinc-400">scripts/RUN-MISSING-MIGRATIONS.sql</code>{" "}
+              in the Supabase SQL editor (safe to re-run).
             </div>
           </div>
         )}
