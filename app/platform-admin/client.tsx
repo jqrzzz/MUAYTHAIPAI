@@ -658,7 +658,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
             {
               label: "Network",
               items: [
-                { id: "gyms", label: "Gyms", icon: Users },
+                { id: "gyms", label: "Gyms", icon: Building2 },
+                { id: "customers", label: "Customers", icon: Users, href: "/platform-admin/customers" },
                 { id: "trainers", label: "Trainers", icon: UserCheck },
                 { id: "students", label: "Students", icon: GraduationCap },
                 { id: "network", label: "Network", icon: Map },
