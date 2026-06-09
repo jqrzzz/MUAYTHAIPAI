@@ -95,6 +95,7 @@ const SORTS = [
 export default function TrainersTab() {
   const [trainers, setTrainers] = useState<TrainerRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState("recent")
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -104,15 +105,17 @@ export default function TrainersTab() {
 
   const fetchTrainers = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = new URLSearchParams()
       if (search.trim()) params.set("q", search.trim())
       params.set("sort", sort)
       const res = await fetch(`/api/platform-admin/trainers?${params.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
-        setTrainers(data.trainers || [])
-      }
+      if (!res.ok) throw new Error("failed")
+      const data = await res.json()
+      setTrainers(data.trainers || [])
+    } catch {
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -190,6 +193,17 @@ export default function TrainersTab() {
             {loading ? (
               <div className="text-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-zinc-500" />
+              </div>
+            ) : error ? (
+              <div className="text-center py-12 text-zinc-500">
+                <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p>Couldn&apos;t load trainers.</p>
+                <button
+                  onClick={() => fetchTrainers()}
+                  className="text-orange-400 underline text-sm mt-1"
+                >
+                  Try again
+                </button>
               </div>
             ) : trainers.length === 0 ? (
               <div className="text-center py-12 text-zinc-500">

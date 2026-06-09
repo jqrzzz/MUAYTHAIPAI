@@ -49,6 +49,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function CampaignsTab() {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
@@ -61,12 +62,14 @@ export default function CampaignsTab() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const res = await fetch("/api/platform-admin/campaigns")
-      if (res.ok) {
-        const data = await res.json()
-        setCampaigns(data.campaigns || [])
-      }
+      if (!res.ok) throw new Error("failed")
+      const data = await res.json()
+      setCampaigns(data.campaigns || [])
+    } catch {
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -234,6 +237,17 @@ export default function CampaignsTab() {
           {loading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-zinc-500" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-zinc-500">
+              <Megaphone className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p>Couldn&apos;t load campaigns.</p>
+              <button
+                onClick={() => fetchAll()}
+                className="text-orange-400 underline text-sm mt-1"
+              >
+                Try again
+              </button>
             </div>
           ) : campaigns.length === 0 ? (
             <div className="text-center py-12 text-zinc-500">
