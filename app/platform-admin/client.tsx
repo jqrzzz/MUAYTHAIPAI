@@ -37,6 +37,7 @@ import {
   Receipt,
   LifeBuoy,
   Activity,
+  Award,
   Bell,
   Menu,
   Wallet,
@@ -680,6 +681,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
               items: [
                 { id: "campaigns", label: "Campaigns", icon: Megaphone },
                 { id: "courses", label: "Curriculum", icon: BookOpen },
+                { id: "certificates", label: "Certificates", icon: Award, href: "/platform-admin/certificates" },
                 { id: "ockock", label: "OckOck", icon: MessageSquare, billing: true, ockock: true },
               ],
             },
