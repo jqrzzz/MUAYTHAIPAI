@@ -41,6 +41,8 @@ import {
   Menu,
   Wallet,
   ExternalLink,
+  UserPlus,
+  Briefcase,
 } from "lucide-react"
 import CurriculumTab from "@/components/platform-admin/curriculum-tab"
 import AdoptionTab from "@/components/platform-admin/adoption-tab"
@@ -691,6 +693,13 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                 { id: "blacklist", label: "Blacklist", icon: Shield },
               ],
             },
+            {
+              label: "Team & workspace",
+              items: [
+                { id: "team", label: "Team & access", icon: UserPlus, href: "/platform-admin/team", full: true },
+                { id: "boardroom", label: "Boardroom", icon: Briefcase, href: "/platform-admin/boardroom" },
+              ],
+            },
           ] as {
             label: string
             items: {
@@ -698,13 +707,15 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
               label: string
               icon: typeof Building2
               billing?: boolean
+              full?: boolean
               href?: string
               ockock?: boolean
             }[]
           }[]).map((group) => {
-            const items = group.items.filter(
-              (it) => !(isPartner && (it as { billing?: boolean }).billing),
-            )
+            const items = group.items.filter((it) => {
+              const i = it as { billing?: boolean; full?: boolean }
+              return !(isPartner && (i.billing || i.full))
+            })
             if (items.length === 0) return null
             return (
               <div key={group.label} className="mb-1.5">
