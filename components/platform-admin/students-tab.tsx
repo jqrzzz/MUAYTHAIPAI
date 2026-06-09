@@ -115,6 +115,7 @@ const SORTS = [
 export default function StudentsTab() {
   const [students, setStudents] = useState<StudentRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState("recent")
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -124,15 +125,17 @@ export default function StudentsTab() {
 
   const fetchStudents = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = new URLSearchParams()
       if (search.trim()) params.set("q", search.trim())
       if (sort) params.set("sort", sort)
       const res = await fetch(`/api/platform-admin/students?${params.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
-        setStudents(data.students || [])
-      }
+      if (!res.ok) throw new Error("failed")
+      const data = await res.json()
+      setStudents(data.students || [])
+    } catch {
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -212,6 +215,17 @@ export default function StudentsTab() {
             {loading ? (
               <div className="text-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-zinc-500" />
+              </div>
+            ) : error ? (
+              <div className="text-center py-12 text-zinc-500">
+                <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p>Couldn&apos;t load students.</p>
+                <button
+                  onClick={() => fetchStudents()}
+                  className="text-orange-400 underline text-sm mt-1"
+                >
+                  Try again
+                </button>
               </div>
             ) : students.length === 0 ? (
               <div className="text-center py-12 text-zinc-500">

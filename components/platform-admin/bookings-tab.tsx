@@ -35,6 +35,7 @@ import {
   SaasButton,
   SegmentedControl,
 } from "@/components/saas"
+import { THB_TO_USD_RATE } from "@/lib/payment-config"
 
 interface GymRow {
   org_id: string
@@ -666,10 +667,10 @@ function GymDrawer({ row, recent }: { row: GymRow; recent: RecentRow[] }) {
         <Stat label="Total revenue (USD est.)" value={
           `$${(
             (row.stripe_paid_usd_cents +
-              (row.cash_paid_thb + row.transfer_paid_thb) * 100 / 35) /
+              (row.cash_paid_thb + row.transfer_paid_thb) * 100 / THB_TO_USD_RATE) /
             100
           ).toFixed(2)}`
-        } sub="@ ฿35 / $1" />
+        } sub={`@ ฿${THB_TO_USD_RATE} / $1`} />
         <Stat label="Owed to gym (USD)" value={
           `$${(
             (row.stripe_paid_usd_cents -
