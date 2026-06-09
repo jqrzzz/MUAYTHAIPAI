@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import PlatformAdminClient from "./client"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 
 export default async function PlatformAdminPage({
   searchParams,
@@ -56,20 +57,37 @@ export default async function PlatformAdminPage({
     .eq("is_active", true)
     .order("created_at", { ascending: false })
 
-  // Platform stats
-  const { count: totalGyms } = await supabase.from("organizations").select("*", { count: "exact", head: true })
+  // Platform stats. Fetched with a service-role client so row-level security
+  // on the operator's own session can't silently zero these network-wide
+  // counts — counting the users table under the logged-in client returned 0
+  // (the "Total users: 0" bug). Safe: this page is already gated to platform
+  // admins above.
+  const svc = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
 
-  const { count: totalStudents } = await supabase
-    .from("users")
-    .select("*", { count: "exact", head: true })
-    .eq("is_platform_admin", false)
+  const [
+    { count: totalGyms },
+    { count: totalBookings },
+    { count: activeSubscriptions },
+    { data: bookingEmails },
+  ] = await Promise.all([
+    svc.from("organizations").select("*", { count: "exact", head: true }),
+    svc.from("bookings").select("*", { count: "exact", head: true }),
+    svc
+      .from("gym_subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active"),
+    svc.from("bookings").select("guest_email").not("guest_email", "is", null),
+  ])
 
-  const { count: totalBookings } = await supabase.from("bookings").select("*", { count: "exact", head: true })
-
-  const { data: activeSubscriptions } = await supabase
-    .from("gym_subscriptions")
-    .select("*", { count: "exact" })
-    .eq("status", "active")
+  // Real customer reach: most bookings are guests who never created an
+  // account, so counting the users table drastically undercounts. Count
+  // distinct booking emails instead.
+  const totalCustomers = new Set(
+    (bookingEmails ?? []).map((b) => (b.guest_email as string).toLowerCase().trim()),
+  ).size
 
   return (
     <PlatformAdminClient
@@ -77,9 +95,9 @@ export default async function PlatformAdminPage({
       blacklist={blacklist || []}
       stats={{
         totalGyms: totalGyms || 0,
-        totalStudents: totalStudents || 0,
+        totalCustomers,
         totalBookings: totalBookings || 0,
-        activeSubscriptions: activeSubscriptions?.length || 0,
+        activeSubscriptions: activeSubscriptions || 0,
       }}
       role={role}
     />

@@ -150,7 +150,7 @@ interface Props {
   blacklist: BlacklistEntry[]
   stats: {
     totalGyms: number
-    totalStudents: number
+    totalCustomers: number
     totalBookings: number
     activeSubscriptions: number
   }
@@ -815,7 +815,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
             {/* Network stats — uniform chrome, indigo accent only on revenue */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <NetworkStat icon={Building2} value={stats.totalGyms} label="Total gyms" />
-              <NetworkStat icon={Users} value={stats.totalStudents} label="Total users" />
+              <NetworkStat icon={Users} value={stats.totalCustomers} label="Customers" />
               <NetworkStat icon={Calendar} value={stats.totalBookings} label="Total bookings" />
               {!isPartner && (
                 <NetworkStat icon={CreditCard} value={stats.activeSubscriptions} label="Paying gyms" />
