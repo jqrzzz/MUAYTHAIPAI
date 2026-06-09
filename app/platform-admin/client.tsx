@@ -37,6 +37,9 @@ import {
   Receipt,
   LifeBuoy,
   Activity,
+  Menu,
+  Wallet,
+  ExternalLink,
 } from "lucide-react"
 import CurriculumTab from "@/components/platform-admin/curriculum-tab"
 import AdoptionTab from "@/components/platform-admin/adoption-tab"
@@ -179,6 +182,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
   const [showAddGym, setShowAddGym] = useState(false)
   const [showAddBlacklist, setShowAddBlacklist] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // Add gym form
   const [gymForm, setGymForm] = useState({
@@ -528,41 +532,204 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-inter antialiased">
-      {/* Frosted header */}
-      <header className="sticky top-0 z-30 border-b border-zinc-900/80 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 h-14">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-            <h1 className="text-[14px] font-semibold text-white tracking-tight">
-              Operator console
-            </h1>
-            <span className="hidden sm:inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] font-medium bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/25">
-              Network-wide
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <GlobalSearchButton />
-            <a
-              href="/platform-admin/today"
-              className="hidden sm:inline-flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 rounded-lg px-2.5 py-1.5 transition-colors"
-              title="Mobile-optimized home — Today + Command bar"
-            >
-              <Sparkles className="h-3 w-3 text-indigo-400" />
-              Today
-            </a>
-            <button
-              onClick={handleSignOut}
-              className="inline-flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60 rounded-lg px-2.5 py-1.5 transition-colors"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
-          </div>
+      {/* Mobile top bar */}
+      <div className="md:hidden sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-zinc-900/80 bg-zinc-950/80 backdrop-blur-xl px-4 h-14">
+        <button
+          onClick={() => setMobileNavOpen(true)}
+          className="inline-flex items-center justify-center rounded-lg p-2 text-zinc-400 hover:text-white hover:bg-zinc-900/60"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          <span className="text-[13px] font-semibold text-white truncate">Operator console</span>
         </div>
-      </header>
+        <button
+          onClick={handleSignOut}
+          className="inline-flex items-center justify-center rounded-lg p-2 text-zinc-400 hover:text-white"
+          aria-label="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
+      </div>
 
-      {/* Tab strip — underline indicator only for active */}
-      <div className="border-b border-zinc-900/80 bg-zinc-950">
+      {/* Mobile drawer overlay */}
+      {mobileNavOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
+      {/* Left sidebar — grouped nav (fixed on desktop, drawer on mobile) */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-900/80 bg-zinc-950/95 backdrop-blur-xl transition-transform duration-200 md:w-56 ${
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
+        {/* Brand */}
+        <div className="flex h-14 items-center gap-2 border-b border-zinc-900/80 px-4 shrink-0">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] shrink-0" />
+          <span className="text-[13px] font-semibold tracking-tight text-white truncate">Operator console</span>
+          <span className="hidden md:inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] uppercase tracking-[0.12em] font-medium bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/25">
+            Network
+          </span>
+          <button
+            onClick={() => setMobileNavOpen(false)}
+            className="ml-auto md:hidden inline-flex items-center justify-center rounded-lg p-1.5 text-zinc-500 hover:text-zinc-200"
+            aria-label="Close menu"
+          >
+            <XCircle className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-2 pt-2">
+          <GlobalSearchButton />
+        </div>
+
+        {/* Grouped nav */}
+        <nav className="flex-1 overflow-y-auto px-2 py-2">
+          {([
+            {
+              label: "Overview",
+              items: [
+                { id: "overview", label: "Overview", icon: Building2 },
+                { id: "command", label: "Command", icon: Sparkles },
+              ],
+            },
+            {
+              label: "Network",
+              items: [
+                { id: "gyms", label: "Gyms", icon: Users },
+                { id: "trainers", label: "Trainers", icon: UserCheck },
+                { id: "students", label: "Students", icon: GraduationCap },
+                { id: "network", label: "Network", icon: Map },
+                { id: "adoption", label: "Adoption", icon: TrendingUp },
+              ],
+            },
+            {
+              label: "Money",
+              items: [
+                { id: "bookings", label: "Bookings", icon: Receipt, billing: true },
+                { id: "subscriptions", label: "Subscriptions", icon: CreditCard, billing: true },
+                { id: "payouts", label: "Payouts", icon: DollarSign, billing: true },
+                { id: "finance", label: "Finance", icon: Wallet, billing: true, href: "/platform-admin/finance" },
+              ],
+            },
+            {
+              label: "Growth",
+              items: [
+                { id: "campaigns", label: "Campaigns", icon: Megaphone },
+                { id: "courses", label: "Curriculum", icon: BookOpen },
+                { id: "ockock", label: "OckOck", icon: MessageSquare, billing: true, ockock: true },
+              ],
+            },
+            {
+              label: "Trust & ops",
+              items: [
+                { id: "support", label: "Support", icon: LifeBuoy },
+                { id: "audit", label: "Audit", icon: Activity },
+                { id: "blacklist", label: "Blacklist", icon: Shield },
+              ],
+            },
+          ] as {
+            label: string
+            items: {
+              id: string
+              label: string
+              icon: typeof Building2
+              billing?: boolean
+              href?: string
+              ockock?: boolean
+            }[]
+          }[]).map((group) => {
+            const items = group.items.filter(
+              (it) => !(isPartner && (it as { billing?: boolean }).billing),
+            )
+            if (items.length === 0) return null
+            return (
+              <div key={group.label} className="mb-1.5">
+                <p className="px-3 pb-1 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-600">
+                  {group.label}
+                </p>
+                <div className="space-y-0.5">
+                  {items.map((it) => {
+                    const item = it as {
+                      id: string
+                      label: string
+                      icon: typeof Building2
+                      href?: string
+                      ockock?: boolean
+                    }
+                    const active = !item.href && activeTab === item.id
+                    const cls = `flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors ${
+                      active
+                        ? "bg-indigo-500/15 text-white ring-1 ring-indigo-500/25"
+                        : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-100"
+                    }`
+                    const inner = (
+                      <>
+                        {item.ockock ? (
+                          <Image
+                            src="/images/ockock-avatar.png"
+                            alt=""
+                            width={16}
+                            height={16}
+                            className="rounded-full shrink-0"
+                          />
+                        ) : (
+                          <item.icon className="h-4 w-4 shrink-0" />
+                        )}
+                        <span className="truncate">{item.label}</span>
+                        {item.href && <ExternalLink className="ml-auto h-3 w-3 text-zinc-600" />}
+                      </>
+                    )
+                    return item.href ? (
+                      <a key={item.id} href={item.href} className={cls}>
+                        {inner}
+                      </a>
+                    ) : (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveTab(item.id as typeof activeTab)
+                          setMobileNavOpen(false)
+                        }}
+                        className={cls}
+                      >
+                        {inner}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="shrink-0 space-y-0.5 border-t border-zinc-900/80 p-2">
+          <a
+            href="/platform-admin/today"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-900/60 hover:text-zinc-100"
+          >
+            <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" />
+            <span>Today</span>
+          </a>
+          <button
+            onClick={handleSignOut}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-900/60 hover:text-zinc-100"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Old top tab strip — replaced by the left sidebar; hidden. */}
+      <div className="hidden">
         <div className="mx-auto max-w-6xl px-5 overflow-x-auto">
           <div className="flex gap-0.5 min-w-max">
             {[
@@ -607,7 +774,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
       </div>
 
       {/* Content — keyed wrapper so each tab change replays a quick fade */}
-      <main key={activeTab} className="mx-auto max-w-6xl p-4 animate-in fade-in duration-200">
+      <main key={activeTab} className="p-4 animate-in fade-in duration-200 md:pl-56">
         {/* Command Tab — AI command bar over the network */}
         {activeTab === "command" && <PlatformCommandBar />}
 
