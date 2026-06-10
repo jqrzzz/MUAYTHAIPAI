@@ -525,6 +525,72 @@ async function handleCertEnrollmentCompleted(
   }
 }
 
+// Course-purchase branch of checkout.session.completed. Flips the paused
+// (pending-payment) enrollments row to active — this is the paywall's source
+// of truth: until it runs, /api/courses/enroll refuses to resume the row.
+async function handleCourseEnrollmentCompleted(
+  session: Stripe.Checkout.Session,
+  metadata: Stripe.Metadata,
+) {
+  const enrollmentId = metadata.enrollment_id
+  if (!enrollmentId) return
+
+  const { data: existing } = await supabase
+    .from("enrollments")
+    .select("id, status, course_id")
+    .eq("id", enrollmentId)
+    .maybeSingle()
+  if (!existing) {
+    console.warn("[course.webhook] enrollment not found:", enrollmentId)
+    return
+  }
+  if (existing.status === "active" || existing.status === "completed") {
+    return // idempotent — Stripe retries
+  }
+
+  // Recount lessons here rather than trusting the denormalized snapshot —
+  // content may have changed between checkout and payment.
+  const { count } = await supabase
+    .from("lessons")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", existing.course_id)
+
+  const { error: updateErr } = await supabase
+    .from("enrollments")
+    .update({
+      status: "active",
+      payment_method: "stripe",
+      payment_amount_thb: session.amount_total ? Math.round(session.amount_total / 100) : null,
+      total_lessons: count ?? 0,
+      last_accessed_at: new Date().toISOString(),
+    })
+    .eq("id", existing.id)
+  if (updateErr) {
+    console.error("[course.webhook] activation failed:", updateErr)
+    return
+  }
+
+  // Gym-owned course → surface the sale on the gym's bell. Platform courses
+  // (org_id null) have no gym to ping.
+  const { data: course } = await supabase
+    .from("courses")
+    .select("title, org_id")
+    .eq("id", existing.course_id)
+    .maybeSingle()
+  if (course?.org_id) {
+    notifyNewBooking({
+      orgId: course.org_id as string,
+      customerName: session.customer_details?.name || "Student",
+      customerEmail: session.customer_details?.email || "",
+      serviceName: `Course: ${course.title}`,
+      bookingDate: new Date().toISOString().split("T")[0],
+      amount: session.amount_total ? session.amount_total / 100 : 0,
+      paymentMethod: "stripe",
+      paymentStatus: "paid",
+    }).catch((err) => console.error("[course.webhook] notify failed:", err))
+  }
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     const metadata = session.metadata || {}
@@ -541,6 +607,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // /api/public/enroll/checkout and carry an enrollment_id.
     if (metadata.kind === "cert_enrollment" && metadata.enrollment_id) {
       await handleCertEnrollmentCompleted(session, metadata)
+      return
+    }
+
+    // Course-purchase path — kind=course_enrollment sessions originate from
+    // /api/courses/checkout.
+    if (metadata.kind === "course_enrollment" && metadata.enrollment_id) {
+      await handleCourseEnrollmentCompleted(session, metadata)
       return
     }
 
