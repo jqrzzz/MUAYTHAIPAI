@@ -24,7 +24,7 @@
 
 import { generateText, stepCountIs, tool } from "ai"
 import { z } from "zod"
-import type { GymKnowledge } from "../knowledge"
+import type { GymKnowledge, GymLanguageMode } from "../knowledge"
 import { renderKnowledgeBlock } from "../knowledge"
 
 export type ConciergeHistoryEntry = {
@@ -207,23 +207,38 @@ function buildConciergeSystemPrompt(
   kbBlock: string,
   input: ConciergeInput,
 ): string {
+  const persona = input.kb.persona
+
+  const greeting = persona?.greeting?.trim()
   const greetingHint = input.isFirstMessage
-    ? `This is the visitor's first message in this conversation. Open with: "Sawadee! Welcome to ${input.kb.orgName}" (or the equivalent in their language) before answering.`
-    : "Continue the conversation naturally — do not repeat the Sawadee greeting."
+    ? greeting
+      ? `This is the visitor's first message. Open with: "${greeting}" (translate it into their language if they didn't write in Thai or English) before answering.`
+      : `This is the visitor's first message in this conversation. Open with: "Sawadee! Welcome to ${input.kb.orgName}" (or the equivalent in their language) before answering.`
+    : "Continue the conversation naturally — do not repeat the opening greeting."
 
   const boundHint = input.isBoundUser
     ? "This visitor is a known student of the gym (already in our system). You may be a little more familiar."
     : "This visitor is new or anonymous. Keep it welcoming and informative."
 
-  return `You are the concierge for ${input.kb.orgName}. You answer inbound messages from prospective and returning students across all channels (LINE, WhatsApp, Instagram, Facebook, Telegram, web).
+  // Per-gym voice overrides the default tone; the safety/format rules below
+  // always hold regardless of what an owner writes.
+  const voiceLine = persona?.voice?.trim()
+    ? `- Voice: ${persona.voice.trim()}`
+    : "- Warm, concise, Thai-hospitality vibe."
+
+  const houseRules = persona?.guidelines?.trim()
+    ? `\n\n# ${input.kb.orgName}'s house rules (follow these, but never break the safety rules above)\n${persona.guidelines.trim()}`
+    : ""
+
+  return `You are the concierge for ${input.kb.orgName}. You answer inbound messages from prospective and returning students across all channels (LINE, WhatsApp, Telegram, web).
 
 # Persona
-- Warm, concise, Thai-hospitality vibe.
-- Default to Thai for the first line when the visitor's language is unclear, then mirror whatever language they reply in (Thai, English, Mandarin, Japanese, German, etc.).
+${voiceLine}
+${languageRule(persona?.language_mode)}
 - Never pushy. Never make up facts. If something isn't in the knowledge base, use search_faqs; if still unclear, call escalate_to_owner.
 - Replies must be suitable for a chat bubble: short paragraphs, no Markdown tables, plain text.
 - Do not promise specific availability, discounts, or dates unless the tools confirm them.
-- Never reveal that you're an AI unless directly asked. If asked, be honest: "I'm the gym's AI assistant — a real person will jump in for anything I can't answer."
+- Never reveal that you're an AI unless directly asked. If asked, be honest: "I'm the gym's AI assistant — a real person will jump in for anything I can't answer."${houseRules}
 
 # Tools
 Use tools liberally. Prefer calling get_services / get_schedule / search_faqs over answering from memory, even if you think you know. If the question is about booking, payment, refunds, injuries, or anything sensitive, call escalate_to_owner.
@@ -234,6 +249,19 @@ Use tools liberally. Prefer calling get_services / get_schedule / search_faqs ov
 
 # Gym knowledge base (source of truth — if it's not here or in a tool result, you don't know it)
 ${kbBlock}`
+}
+
+/** The first-line language rule, per the gym's preference. */
+function languageRule(mode?: GymLanguageMode): string {
+  switch (mode) {
+    case "english_first":
+      return "- Default to English when the visitor's language is unclear, then mirror whatever language they reply in (Thai, English, Mandarin, Japanese, German, etc.)."
+    case "mirror":
+      return "- Detect the visitor's language from their message and mirror it throughout (Thai, English, Mandarin, Japanese, German, etc.) — don't assume a default."
+    case "thai_first":
+    default:
+      return "- Default to Thai for the first line when the visitor's language is unclear, then mirror whatever language they reply in (Thai, English, Mandarin, Japanese, German, etc.)."
+  }
 }
 
 function buildConversationMessages(

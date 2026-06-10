@@ -44,6 +44,15 @@ export type GymKnowledgeTrainer = {
   bio: string | null
 }
 
+export type GymLanguageMode = "thai_first" | "english_first" | "mirror"
+
+export type GymPersona = {
+  voice: string | null
+  greeting: string | null
+  language_mode: GymLanguageMode
+  guidelines: string | null
+}
+
 export type GymKnowledge = {
   orgId: string
   orgName: string
@@ -62,6 +71,8 @@ export type GymKnowledge = {
   schedule: GymKnowledgeTimeSlot[]
   faqs: GymKnowledgeFAQ[]
   trainers: GymKnowledgeTrainer[]
+  /** Per-gym voice config — shapes the concierge prompt. Null = OckOck default. */
+  persona: GymPersona | null
 }
 
 const DAY_NAMES = [
@@ -89,7 +100,7 @@ export async function loadGymKnowledge(
   if (!org) return null
 
   // Parallel fetches — KB compile should be one round-trip worth of latency.
-  const [servicesRes, slotsRes, faqsRes, trainersRes] = await Promise.all([
+  const [servicesRes, slotsRes, faqsRes, trainersRes, personaRes] = await Promise.all([
     supabase
       .from("services")
       .select(
@@ -118,6 +129,11 @@ export async function loadGymKnowledge(
       .eq("org_id", orgId)
       .eq("is_available", true)
       .limit(20),
+    supabase
+      .from("gym_ai_persona")
+      .select("voice, greeting, language_mode, guidelines")
+      .eq("org_id", orgId)
+      .maybeSingle(),
   ])
 
   const schedule: GymKnowledgeTimeSlot[] = (slotsRes.data ?? []).map(
@@ -150,6 +166,7 @@ export async function loadGymKnowledge(
     schedule,
     faqs: (faqsRes.data ?? []) as GymKnowledgeFAQ[],
     trainers: (trainersRes.data ?? []) as GymKnowledgeTrainer[],
+    persona: (personaRes.data as GymPersona | null) ?? null,
   }
 }
 

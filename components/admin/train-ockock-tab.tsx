@@ -33,6 +33,7 @@ import {
 } from "lucide-react"
 import { FAQ_CATEGORIES } from "@/lib/chat/faq-categories"
 import { InlineConfirm } from "@/components/ui/inline-confirm"
+import OckockVoiceCard from "@/components/admin/ockock-voice-card"
 
 const OckOckAvatar = ({ size = 32 }: { size?: number }) => (
   <Image src="/images/ockock-avatar.png" alt="OckOck" width={size} height={size} className="rounded-full" />
@@ -296,6 +297,9 @@ export default function TrainOckockTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* OckOck's voice — per-gym persona that shapes how the concierge replies */}
+      <OckockVoiceCard />
 
       {/* Quick Reply Box */}
       <Card className="bg-neutral-900/50 border-neutral-800">
