@@ -7,6 +7,7 @@
  * PATCH /api/admin/website    → update sections / theme / status
  */
 import { NextResponse } from "next/server"
+import type { Json } from "@/lib/supabase/database.types"
 import { z } from "zod"
 import { requireGymAdmin } from "@/lib/auth-helpers"
 import { defaultSections, type WebsiteSection, type WebsiteTheme } from "@/lib/website-sections"
@@ -49,7 +50,7 @@ export async function GET() {
     .insert({
       org_id: orgId,
       status: "draft",
-      sections,
+      sections: sections as unknown as Json,
       theme: {},
     })
     .select()

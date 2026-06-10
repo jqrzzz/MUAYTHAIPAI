@@ -10,10 +10,12 @@
  * here too. That is intentional: the types document reality, and the service
  * client can technically reach all of them.
  *
- * DO NOT EDIT BY HAND — one documented exception: bookings.service_id is
- * patched to its post-migration shape (nullable; see supabase/migrations/
- * 20260610000002_bookings_service_id_nullable.sql). Regenerate after that
- * migration applies and the patch disappears naturally.
+ * DO NOT EDIT BY HAND — documented exceptions, all patched to their
+ * POST-migration shapes (regenerate after applying and the patches
+ * disappear naturally):
+ *   - bookings.service_id nullable        (migration 20260610000002)
+ *   - gym_ai_persona table                (migration 20260610000003)
+ *   - social_posts v2 columns             (migration 20260610000004)
  */
 export type Json =
   | string
@@ -3043,6 +3045,41 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gym_ai_persona: {
+        Row: {
+          greeting: string | null
+          guidelines: string | null
+          language_mode: string
+          org_id: string
+          updated_at: string
+          voice: string | null
+        }
+        Insert: {
+          greeting?: string | null
+          guidelines?: string | null
+          language_mode?: string
+          org_id: string
+          updated_at?: string
+          voice?: string | null
+        }
+        Update: {
+          greeting?: string | null
+          guidelines?: string | null
+          language_mode?: string
+          org_id?: string
+          updated_at?: string
+          voice?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_ai_persona_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -8062,11 +8099,16 @@ export type Database = {
       }
       social_posts: {
         Row: {
+          platforms: string[]
+          content: Json
+          source: string
+          source_intent: string | null
+          published_at: string | null
           ai_generated: boolean | null
           ai_prompt: string | null
           campaign: string | null
-          caption: string
-          content_type: string
+          caption: string | null
+          content_type: string | null
           created_at: string | null
           created_by: string | null
           engagement_notes: string | null
@@ -8081,11 +8123,16 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          platforms?: string[]
+          content?: Json
+          source?: string
+          source_intent?: string | null
+          published_at?: string | null
           ai_generated?: boolean | null
           ai_prompt?: string | null
           campaign?: string | null
-          caption: string
-          content_type: string
+          caption?: string | null
+          content_type?: string | null
           created_at?: string | null
           created_by?: string | null
           engagement_notes?: string | null
@@ -8100,11 +8147,16 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          platforms?: string[]
+          content?: Json
+          source?: string
+          source_intent?: string | null
+          published_at?: string | null
           ai_generated?: boolean | null
           ai_prompt?: string | null
           campaign?: string | null
-          caption?: string
-          content_type?: string
+          caption?: string | null
+          content_type?: string | null
           created_at?: string | null
           created_by?: string | null
           engagement_notes?: string | null

@@ -21,7 +21,7 @@ export default async function EmbedPage({ params }: EmbedPageProps) {
 
   const { data: gym } = await supabase
     .from("organizations")
-    .select("id, name, name_th, slug, logo_url")
+    .select("id, name, slug, logo_url")
     .eq("slug", slug)
     .eq("status", "active")
     .single()

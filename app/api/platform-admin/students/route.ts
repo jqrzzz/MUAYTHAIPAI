@@ -78,7 +78,7 @@ export async function GET(request: Request) {
     const cur = certsByUser.get(c.user_id) || { count: 0, levels: [], lastAt: null }
     cur.count += 1
     cur.levels.push(c.level)
-    if (!cur.lastAt || c.issued_at > cur.lastAt) cur.lastAt = c.issued_at
+    if (c.issued_at && (!cur.lastAt || c.issued_at > cur.lastAt)) cur.lastAt = c.issued_at
     certsByUser.set(c.user_id, cur)
   }
 

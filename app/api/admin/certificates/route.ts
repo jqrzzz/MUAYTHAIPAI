@@ -126,7 +126,7 @@ export async function POST(request: Request) {
       .in("level", requiredLevels)
 
     const earnedMap = new Map(
-      (earnedCerts ?? []).map((c: { level: string; issued_at: string }) => [c.level, c.issued_at])
+      (earnedCerts ?? []).map((c) => [c.level, c.issued_at] as [string, string | null])
     )
     const missing = requiredLevels.filter((l) => !earnedMap.has(l))
     if (missing.length > 0) {

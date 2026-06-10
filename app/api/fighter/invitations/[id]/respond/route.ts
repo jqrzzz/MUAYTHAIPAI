@@ -70,6 +70,9 @@ export async function POST(
     )
   }
 
+  if (!inv.fighter_id) {
+    return NextResponse.json({ error: "Not your invitation" }, { status: 403 })
+  }
   const { data: profile } = await supabase
     .from("trainer_profiles")
     .select("id")

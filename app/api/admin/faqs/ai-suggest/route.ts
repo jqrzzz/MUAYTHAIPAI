@@ -47,7 +47,7 @@ export async function POST() {
       supabase
         .from("organizations")
         .select(
-          "name, name_th, description, city, province, country, address, phone, email, website, instagram"
+          "name, description, city, province, country, address, phone, email, website, instagram"
         )
         .eq("id", orgId)
         .single(),
@@ -85,7 +85,7 @@ export async function POST() {
 
   const factSheet = `
 GYM
-- Name: ${org.name}${org.name_th ? ` (${org.name_th})` : ""}
+- Name: ${org.name}
 - Location: ${[org.city, org.province, org.country].filter(Boolean).join(", ") || "Thailand"}
 - Address: ${org.address || "—"}
 - Description: ${org.description || "—"}

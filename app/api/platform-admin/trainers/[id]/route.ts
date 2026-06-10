@@ -55,7 +55,7 @@ export async function GET(
     user_id: string
     student_name: string | null
     level: string
-    issued_at: string
+    issued_at: string | null
     certificate_number: string | null
   }> = []
   if (trainerProfileId) {
@@ -124,7 +124,7 @@ export async function GET(
       signoffs: 0,
     }
     cur.role = m.role
-    cur.status = m.status
+    cur.status = m.status ?? undefined
     gymMap.set(m.org_id, cur)
   }
 

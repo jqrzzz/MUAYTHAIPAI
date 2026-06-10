@@ -93,17 +93,16 @@ export async function POST(
     return NextResponse.json({ error: creditErr.message }, { status: 500 })
   }
 
-  // Record the transaction. credit_change = pkg.credit_count (or 0
-  // for unlimited so audit shows it ≠ a top-up). amount_thb captures
-  // the revenue.
+  // Record the transaction. amount = pkg.credit_count (or 0 for unlimited
+  // so audit shows it ≠ a top-up). payment_amount_thb captures the revenue.
   await supabase.from("credit_transactions").insert({
     org_id: orgId,
     user_id: studentId,
     transaction_type: "package_purchase",
-    credit_change: pkg.credit_count ?? 0,
-    amount_thb: pkg.price_thb,
+    amount: pkg.credit_count ?? 0,
+    payment_amount_thb: pkg.price_thb,
     payment_method: parsed.data.payment_method,
-    notes: `Sold ${pkg.name}${parsed.data.notes ? ` — ${parsed.data.notes}` : ""}`,
+    description: `Sold ${pkg.name}${parsed.data.notes ? ` — ${parsed.data.notes}` : ""}`,
     created_by: user.id,
   })
 

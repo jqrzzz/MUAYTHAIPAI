@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     // Get unpaid gym payouts
     const { data: pendingPayouts } = await supabase
       .from("gym_payouts")
-      .select("org_id, amount_usd, organizations(name)")
+      .select("org_id, payout_usd, organizations(name)")
       .eq("status", "pending")
 
     // Get total students
@@ -124,7 +124,7 @@ ${
 }
 
 PENDING PAYOUTS:
-${pendingPayouts?.map((p) => `- ${(p.organizations as any)?.name}: $${p.amount_usd} pending`).join("\n") || "No pending payouts"}
+${pendingPayouts?.map((p) => `- ${(p.organizations as any)?.name}: $${p.payout_usd ?? 0} pending`).join("\n") || "No pending payouts"}
 `
 
     const systemPrompt = `${context}

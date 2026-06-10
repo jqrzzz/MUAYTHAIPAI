@@ -33,5 +33,5 @@ export default async function GymsPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  return <GymsListClient gyms={gyms || []} user={user} />
+  return <GymsListClient gyms={(gyms || []) as unknown as Parameters<typeof GymsListClient>[0]["gyms"]} user={user} />
 }

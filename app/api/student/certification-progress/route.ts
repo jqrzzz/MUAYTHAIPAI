@@ -93,7 +93,7 @@ export async function GET() {
   }
 
   // Build earned levels set with issued dates
-  const earnedMap = new Map<string, { issued_at: string; certificate_number: string }>()
+  const earnedMap = new Map<string, { issued_at: string | null; certificate_number: string | null }>()
   for (const c of certificates) {
     earnedMap.set(c.level, { issued_at: c.issued_at, certificate_number: c.certificate_number })
   }
@@ -124,7 +124,7 @@ export async function GET() {
           eligible = false
         } else {
           const daysSince = Math.floor(
-            (Date.now() - new Date(prevEarned.issued_at).getTime()) / (1000 * 60 * 60 * 24)
+            (Date.now() - new Date(prevEarned.issued_at ?? 0).getTime()) / (1000 * 60 * 60 * 24)
           )
           if (daysSince < level.minDaysAfterPrevious) {
             daysUntilEligible = level.minDaysAfterPrevious - daysSince

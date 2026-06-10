@@ -49,7 +49,7 @@ export default async function InviteAcceptPage({
     if (invite.status === "expired" || invite.status === "cancelled") {
       return <ExpiredOrInvalid title="Invite Expired" body="This invite has expired. Please ask for a new invitation." />
     }
-    if (new Date(invite.expires_at) < new Date()) {
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       return <ExpiredOrInvalid title="Invite Expired" body="This invite has expired. Please ask for a new invitation." />
     }
     return (

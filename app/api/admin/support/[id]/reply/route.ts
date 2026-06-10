@@ -73,7 +73,7 @@ export async function POST(
   })
 
   // Flip back to open + bump SLA so operator has a fresh window
-  const slaHours = SLA_HOURS[ticket.priority] ?? 24
+  const slaHours = SLA_HOURS[ticket.priority ?? ""] ?? 24
   await supabase
     .from("support_tickets")
     .update({

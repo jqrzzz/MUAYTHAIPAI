@@ -68,7 +68,7 @@ export async function GET() {
   const cutoff30 = ago(30)
   for (const c of certsRes.data || []) {
     issuedByLevelAllTime[c.level] = (issuedByLevelAllTime[c.level] ?? 0) + 1
-    if (c.issued_at >= cutoff30) {
+    if (c.issued_at && c.issued_at >= cutoff30) {
       issuedByLevel30d[c.level] = (issuedByLevel30d[c.level] ?? 0) + 1
     }
   }

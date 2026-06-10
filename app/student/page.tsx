@@ -72,8 +72,8 @@ export default async function StudentDashboardPage() {
     <StudentDashboardClient
       user={user}
       profile={profile}
-      bookings={bookings || []}
-      certificates={certificates || []}
+      bookings={(bookings || []) as unknown as Parameters<typeof StudentDashboardClient>[0]["bookings"]}
+      certificates={(certificates || []) as unknown as Parameters<typeof StudentDashboardClient>[0]["certificates"]}
       gyms={gyms || []}
     />
   )

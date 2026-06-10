@@ -21,6 +21,7 @@
  * v2 ideas: image generation, image upload from URL, multi-step plans.
  */
 import { NextResponse } from "next/server"
+import type { Json } from "@/lib/supabase/database.types"
 import { z } from "zod"
 import { generateObject } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
@@ -208,7 +209,7 @@ If they're just asking a question (not a change), reply but return actions: [].`
   }
 
   // Apply actions to the sections + theme
-  let sections = (website.sections ?? []) as WebsiteSection[]
+  let sections = (website.sections ?? []) as unknown as WebsiteSection[]
   let theme = (website.theme ?? {}) as WebsiteTheme
 
   for (const action of aiResponse.actions) {
@@ -258,7 +259,7 @@ If they're just asking a question (not a change), reply but return actions: [].`
   if (aiResponse.actions.length > 0) {
     const { data: updated, error: updateErr } = await supabase
       .from("gym_websites")
-      .update({ sections, theme })
+      .update({ sections: sections as unknown as Json, theme: theme as unknown as Json })
       .eq("org_id", orgId)
       .select()
       .single()

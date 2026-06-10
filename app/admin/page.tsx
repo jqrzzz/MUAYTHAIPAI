@@ -169,14 +169,14 @@ export default async function AdminPage() {
       user={user}
       membership={membership}
       organization={membership.organizations}
-      todaysBookings={todaysBookings || []}
-      recentBookings={recentBookings || []}
-      analyticsBookings={analyticsBookings || []}
-      services={services || []}
-      trainers={trainers || []}
+      todaysBookings={(todaysBookings || []) as unknown as Parameters<typeof AdminDashboardClient>[0]["todaysBookings"]}
+      recentBookings={(recentBookings || []) as unknown as Parameters<typeof AdminDashboardClient>[0]["recentBookings"]}
+      analyticsBookings={(analyticsBookings || []) as unknown as Parameters<typeof AdminDashboardClient>[0]["analyticsBookings"]}
+      services={(services || []) as unknown as Parameters<typeof AdminDashboardClient>[0]["services"]}
+      trainers={(trainers || []) as unknown as Parameters<typeof AdminDashboardClient>[0]["trainers"]}
       todayDate={todayInPai}
       timezone={orgTimezone}
-      orgSettings={orgSettings}
+      orgSettings={(orgSettings) as unknown as Parameters<typeof AdminDashboardClient>[0]["orgSettings"]}
       subscription={subscription}
     />
   )

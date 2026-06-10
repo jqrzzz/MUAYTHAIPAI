@@ -145,9 +145,13 @@ export default async function TrainerDashboardPage() {
   
   // Add registered users from bookings
   bookingStudents?.forEach((b) => {
-    if (b.users && typeof b.users === "object" && "id" in b.users && !allStudentMap.has(b.users.id)) {
-      allStudentMap.set(b.users.id, {
-        ...b.users,
+    const u = b.users as unknown as {
+      id: string; full_name: string | null; email: string | null
+      avatar_url: string | null; created_at: string | null
+    } | null
+    if (u && !allStudentMap.has(u.id)) {
+      allStudentMap.set(u.id, {
+        ...u,
         credits_remaining: 0,
         credit_type: null,
         expires_at: null,
@@ -182,11 +186,11 @@ export default async function TrainerDashboardPage() {
   return (
     <TrainerDashboardClient
       user={user}
-      trainerProfile={trainerProfile}
+      trainerProfile={trainerProfile as unknown as Parameters<typeof TrainerDashboardClient>[0]["trainerProfile"]}
       organization={trainerProfile.organizations}
       todayBookings={(todayBookings || []) as unknown as Parameters<typeof TrainerDashboardClient>[0]["todayBookings"]}
       students={allStudents}
-      services={services || []}
+      services={(services || []) as unknown as Parameters<typeof TrainerDashboardClient>[0]["services"]}
     />
   )
 }

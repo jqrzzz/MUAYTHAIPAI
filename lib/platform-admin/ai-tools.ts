@@ -780,7 +780,7 @@ export function buildPlatformTools(supabase: SupabaseClient) {
         }
         for (const t of data ?? []) {
           if (t.status in summary) summary[t.status as keyof typeof summary]++
-          if (t.priority in summary) summary[t.priority as keyof typeof summary]++
+          if (t.priority && t.priority in summary) summary[t.priority as keyof typeof summary]++
           if (t.sla_due_at && new Date(t.sla_due_at).getTime() < now) summary.overdue++
         }
         return summary

@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       // (payment_method "pending_stripe" — never actually paid). Reactivating
       // it here would skip the paywall, so route those back through checkout.
       // Only resume for free courses or enrollments that completed payment.
-      const isPaid = !course.is_free && course.price_thb > 0
+      const isPaid = !course.is_free && (course.price_thb ?? 0) > 0
       if (isPaid && existing.payment_method !== "stripe") {
         return NextResponse.json(
           { error: "paid_course", price_thb: course.price_thb, course_id: course.id },
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   }
 
   // Paid courses go through /api/courses/checkout
-  if (!course.is_free && course.price_thb > 0) {
+  if (!course.is_free && (course.price_thb ?? 0) > 0) {
     return NextResponse.json(
       { error: "paid_course", price_thb: course.price_thb, course_id: course.id },
       { status: 402 }

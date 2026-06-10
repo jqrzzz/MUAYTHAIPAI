@@ -81,7 +81,7 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
       .eq("user_id", id),
     supabase
       .from("credit_transactions")
-      .select("id, transaction_type, credit_change, amount_thb, payment_method, notes, created_at")
+      .select("id, transaction_type, amount, payment_amount_thb, payment_method, description, created_at")
       .eq("org_id", orgId)
       .eq("user_id", id)
       .order("created_at", { ascending: false })
@@ -89,10 +89,10 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
     supabase
       .from("student_notes")
       .select(
-        "id, note, created_at, created_by, users:created_by(full_name, email)",
+        "id, content, created_at, trainer_id, users:trainer_id(full_name, email)",
       )
       .eq("org_id", orgId)
-      .eq("user_id", id)
+      .eq("student_id", id)
       .order("created_at", { ascending: false })
       .limit(10),
     supabase
@@ -248,7 +248,7 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
   return (
     <StudentProfileClient
       orgRole={String(membership.role) as "owner" | "admin"}
-      student={studentRes.data}
+      student={studentRes.data as unknown as Parameters<typeof StudentProfileClient>[0]["student"]}
       bookings={bookings.slice(0, 30).map((b) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const svc = (b as any).services
@@ -265,20 +265,20 @@ export default async function StudentProfilePage({ params }: StudentPageProps) {
           service_name: service?.name ?? null,
           service_category: service?.category ?? null,
         }
-      })}
-      credits={creditsRes.data ?? []}
-      transactions={transactionsRes.data ?? []}
+      }) as unknown as Parameters<typeof StudentProfileClient>[0]["bookings"]}
+      credits={(creditsRes.data ?? []) as unknown as Parameters<typeof StudentProfileClient>[0]["credits"]}
+      transactions={(transactionsRes.data ?? []) as unknown as Parameters<typeof StudentProfileClient>[0]["transactions"]}
       notes={(notesRes.data ?? []).map((n) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const u = (n as any).users
         const author = Array.isArray(u) ? u[0] : u
         return {
           id: n.id,
-          note: n.note,
+          note: n.content,
           created_at: n.created_at,
           author: author?.full_name ?? author?.email ?? null,
         }
-      })}
+      }) as unknown as Parameters<typeof StudentProfileClient>[0]["notes"]}
       ladder={ladder}
       recentSignoffs={signoffsHere.slice(0, 15).map((s) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

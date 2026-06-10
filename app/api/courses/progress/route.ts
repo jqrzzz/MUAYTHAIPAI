@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import type { Json, TablesInsert } from "@/lib/supabase/database.types"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { notifyCourseCompleted } from "@/lib/notifications"
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
 
   // Upsert lesson progress
   const now = new Date().toISOString()
-  const updates: Record<string, unknown> = {
+  const updates: TablesInsert<"lesson_progress"> = {
     user_id: user.id,
     lesson_id,
     course_id,
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
     updates.video_position_seconds = video_position_seconds
   }
   if (quiz_answers !== undefined) {
-    updates.quiz_answers = quiz_answers
+    updates.quiz_answers = quiz_answers as Json
   }
   if (quizScore !== undefined) {
     updates.quiz_score = quizScore
