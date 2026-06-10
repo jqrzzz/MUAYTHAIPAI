@@ -99,15 +99,23 @@ export default async function LessonPage({ params }: Props) {
     quizQuestions = (data || []).map((q) => ({
       ...q,
       options: Array.isArray(q.options)
-        ? q.options.map((opt: { id: string; text: string }) => ({ id: opt.id, text: opt.text }))
-        : q.options,
+        ? q.options.map((opt) => {
+            const o = opt as { id: string; text: string }
+            return { id: o.id, text: o.text }
+          })
+        : null,
     }))
   }
 
   return (
     <LessonPlayerClient
       course={course}
-      lesson={lesson}
+      lesson={{
+        ...lesson,
+        gallery: lesson.gallery as unknown as
+          | { url: string; caption?: string | null; alt?: string | null }[]
+          | null,
+      }}
       moduleName={(lesson.course_modules as { title: string }).title}
       modules={sortedModules}
       quizQuestions={quizQuestions}

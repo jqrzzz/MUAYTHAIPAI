@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
   // Server-side quiz scoring
   let quizScore: number | undefined
-  let quizResults: { score: number; total: number; correct_answers: Record<string, string> } | undefined
+  let quizResults: { score: number; total: number; correct_answers: Record<string, string | null> } | undefined
 
   if (quiz_answers && typeof quiz_answers === "object") {
     const { data: questions } = await serviceClient
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       .eq("lesson_id", lesson_id)
 
     if (questions && questions.length > 0) {
-      const correctAnswers: Record<string, string> = {}
+      const correctAnswers: Record<string, string | null> = {}
       let correctCount = 0
 
       for (const q of questions) {

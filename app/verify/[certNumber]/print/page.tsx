@@ -45,7 +45,7 @@ export default async function PrintCertificatePage({ params }: Props) {
   const levelConfig = getLevelById(cert.level)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
   const verifyUrl = `${siteUrl}/verify/${certNumber}`
-  const issuedDate = new Date(cert.issued_at).toLocaleDateString("en-US", {
+  const issuedDate = new Date(cert.issued_at ?? Date.now()).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
