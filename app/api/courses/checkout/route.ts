@@ -1,9 +1,35 @@
+/**
+ * POST /api/courses/checkout — Stripe Checkout for a paid course.
+ *
+ * Mirrors the cert/ticket pattern: create a pending enrollment (status
+ * "paused" — the enrollments status enum has no "pending"), open a Stripe
+ * Checkout Session, and let the webhook (kind=course_enrollment) flip it to
+ * active. The webhook is the source of truth for "paid", so a slow/failed
+ * redirect never loses a payment.
+ *
+ * Replaces the old simulated flow that enrolled without charging. With Stripe
+ * unconfigured this now returns 503 instead of granting access — free courses
+ * are unaffected (they enroll via /api/courses/enroll).
+ *
+ * Body: { course_id }  →  { checkout_url }
+ */
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { stripe } from "@/lib/stripe"
+import { hasEnv } from "@/lib/env"
 
-// POST /api/courses/checkout — create a checkout session for a paid course
-// When Stripe is connected, this will create a real payment intent.
-// For now, it returns a mock session that the client can use to proceed.
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  )
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
 
@@ -14,96 +40,105 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sign in to purchase" }, { status: 401 })
   }
 
-  const { course_id } = await request.json()
+  const { course_id } = await request.json().catch(() => ({}))
   if (!course_id) {
     return NextResponse.json({ error: "course_id required" }, { status: 400 })
   }
 
   const { data: course } = await supabase
     .from("courses")
-    .select("id, title, slug, price_thb, is_free, status")
+    .select("id, title, slug, price_thb, is_free, status, total_lessons")
     .eq("id", course_id)
     .eq("status", "published")
     .single()
-
   if (!course) {
     return NextResponse.json({ error: "Course not found" }, { status: 404 })
   }
-
   if (course.is_free || course.price_thb === 0) {
     return NextResponse.json({ error: "This course is free — enroll directly" }, { status: 400 })
   }
 
-  // Check if already enrolled
+  if (!hasEnv("STRIPE_SECRET_KEY")) {
+    return NextResponse.json(
+      { error: "Online payment isn't set up yet — please check back soon." },
+      { status: 503 },
+    )
+  }
+
+  // Existing enrollment: active/completed means they already have it; a
+  // paused row with no completed payment is an abandoned checkout we reuse.
   const { data: existing } = await supabase
     .from("enrollments")
-    .select("id, status")
+    .select("id, status, payment_method")
     .eq("user_id", user.id)
     .eq("course_id", course_id)
-    .single()
-
+    .maybeSingle()
   if (existing && existing.status !== "paused") {
     return NextResponse.json({ error: "Already enrolled" }, { status: 400 })
   }
 
-  // === STRIPE INTEGRATION POINT ===
-  // When Stripe is connected, replace this block with:
-  //
-  // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-  // const session = await stripe.checkout.sessions.create({
-  //   mode: 'payment',
-  //   line_items: [{
-  //     price_data: {
-  //       currency: 'thb',
-  //       product_data: { name: course.title },
-  //       unit_amount: course.price_thb * 100,
-  //     },
-  //     quantity: 1,
-  //   }],
-  //   metadata: { course_id, user_id: user.id },
-  //   success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/courses/${course.slug}?enrolled=true`,
-  //   cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/courses/${course.slug}`,
-  // })
-  //
-  // return NextResponse.json({ checkout_url: session.url })
-
-  // For now: simulate a successful payment and enroll directly
-  const { data: enrollment, error } = await supabase
-    .from("enrollments")
-    .upsert(
-      {
+  // RLS gives students INSERT but not UPDATE/DELETE on enrollments, and the
+  // webhook + rollback both need writes — so row lifecycle goes through the
+  // service client (user identity comes from the authed session above).
+  const svc = getServiceClient()
+  let enrollmentId = existing?.id ?? null
+  let createdFresh = false
+  if (!enrollmentId) {
+    const { data: pending, error: insertErr } = await svc
+      .from("enrollments")
+      .insert({
         user_id: user.id,
-        course_id: course_id,
-        total_lessons: 0,
-        status: "active",
+        course_id,
+        status: "paused",
         payment_method: "pending_stripe",
         payment_amount_thb: course.price_thb,
+        total_lessons: course.total_lessons ?? 0,
+      })
+      .select("id")
+      .single()
+    if (insertErr || !pending) {
+      return NextResponse.json(
+        { error: insertErr?.message || "Couldn't start enrollment" },
+        { status: 500 },
+      )
+    }
+    enrollmentId = pending.id
+    createdFresh = true
+  }
+
+  const origin = new URL(request.url).origin
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer_email: user.email ?? undefined,
+      line_items: [
+        {
+          price_data: {
+            currency: "thb",
+            product_data: { name: course.title },
+            // THB has 2 decimals (satang) → smallest unit is value × 100.
+            unit_amount: course.price_thb * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${origin}/courses/${course.slug}?purchased=1`,
+      cancel_url: `${origin}/courses/${course.slug}`,
+      metadata: {
+        kind: "course_enrollment",
+        enrollment_id: enrollmentId,
+        course_id,
+        user_id: user.id,
       },
-      { onConflict: "user_id,course_id" }
-    )
-    .select()
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    })
+    return NextResponse.json({ checkout_url: session.url })
+  } catch (err) {
+    console.error("[courses.checkout] stripe failed:", err)
+    // Only roll back a row we just created — a pre-existing paused row may
+    // predate this attempt and shouldn't vanish because Stripe hiccuped.
+    if (createdFresh && enrollmentId) {
+      await svc.from("enrollments").delete().eq("id", enrollmentId)
+    }
+    return NextResponse.json({ error: "Couldn't open checkout. Try again." }, { status: 500 })
   }
-
-  // Update total_lessons from course
-  const { count } = await supabase
-    .from("lessons")
-    .select("id", { count: "exact", head: true })
-    .eq("course_id", course_id)
-
-  if (count) {
-    await supabase
-      .from("enrollments")
-      .update({ total_lessons: count })
-      .eq("id", enrollment.id)
-  }
-
-  return NextResponse.json({
-    enrollment: { ...enrollment, total_lessons: count || 0 },
-    payment_status: "simulated",
-    message: "Enrolled successfully. Stripe payment will be required when connected.",
-  })
 }

@@ -66,12 +66,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 })
   }
 
-  // Verify enrollment
+  // Verify enrollment. Status matters: a paused row can be an unpaid
+  // checkout-in-progress (see /api/courses/checkout), which must not be able
+  // to record progress — same gate the lesson page applies.
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select("id")
     .eq("user_id", user.id)
     .eq("course_id", course_id)
+    .in("status", ["active", "completed"])
     .single()
 
   if (!enrollment) {
