@@ -217,7 +217,7 @@ export default async function PartnerDeckPage() {
                   "Bilingual chat — Thai & English",
                   "Naga–Garuda cert ladder",
                   "Public gym page on the network",
-                  "Inbox: LINE / WhatsApp / IG / FB",
+                  "Inbox: LINE / WhatsApp / Telegram",
                   "We take 0% of your bookings",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">

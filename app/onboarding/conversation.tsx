@@ -386,7 +386,7 @@ export default function OnboardingConversation({
             Go to your dashboard <ArrowRight className="h-4 w-4" />
           </button>
           <p className="max-w-md text-[12px] text-zinc-600">
-            Want OckOck answering on LINE, WhatsApp, or Instagram too? Connect a channel anytime from the
+            Want OckOck answering on LINE, WhatsApp, or Telegram too? Connect a channel anytime from the
             Channels tab in your dashboard.
           </p>
         </div>
