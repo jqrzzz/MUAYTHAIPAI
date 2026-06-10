@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { BadgeCheck, XCircle, MapPin, Calendar, Share2, ExternalLink, ScrollText, ChevronRight, Video } from "lucide-react"
 import QRCode from "qrcode"
 import { getLevelById } from "@/lib/certification-levels"
+import { getCertSkillsMap } from "@/lib/cert-skills"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,6 +109,10 @@ export default async function VerifyCertificatePage({ params }: Props) {
   const trainer = cert.issued_by_trainer as unknown as { display_name: string } | null
   const style = LEVEL_STYLES[cert.level] || LEVEL_STYLES.naga
   const levelConfig = getLevelById(cert.level)
+  // Skill labels are DB-backed (operator-reworded) with a code fallback —
+  // the syllabus shown here must match what trainers actually sign off.
+  // Reword never changes count/order, so skill_index alignment holds.
+  const levelSkills = (await getCertSkillsMap(supabase))[cert.level] ?? levelConfig?.skills ?? []
   const isActive = cert.status === "active"
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://muaythaipai.com"
   const verifyUrl = `${siteUrl}/verify/${certNumber}`
@@ -221,7 +226,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
         ? { url: `${siteUrl}/p/${student.public_passport_handle}` }
         : {}),
     },
-    competencyRequired: levelConfig?.skills ?? [],
+    competencyRequired: levelSkills,
   }
 
   return (
@@ -358,7 +363,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
           </div>
 
           {/* SKILLS ATTESTED — the credential substance */}
-          {levelConfig && levelConfig.skills.length > 0 && (
+          {levelSkills.length > 0 && (
             <div className="mt-6 pt-6 border-t border-white/10">
               <div className="flex items-baseline justify-between mb-2">
                 <p className="font-display text-[10px] uppercase tracking-[0.22em] text-neutral-500 inline-flex items-center gap-1.5">
@@ -366,7 +371,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
                   Skills Attested
                 </p>
                 <p className="text-[11px] text-neutral-600 tabular-nums">
-                  {signoffs.length}/{levelConfig.skills.length} signed off
+                  {signoffs.length}/{levelSkills.length} signed off
                   {videoByIndex.size > 0 && (
                     <>
                       {" · "}
@@ -389,7 +394,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
                 )}
               </p>
               <ol className="space-y-2">
-                {levelConfig.skills.map((skill, i) => {
+                {levelSkills.map((skill, i) => {
                   const signoff = signoffByIndex.get(i)
                   const videoUrl = videoByIndex.get(i)
                   return (
