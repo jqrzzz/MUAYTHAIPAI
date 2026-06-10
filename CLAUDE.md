@@ -117,19 +117,23 @@ Cross-cutting: `logAudit()` (`lib/audit-log`) for sensitive operator actions;
 
 ## Build, types, CI
 
+- **Package manager is pnpm** (`pnpm-lock.yaml` committed; `node_modules` uses
+  the `.pnpm` layout, so plain `npm install` will fail — use `pnpm install`).
 - **`npx tsc --noEmit` must be green.** `next.config.mjs` no longer sets
   `ignoreBuildErrors` (it was masking 190 errors). CI (`.github/workflows/ci.yml`)
-  runs tsc + build on every PR.
+  runs tsc + tests + build on every PR.
+- **Tests:** Vitest unit tests over the pure logic in `lib/` (money math, cert
+  ladder, concierge prompt rendering) — `pnpm test`, blocking in CI. Tests live
+  next to their module (`lib/foo.test.ts`). No integration/E2E yet.
 - **Lint** is wired (`.eslintrc.json`) but non-blocking — `@typescript-eslint`
   isn't installed yet, so its `eslint-disable` directives don't resolve.
-- **No test suite yet.** Biggest gap; verify changes with `tsc` + a real build.
 - The Supabase clients are **untyped**, hence ~150 `as any` casts. Generating
   DB types (`supabase gen types`) is the planned fix (needs the migration
   baseline first).
 
 ## Working in this repo
 
-- **Verify with `npx tsc --noEmit`** before every commit. A full `npx next build`
+- **Verify with `npx tsc --noEmit` and `pnpm test`** before every commit. A full `npx next build`
   (dummy env is fine) additionally catches Next route-contract errors tsc misses
   — route files may only export handlers (`GET`/`POST`/…) + config, never
   arbitrary values.

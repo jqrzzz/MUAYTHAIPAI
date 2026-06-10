@@ -12,23 +12,32 @@ concurrency:
 
 jobs:
   quality:
-    name: Typecheck · Lint · Build
+    name: Typecheck · Test · Lint · Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # The repo is a pnpm project (pnpm-lock.yaml; node_modules uses the
+      # .pnpm layout — plain `npm install` chokes on it). Version comes from
+      # package.json's `packageManager` field.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: pnpm
 
-      # No package-lock.json in the repo yet, so `npm install` (not `npm ci`).
-      # Committing a lockfile is a tracked follow-up for reproducible installs.
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
 
       # The real gate. Was masking 190 errors via next.config ignoreBuildErrors.
       - name: Typecheck
         run: npx tsc --noEmit
+
+      # Unit tests over the pure logic in lib/ (money math, cert ladder,
+      # concierge prompt rendering). Blocking.
+      - name: Test
+        run: pnpm test
 
       # Informational until @typescript-eslint is installed and the existing
       # eslint-disable directives resolve (see next.config.mjs note).

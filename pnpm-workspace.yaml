@@ -1,0 +1,5 @@
+# pnpm settings (pnpm ≥10 reads these from here, not package.json).
+# Build scripts are opt-in; these two are vitest's toolchain.
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
