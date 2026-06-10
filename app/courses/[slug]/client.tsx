@@ -100,27 +100,52 @@ export default function CourseDetailClient({
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
   const [enrollError, setEnrollError] = useState<string | null>(null)
+  const [confirmingPayment, setConfirmingPayment] = useState(false)
   const [expandedModules, setExpandedModules] = useState<Set<string>>(
     new Set(modules.slice(0, 2).map((m) => m.id))
   )
 
-  // Load enrollment and progress
+  // Load enrollment and progress. Returning from Stripe Checkout
+  // (?purchased=1) the webhook may lag the redirect by a beat — poll a few
+  // times until the enrollment flips from paused to active.
   useEffect(() => {
+    let cancelled = false
     async function load() {
-      try {
-        const res = await fetch(`/api/courses/progress?course_id=${course.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          setEnrollment(data.enrollment)
-          setProgress(data.progress || [])
+      const purchased =
+        typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("purchased") === "1"
+      const attempts = purchased ? 5 : 1
+      let active = false
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const res = await fetch(`/api/courses/progress?course_id=${course.id}`, {
+            cache: "no-store",
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (cancelled) return
+            setEnrollment(data.enrollment)
+            setProgress(data.progress || [])
+            active = data.enrollment && data.enrollment.status !== "paused"
+          }
+        } catch {
+          // Not logged in — that's fine
         }
-      } catch {
-        // Not logged in — that's fine
-      } finally {
-        setLoading(false)
+        if (!purchased || active) break
+        setConfirmingPayment(true)
+        if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1600))
       }
+      if (cancelled) return
+      setConfirmingPayment(false)
+      if (purchased && !active) {
+        setEnrollError("Payment received — your course is still activating. Refresh in a moment.")
+      }
+      setLoading(false)
     }
     load()
+    return () => {
+      cancelled = true
+    }
   }, [course.id])
 
   async function handleEnroll() {
@@ -521,9 +546,15 @@ export default function CourseDetailClient({
                     )}
                   </div>
 
+                  {confirmingPayment && (
+                    <div className="mb-3 flex items-center justify-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-xs text-emerald-300">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Payment received — activating your course…
+                    </div>
+                  )}
                   <button
                     onClick={handleEnroll}
-                    disabled={enrolling}
+                    disabled={enrolling || confirmingPayment}
                     className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 py-2.5 font-semibold text-black hover:bg-orange-400 transition-colors disabled:opacity-50"
                   >
                     {enrolling ? (

@@ -30,14 +30,24 @@ export async function POST(request: Request) {
   // Check if already enrolled
   const { data: existing } = await supabase
     .from("enrollments")
-    .select("id, status")
+    .select("id, status, payment_method")
     .eq("user_id", user.id)
     .eq("course_id", course_id)
     .single()
 
   if (existing) {
-    // Reactivate if paused
     if (existing.status === "paused") {
+      // A paused row on a paid course can be an abandoned checkout
+      // (payment_method "pending_stripe" — never actually paid). Reactivating
+      // it here would skip the paywall, so route those back through checkout.
+      // Only resume for free courses or enrollments that completed payment.
+      const isPaid = !course.is_free && course.price_thb > 0
+      if (isPaid && existing.payment_method !== "stripe") {
+        return NextResponse.json(
+          { error: "paid_course", price_thb: course.price_thb, course_id: course.id },
+          { status: 402 }
+        )
+      }
       await supabase
         .from("enrollments")
         .update({ status: "active", last_accessed_at: new Date().toISOString() })
