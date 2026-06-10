@@ -12,6 +12,10 @@ interface GymRow {
     totalCollectedUsd: number
     commissionUsd: number
     amountOwedUsd: number
+    /** THB card revenue (cert/course enrollments) — gross of Stripe's fee. */
+    thbCount?: number
+    totalCollectedThb?: number
+    amountOwedThb?: number
   }
   payout: { status: string; paidAt: string | null } | null
 }
@@ -23,6 +27,8 @@ interface PayoutsData {
     totalCollectedUsd: number
     totalCommissionUsd: number
     totalOwedUsd: number
+    totalCollectedThb?: number
+    totalOwedThb?: number
     totalBookings: number
     gymCount: number
   }
@@ -30,6 +36,7 @@ interface PayoutsData {
 
 const usd = (n: number) =>
   `$${(n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const baht = (n: number) => `฿${(n ?? 0).toLocaleString()}`
 
 function StatusPill({ status }: { status: string | undefined }) {
   const map: Record<string, { text: string; cls: string }> = {
@@ -106,9 +113,25 @@ export default function GymPayoutsSummary() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard icon={Banknote} label="Collected online" value={usd(data.totals.totalCollectedUsd)} sub="all gyms" accent={CHART_COLORS.online} />
+        <KpiCard
+          icon={Banknote}
+          label="Collected online"
+          value={usd(data.totals.totalCollectedUsd)}
+          sub={(data.totals.totalCollectedThb ?? 0) > 0 ? `+ ${baht(data.totals.totalCollectedThb ?? 0)} in THB` : "all gyms"}
+          accent={CHART_COLORS.online}
+        />
         <KpiCard icon={Banknote} label="Platform cut" value={usd(data.totals.totalCommissionUsd)} sub="we take 0%" accent={CHART_COLORS.indigo} />
-        <KpiCard icon={Banknote} label="Owed to gyms" value={usd(data.totals.totalOwedUsd)} sub={`${data.totals.gymCount} gym${data.totals.gymCount === 1 ? "" : "s"}`} accent={CHART_COLORS.pending} />
+        <KpiCard
+          icon={Banknote}
+          label="Owed to gyms"
+          value={usd(data.totals.totalOwedUsd)}
+          sub={
+            (data.totals.totalOwedThb ?? 0) > 0
+              ? `+ ${baht(data.totals.totalOwedThb ?? 0)} less card fees`
+              : `${data.totals.gymCount} gym${data.totals.gymCount === 1 ? "" : "s"}`
+          }
+          accent={CHART_COLORS.pending}
+        />
         <KpiCard icon={Banknote} label="Bookings" value={String(data.totals.totalBookings)} sub="online, this period" accent={CHART_COLORS.other} />
       </div>
 
@@ -143,7 +166,14 @@ export default function GymPayoutsSummary() {
                       </td>
                       <td className="py-2.5 px-3 text-right tabular-nums text-neutral-300">{usd(g.summary.totalCollectedUsd)}</td>
                       <td className="py-2.5 px-3 text-right tabular-nums text-neutral-500">{usd(g.summary.commissionUsd)}</td>
-                      <td className="py-2.5 px-3 text-right tabular-nums font-medium text-white">{usd(g.summary.amountOwedUsd)}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums font-medium text-white">
+                        {usd(g.summary.amountOwedUsd)}
+                        {(g.summary.amountOwedThb ?? 0) > 0 && (
+                          <span className="block text-[11px] font-normal text-amber-300/90">
+                            + {baht(g.summary.amountOwedThb ?? 0)}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2.5 pl-3 text-right">
                         <StatusPill status={g.payout?.status} />
                       </td>
