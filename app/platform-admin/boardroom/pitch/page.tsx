@@ -307,7 +307,7 @@ export default async function PartnerDeckPage() {
           <Eyebrow>Traction</Eyebrow>
           <H2>What's real today.</H2>
 
-          <div className="mt-12 grid gap-3 md:grid-cols-3">
+          <div className="mt-12 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl bg-zinc-900/40 p-6 ring-1 ring-zinc-900">
               <div className="mb-3 inline-flex rounded-lg bg-amber-500/10 p-2.5">
                 <Newspaper className="h-5 w-5 text-amber-300" />
@@ -336,6 +336,17 @@ export default async function PartnerDeckPage() {
               <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
                 Cert-authority partnerships in motion — Big Dog driving relationships toward the official
                 Kingdom-recognized stamp.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-zinc-900/40 p-6 ring-1 ring-zinc-900">
+              <div className="mb-3 inline-flex rounded-lg bg-indigo-500/10 p-2.5">
+                <Calendar className="h-5 w-5 text-indigo-300" />
+              </div>
+              <p className="font-display text-[18px] text-white">Events &amp; ticketing — live</p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
+                The promoter console is in production: fight events, bouts, fighter invitations, AI
+                match-making — and Stripe ticket sales with door-scan check-in. Layers 3–4 of the
+                flywheel, already built.
               </p>
             </div>
           </div>
@@ -415,13 +426,13 @@ export default async function PartnerDeckPage() {
               {
                 tag: "6 months",
                 title: "Authority + fighters",
-                body: "First credential-authority partnership signed. Fighter directory + promoter accounts go live on top of the credentialed network.",
+                body: "First credential-authority partnership signed. The fighter directory + promoter console are already built — this horizon fills them: credentialed fighters listed, real cards matched.",
                 tone: "indigo",
               },
               {
                 tag: "12+ months",
-                title: "Ticketing marketplace",
-                body: "Events + ticketing on top of the active fighter+promoter network. Promoters run cards; we run the ticketing platform.",
+                title: "Scale ticketing",
+                body: "The ticketing rails are live today — Stripe sales, door-scan check-in, payouts. This horizon is volume: more promoters, more cards, the network as the box office for Thai Muay Thai.",
                 tone: "zinc",
               },
               {
@@ -454,7 +465,8 @@ export default async function PartnerDeckPage() {
             </H2>
             <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-zinc-400">
               Partnership, introductions to credentialing bodies, gym connections, capital — all
-              welcome. The cert ladder is built; the wedge is in market; the network is the next mile.
+              welcome. The cert ladder and the ticketing rails are built; the wedge is in market;
+              density is the next mile.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <a
