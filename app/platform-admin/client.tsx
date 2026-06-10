@@ -385,7 +385,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
     statement += `${"=".repeat(50)}\n\n`
     statement += `Online Bookings: ${gymPayout.summary.bookingCount}\n`
     statement += `Total Collected: $${gymPayout.summary.totalCollectedUsd.toFixed(2)} USD\n`
-    statement += `Platform Commission (15%): $${gymPayout.summary.commissionUsd.toFixed(2)} USD\n`
+    statement += `Platform Commission (0% — your ฿999/mo plan is all-in): $${gymPayout.summary.commissionUsd.toFixed(2)} USD\n`
     statement += `Amount Due: $${gymPayout.summary.amountOwedUsd.toFixed(2)} USD\n`
     statement += `Exchange Rate: ${rate}\n`
     statement += `THB Amount: ฿${thbAmount.toLocaleString()}\n\n`
@@ -1071,7 +1071,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-zinc-400">Your Commission</p>
+                      <p className="text-xs text-zinc-400">Platform cut (0%)</p>
                       <p className="text-lg font-bold text-green-400">
                         ${payoutData.totals.totalCommissionUsd.toFixed(2)}
                       </p>
@@ -1663,7 +1663,7 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                 <div className="mt-2 space-y-1 text-sm text-zinc-400">
                   <p>Bookings: {selectedGymPayout.summary.bookingCount}</p>
                   <p>Total Collected: ${selectedGymPayout.summary.totalCollectedUsd.toFixed(2)}</p>
-                  <p>Your Commission: ${selectedGymPayout.summary.commissionUsd.toFixed(2)}</p>
+                  <p>Platform cut (0%): ${selectedGymPayout.summary.commissionUsd.toFixed(2)}</p>
                   <p className="text-lg font-bold text-indigo-300">
                     Amount Owed: ${selectedGymPayout.summary.amountOwedUsd.toFixed(2)}
                   </p>

@@ -7,11 +7,12 @@
  * platform payout math exactly so a gym owner sees the same "you're owed"
  * number the operator settles:
  *
- *   online collected (USD, whole dollars) − 15% commission = owed to gym.
+ *   owed to gym = the Stripe net of online card payments.
  *
- * Online card payments are collected into the platform Stripe account and
- * settled to the gym via gym_payouts. Cash + bank transfer are collected by
- * the gym directly (it keeps 100%); we surface them for completeness.
+ * Pure-SaaS: the platform takes 0% of bookings. Online card payments are
+ * collected into the platform Stripe account and passed through to the gym in
+ * full — minus only Stripe's own card fee — via gym_payouts. Cash + bank
+ * transfer are collected by the gym directly; we surface them for completeness.
  */
 import { NextResponse } from "next/server"
 import { requireGymAdmin } from "@/lib/auth-helpers"
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
       .select(`
         id, booking_date, payment_method, payment_status,
         payment_amount_thb, payment_amount_usd, commission_amount_usd,
+        stripe_fee_cents, stripe_net_cents,
         refunded_amount_cents, guest_name,
         services:service_id (name),
         users:user_id (full_name, email)
@@ -66,6 +68,7 @@ export async function GET(request: Request) {
 
   let onlineCollectedUsd = 0
   let onlineCommissionUsd = 0
+  let onlineNetUsd = 0
   let onlineCount = 0
   let cashPaidThb = 0
   let cashPaidCount = 0
@@ -84,8 +87,16 @@ export async function GET(request: Request) {
     }
     const method = b.payment_method
     if (method === "stripe" && b.payment_status === "paid") {
-      onlineCollectedUsd += b.payment_amount_usd ?? 0
+      const collected = b.payment_amount_usd ?? 0
+      // Owed = Stripe net (we take 0%). Historical rows without a captured net
+      // fall back to collected − stored commission.
+      const net =
+        b.stripe_net_cents != null
+          ? b.stripe_net_cents / 100
+          : collected - Number(b.commission_amount_usd ?? 0)
+      onlineCollectedUsd += collected
       onlineCommissionUsd += Number(b.commission_amount_usd ?? 0)
+      onlineNetUsd += net
       onlineCount++
     } else if (method === "cash" && b.payment_status === "paid") {
       cashPaidThb += b.payment_amount_thb ?? 0
@@ -99,7 +110,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const owedUsd = onlineCollectedUsd - onlineCommissionUsd
+  const owedUsd = onlineNetUsd
   const payout = (payoutsRes.data ?? [])[0] ?? null
 
   const recent = bookings
@@ -124,6 +135,7 @@ export async function GET(request: Request) {
     online: {
       collectedUsd: onlineCollectedUsd,
       commissionUsd: onlineCommissionUsd,
+      feeUsd: onlineCollectedUsd - onlineNetUsd,
       owedUsd,
       count: onlineCount,
     },

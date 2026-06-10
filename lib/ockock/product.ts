@@ -25,6 +25,15 @@ export const PLAN = {
   creditCardRequired: false,
 } as const
 
+/**
+ * Platform commission on gym bookings. Pure-SaaS model: we take **0%** — the
+ * ฿999/mo is all-in and gyms keep 100% of what students pay. Card bookings
+ * still incur Stripe's own card fee, which the gym bears; the platform is the
+ * merchant of record and passes through 100% of the Stripe net. Single source
+ * of truth — the Stripe webhook stamps this onto every booking.
+ */
+export const PLATFORM_BOOKING_COMMISSION_RATE = 0
+
 /** Short feature list — used by the marketing grid and the chat overview. */
 export const FEATURES: ReadonlyArray<{ title: string; desc: string }> = [
   {

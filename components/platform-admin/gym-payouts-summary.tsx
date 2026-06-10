@@ -93,7 +93,7 @@ export default function GymPayoutsSummary() {
         <div>
           <h2 className="text-lg font-semibold text-white">Owed to gyms</h2>
           <p className="text-xs text-neutral-500">
-            Per gym, after 15% commission · {data.period.label}. Record payouts in the console.
+            Per gym · {data.period.label}. We take 0% — gyms keep 100% of the net. Record payouts in the console.
           </p>
         </div>
         <button
@@ -107,7 +107,7 @@ export default function GymPayoutsSummary() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard icon={Banknote} label="Collected online" value={usd(data.totals.totalCollectedUsd)} sub="all gyms" accent={CHART_COLORS.online} />
-        <KpiCard icon={Banknote} label="Commission" value={usd(data.totals.totalCommissionUsd)} sub="platform keeps" accent={CHART_COLORS.indigo} />
+        <KpiCard icon={Banknote} label="Platform cut" value={usd(data.totals.totalCommissionUsd)} sub="we take 0%" accent={CHART_COLORS.indigo} />
         <KpiCard icon={Banknote} label="Owed to gyms" value={usd(data.totals.totalOwedUsd)} sub={`${data.totals.gymCount} gym${data.totals.gymCount === 1 ? "" : "s"}`} accent={CHART_COLORS.pending} />
         <KpiCard icon={Banknote} label="Bookings" value={String(data.totals.totalBookings)} sub="online, this period" accent={CHART_COLORS.other} />
       </div>
