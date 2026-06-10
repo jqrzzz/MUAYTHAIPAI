@@ -516,6 +516,7 @@ function BuyTicketDialog({
   ticket: TicketTier
   eventId: string
   eventName: string
+  onClose: () => void
 }) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")

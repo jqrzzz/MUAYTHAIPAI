@@ -735,11 +735,12 @@ export default function EventEditorClient({
           onSave={saveEvent}
           saving={saving}
           isCreate={mode === "create"}
+          onEventCancelled={() => setEventStatus("cancelled")}
         />
       )}
       {tab === "bouts" && (
         <BoutsTab
-          eventId={eventId}
+          eventId={eventId ?? null}
           bouts={bouts}
           invitationsByBout={invitationsByBout}
           onAdd={addBout}
@@ -753,7 +754,7 @@ export default function EventEditorClient({
       )}
       {tab === "tickets" && (
         <TicketsTab
-          eventId={eventId}
+          eventId={eventId ?? null}
           tickets={tickets}
           ticketSalesOpen={ticketSalesOpen}
           togglingSales={togglingSales}
@@ -785,6 +786,7 @@ function DetailsTab({
   onSave,
   saving,
   isCreate,
+  onEventCancelled,
 }: {
   form: EventForm
   setForm: (f: EventForm) => void
@@ -793,6 +795,7 @@ function DetailsTab({
   onSave: () => void
   saving: boolean
   isCreate: boolean
+  onEventCancelled: () => void
 }) {
   const update = (field: keyof EventForm, value: string) =>
     setForm({ ...form, [field]: value })
@@ -1041,7 +1044,7 @@ function DetailsTab({
       {!isCreate && eventId && eventStatus !== "cancelled" && (
         <DangerZone
           eventId={eventId}
-          onCancelled={() => setEventStatus("cancelled")}
+          onCancelled={onEventCancelled}
         />
       )}
       {!isCreate && eventStatus === "cancelled" && (

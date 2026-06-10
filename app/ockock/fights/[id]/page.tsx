@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       .select("name, event_date, venue_name, venue_city, status")
       .eq("id", id)
       .maybeSingle()
-    event = data as typeof event
+    event = data as { name: string; event_date: string | null; venue_name: string | null; venue_city: string | null; status: string } | null
   } catch {
     return {
       title: "Fight Event | OckOck",

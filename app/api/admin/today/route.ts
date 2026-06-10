@@ -59,8 +59,7 @@ export async function GET() {
       supabase
         .from("skill_signoffs")
         .select(
-          "id, student_id, level, skill_index, signed_off_at, " +
-            "users:student_id(full_name, email)"
+          "id, student_id, level, skill_index, signed_off_at, users:student_id(full_name, email)"
         )
         .eq("org_id", orgId)
         .gte("signed_off_at", ago(7))
@@ -69,8 +68,7 @@ export async function GET() {
       supabase
         .from("certificates")
         .select(
-          "id, level, certificate_number, issued_at, " +
-            "users:user_id(full_name, email)"
+          "id, level, certificate_number, issued_at, users:user_id(full_name, email)"
         )
         .eq("org_id", orgId)
         .gte("issued_at", ago(30))

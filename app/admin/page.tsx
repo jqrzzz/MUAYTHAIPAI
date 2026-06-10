@@ -134,7 +134,9 @@ export default async function AdminPage() {
       booking_date,
       payment_method,
       payment_status,
-      payment_amount_thb
+      payment_amount_thb,
+      payment_amount_usd,
+      payment_currency
     `)
     .eq("org_id", membership.org_id)
     .gte("booking_date", thirtyDaysAgo.toISOString().split("T")[0])

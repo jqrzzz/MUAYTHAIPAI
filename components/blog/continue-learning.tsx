@@ -6,6 +6,8 @@ import Link from "next/link"
 
 interface ContinueLearningProps {
   excludeLinks?: string[]
+  /** Marketing pages pass their slug so the current page can be de-emphasised. */
+  currentPage?: string
 }
 
 const ALL_LINKS = [

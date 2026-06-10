@@ -24,8 +24,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("campaigns")
     .select(
-      "id, name, description, channel, status, total_targets, total_drafted, " +
-        "total_sent, total_claimed, created_at, updated_at, sent_at"
+      "id, name, description, channel, status, total_targets, total_drafted, total_sent, total_claimed, created_at, updated_at, sent_at"
     )
     .order("created_at", { ascending: false })
     .limit(100)

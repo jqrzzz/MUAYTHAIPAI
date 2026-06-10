@@ -184,7 +184,7 @@ export default async function TrainerDashboardPage() {
       user={user}
       trainerProfile={trainerProfile}
       organization={trainerProfile.organizations}
-      todayBookings={todayBookings || []}
+      todayBookings={(todayBookings || []) as unknown as Parameters<typeof TrainerDashboardClient>[0]["todayBookings"]}
       students={allStudents}
       services={services || []}
     />

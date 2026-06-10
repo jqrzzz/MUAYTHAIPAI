@@ -140,7 +140,7 @@ export function BookingSection({ initialBookingItemId, gymSlug = "wisarut-family
   }
 
   const isGroupSessionDisabled = (): boolean => {
-    return selectedBookingItem?.name.toLowerCase().includes("group") && isSunday(selectedDate)
+    return !!(selectedBookingItem?.name.toLowerCase().includes("group") && isSunday(selectedDate))
   }
 
   const handleBookingSelect = (itemId: string) => {

@@ -33,9 +33,7 @@ export async function GET(
   let query = supabase
     .from("campaign_sends")
     .select(
-      "id, gym_id, channel, to_address, subject, body, status, " +
-        "drafted_at, approved_at, sent_at, error, " +
-        "discovered_gyms:gym_id(name, name_th, city, province, ai_summary)"
+      "id, gym_id, channel, to_address, subject, body, status, drafted_at, approved_at, sent_at, error, discovered_gyms:gym_id(name, name_th, city, province, ai_summary)"
     )
     .eq("campaign_id", id)
     .order("drafted_at", { ascending: false })
@@ -94,8 +92,7 @@ export async function POST(
   const { data: campaign } = await supabase
     .from("campaigns")
     .select(
-      "id, channel, target_filter, subject_template, body_template, " +
-        "personalize_prompt, personalize, status"
+      "id, channel, target_filter, subject_template, body_template, personalize_prompt, personalize, status"
     )
     .eq("id", id)
     .single()
@@ -117,9 +114,7 @@ export async function POST(
     {
       campaignId: campaign.id,
       selectColumns:
-        "id, name, name_th, city, province, country, website, " +
-          "email, phone, line_id, ai_summary, ai_tags, last_extracted_at, " +
-          "invite_token",
+        "id, name, name_th, city, province, country, website, email, phone, line_id, ai_summary, ai_tags, last_extracted_at, invite_token",
     }
   )
 

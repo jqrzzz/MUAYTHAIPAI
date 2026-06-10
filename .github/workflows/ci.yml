@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck · Lint · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # No package-lock.json in the repo yet, so `npm install` (not `npm ci`).
+      # Committing a lockfile is a tracked follow-up for reproducible installs.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      # The real gate. Was masking 190 errors via next.config ignoreBuildErrors.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Informational until @typescript-eslint is installed and the existing
+      # eslint-disable directives resolve (see next.config.mjs note).
+      - name: Lint
+        run: npx next lint
+        continue-on-error: true
+
+      # Full production build with throwaway env. Catches Next route-type
+      # violations and build breaks that `tsc --noEmit` alone misses. The app
+      # tolerates an unreachable Supabase at build time, so dummy values suffice.
+      - name: Build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy
+          SUPABASE_SERVICE_ROLE_KEY: dummy
+          STRIPE_SECRET_KEY: sk_test_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+          RESEND_API_KEY: dummy
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+          AI_GATEWAY_API_KEY: dummy

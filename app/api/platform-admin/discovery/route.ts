@@ -18,11 +18,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("discovered_gyms")
     .select(
-      "id, source, source_query, name, name_th, city, province, country, lat, lng, " +
-        "phone, email, website, instagram, facebook, line_id, " +
-        "google_place_id, google_rating, google_review_count, google_photos, " +
-        "ai_summary, ai_tags, status, linked_org_id, invited_at, claimed_at, " +
-        "last_crawled_at, last_extracted_at, notes, created_at, updated_at",
+      "id, source, source_query, name, name_th, city, province, country, lat, lng, phone, email, website, instagram, facebook, line_id, google_place_id, google_rating, google_review_count, google_photos, ai_summary, ai_tags, status, linked_org_id, invited_at, claimed_at, last_crawled_at, last_extracted_at, notes, created_at, updated_at",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })

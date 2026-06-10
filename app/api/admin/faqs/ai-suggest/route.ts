@@ -47,8 +47,7 @@ export async function POST() {
       supabase
         .from("organizations")
         .select(
-          "name, name_th, description, city, province, country, address, " +
-            "phone, email, website, instagram"
+          "name, name_th, description, city, province, country, address, phone, email, website, instagram"
         )
         .eq("id", orgId)
         .single(),

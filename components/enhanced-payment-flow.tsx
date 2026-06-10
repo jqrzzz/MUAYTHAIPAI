@@ -649,7 +649,6 @@ export function EnhancedPaymentFlow({
                         clientSecret={clientSecret}
                         onSuccess={handlePaymentSuccess}
                         onError={setError}
-                        theme={mounted ? theme : "dark"}
                       />
                     </Elements>
                   )}

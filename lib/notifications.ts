@@ -10,7 +10,7 @@ const serviceClient = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export type NotificationType = "new_booking" | "cancellation" | "payment_received" | "contact_form" | "course_completed" | "cert_eligible"
+export type NotificationType = "new_booking" | "cancellation" | "payment_received" | "contact_form" | "course_completed" | "cert_eligible" | "ticket_sold" | "invitation_accepted" | "invitation_declined"
 
 interface NotifyOptions {
   orgId: string

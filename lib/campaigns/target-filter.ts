@@ -19,8 +19,7 @@ export async function applyTargetFilter(
 }> {
   const cols =
     options?.selectColumns ||
-    "id, name, name_th, city, province, country, website, email, phone, " +
-      "google_rating, ai_summary, ai_tags, status, source, last_extracted_at"
+    "id, name, name_th, city, province, country, website, email, phone, google_rating, ai_summary, ai_tags, status, source, last_extracted_at"
 
   let query = supabase.from("discovered_gyms").select(cols, { count: "exact" })
 
@@ -72,7 +71,7 @@ export async function applyTargetFilter(
   const { data, count, error } = await query
   if (error) throw error
 
-  let rows = (data || []) as Array<Record<string, unknown>>
+  let rows = (data || []) as unknown as Array<Record<string, unknown>>
 
   // Post-filter: ai_tags overlap (PostgREST's `cs`/`ov` works but JS is fine here)
   if (filter.ai_tags_any && filter.ai_tags_any.length > 0) {

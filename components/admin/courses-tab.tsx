@@ -20,6 +20,7 @@ import { InlineConfirm } from "@/components/ui/inline-confirm"
 
 interface Course {
   id: string
+  org_id: string | null
   title: string
   slug: string
   description: string | null

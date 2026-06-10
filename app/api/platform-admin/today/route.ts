@@ -65,9 +65,7 @@ export async function GET() {
     supabase
       .from("skill_signoffs")
       .select(
-        "id, level, skill_index, signed_off_at, " +
-          "users:student_id(full_name, email), " +
-          "organizations:org_id(name)"
+        "id, level, skill_index, signed_off_at, users:student_id(full_name, email), organizations:org_id(name)"
       )
       .gte("signed_off_at", ago(1))
       .order("signed_off_at", { ascending: false })
@@ -76,9 +74,7 @@ export async function GET() {
     supabase
       .from("certificates")
       .select(
-        "id, level, certificate_number, issued_at, " +
-          "users:user_id(full_name, email), " +
-          "organizations:org_id(name)"
+        "id, level, certificate_number, issued_at, users:user_id(full_name, email), organizations:org_id(name)"
       )
       .gte("issued_at", ago(7))
       .order("issued_at", { ascending: false })
