@@ -69,10 +69,15 @@ const CHANNEL_TAGLINE: Record<ChannelName, string> = {
   line: "Connect your LINE Official Account so OckOck can answer and you can reply from the inbox.",
   telegram: "Connect a Telegram bot for chat-channel inbound + outbound.",
   whatsapp: "Connect WhatsApp Business via the Meta Cloud API.",
-  ig: "Connect your Instagram Business account so DMs land in OckOck's inbox.",
-  fb: "Connect your Facebook Page so Messenger DMs land in OckOck's inbox.",
+  ig: "Instagram DMs in OckOck's inbox — the adapter is in development.",
+  fb: "Facebook Messenger in OckOck's inbox — the adapter is in development.",
   test: "Internal smoke-test adapter. Only useful in dev.",
 }
+
+// Channels whose inbound adapter + webhook don't exist yet (lib/chat/adapters
+// has line/telegram/whatsapp only). Until they do, offering a credentials form
+// would imply DMs arrive — they wouldn't. Render these as a coming-soon card.
+const COMING_SOON = new Set<ChannelName>(["ig", "fb"])
 
 export default function ChannelCredentialsCard() {
   const [channels, setChannels] = useState<ChannelStatus[] | null>(null)
@@ -224,6 +229,28 @@ export default function ChannelCredentialsCard() {
       )}
 
       {visibleChannels.map((c) => {
+        if (COMING_SOON.has(c.channel)) {
+          return (
+            <Card key={c.channel} className="bg-neutral-900/60 border-neutral-800">
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <CardTitle className="text-neutral-300 text-lg">
+                      {CHANNEL_LABEL[c.channel]}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {CHANNEL_TAGLINE[c.channel]}
+                    </CardDescription>
+                  </div>
+                  <Badge className="bg-neutral-700/50 text-neutral-300 border-neutral-600 shrink-0">
+                    Coming soon
+                  </Badge>
+                </div>
+              </CardHeader>
+            </Card>
+          )
+        }
+
         const draft = drafts[c.channel] ?? {}
         const dirty = Object.values(draft).some((v) => v?.trim())
         const isSaving = saving === c.channel

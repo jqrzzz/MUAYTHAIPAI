@@ -366,8 +366,8 @@ export default function InboxTab({ role, onGoToChannels }: InboxTabProps) {
                 <MessageSquare className="w-8 h-8 mx-auto text-neutral-600" />
                 <div className="text-neutral-300 font-medium">No conversations yet</div>
                 <p className="text-neutral-500 text-xs leading-relaxed">
-                  Visitors write in via LINE, Telegram, WhatsApp or Instagram.
-                  Connect a channel to start receiving messages.
+                  Visitors write in via LINE, WhatsApp, Telegram, or the chat on
+                  your gym page. Connect a channel to start receiving messages.
                 </p>
                 {onGoToChannels && (
                   <Button
