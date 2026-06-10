@@ -1,0 +1,15 @@
+# Minimal Supabase CLI config. Full reference: https://supabase.com/docs/guides/cli/config
+#
+# `project_id` only names the local stack. Connect this repo to the hosted
+# database once with:
+#     npx supabase link --project-ref <your-project-ref>
+# (find the ref in the Supabase dashboard URL or Project Settings → General).
+#
+# The CLI fills in every other option with its defaults; pin more here only
+# when you need to override one.
+
+project_id = "muaythaipai"
+
+[db]
+# Match the hosted Postgres major version (Supabase is on 15).
+major_version = 15
