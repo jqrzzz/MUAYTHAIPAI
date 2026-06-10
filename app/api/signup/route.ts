@@ -1,14 +1,11 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { ensureChatGroups } from "@/lib/chat/bootstrap"
 import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
 import { PLAN } from "@/lib/ockock/product"
 
 // Use service role to create orgs (no auth required for signup)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = createServiceClient()
 
 function generateSlug(name: string): string {
   return name

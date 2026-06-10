@@ -1,9 +1,9 @@
 import { stripe } from "@/lib/stripe"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 // Use service role for webhooks (no user context)
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+const supabase = createServiceClient()
 
 /**
  * Stripe SDK 18.x types reflect API version 2025-04-30.basil, which

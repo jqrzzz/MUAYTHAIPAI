@@ -14,13 +14,9 @@
  *   const gate = await checkLimit({ key: `lead:${ip}`, max: 5, windowSeconds: 3600 })
  *   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: 429, headers: gate.headers })
  */
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } },
-)
+const sb = createServiceClient()
 
 interface CheckArgs {
   /** Stable identifier — user id, IP, "scope:id" string, etc. */

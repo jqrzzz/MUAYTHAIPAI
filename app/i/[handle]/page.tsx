@@ -10,17 +10,14 @@
  * Privacy: counts aggregated only; no named student lists. Students
  * own that visibility via /p/[handle].
  */
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { BadgeCheck, MapPin, Award, Trophy, Calendar } from "lucide-react"
 import { CERTIFICATION_LEVELS } from "@/lib/certification-levels"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const supabase = createServiceClient()
 
 interface Props {
   params: Promise<{ handle: string }>

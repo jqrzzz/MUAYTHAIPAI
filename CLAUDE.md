@@ -49,11 +49,13 @@ Three client types. **Pick the right one — it's a security boundary:**
 
 1. **`createClient()` from `lib/supabase/server`** — anon/cookie client, **RLS
    enforced**. Default for anything acting as the logged-in user.
-2. **Service-role client** (`createClient(url, SUPABASE_SERVICE_ROLE_KEY)`) —
-   **bypasses RLS**. Use only when you genuinely need cross-tenant/admin access
-   (webhooks, the public chat loading any gym's KB, operator queries). ~60 files
-   create one today; a `lib/supabase/service.ts` factory to centralize them is a
-   tracked follow-up.
+2. **`createServiceClient()` from `lib/supabase/service`** — the service-role
+   client, **bypasses RLS**. Use only when you genuinely need cross-tenant or
+   unauthenticated admin access (webhooks, the public chat loading any gym's KB,
+   cron, operator queries). It's the single audited chokepoint — never construct
+   a service client by hand with `SUPABASE_SERVICE_ROLE_KEY`. (The
+   `serviceRoleClient()` wrapper in `lib/supabase/service-role.ts` is the same
+   client with operator-specific guidance attached.)
 3. **Browser client** (`lib/supabase/client`) — client components.
 
 Auth helpers (`lib/auth-helpers.ts`):

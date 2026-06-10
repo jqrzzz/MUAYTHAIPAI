@@ -7,7 +7,7 @@
  * (gym-logos) so the URL renders directly on /gyms/[slug] etc.
  */
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { requireGymAdmin } from "@/lib/auth-helpers"
 
 export const runtime = "nodejs"
@@ -18,12 +18,7 @@ const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 const ALLOWED_MIME = /^image\/(jpeg|png|webp|gif)$/
 
 function service() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error("Supabase service-role env missing")
-  return createServiceClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  return createServiceClient()
 }
 
 export async function POST(request: NextRequest) {

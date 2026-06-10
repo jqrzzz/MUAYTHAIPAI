@@ -1,11 +1,8 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { EmailService } from "@/lib/email-service"
 import { getLevelById } from "@/lib/certification-levels"
 
-const serviceClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const serviceClient = createServiceClient()
 
 export async function notifyStudentCertificateIssued(data: {
   studentId: string

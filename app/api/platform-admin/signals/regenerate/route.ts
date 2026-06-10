@@ -7,7 +7,7 @@
  * the UI. Reuses the cron handler by setting the bearer auth.
  */
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import {
   aiReframeSignals,
@@ -27,10 +27,7 @@ export async function POST() {
 
   // Service-role client so we can write to platform_signals regardless
   // of the cookie session
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const supabase = createServiceClient()
 
   const snap = await buildSnapshot(supabase)
   let drafts = generateAllSignals(snap)

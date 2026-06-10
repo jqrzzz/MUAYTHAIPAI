@@ -3,13 +3,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { EmailService } from "@/lib/email-service"
 import { env, hasEnv } from "@/lib/env"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { getOrgEmailContext, notifyNewBooking, notifyTicketSold } from "@/lib/notifications"
 import { ockockUrl } from "@/lib/ockock/url"
 import { PLATFORM_BOOKING_COMMISSION_RATE } from "@/lib/ockock/product"
 import { stripe } from "@/lib/stripe"
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+const supabase = createServiceClient()
 
 /**
  * Fetch the charge + balance transaction for a PaymentIntent so we can

@@ -14,7 +14,7 @@
  * still reads as a credential card.
  */
 import { ImageResponse } from "next/og"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { getLevelById } from "@/lib/certification-levels"
 
 export const runtime = "nodejs"
@@ -22,10 +22,7 @@ export const alt = "MUAYTHAIPAI verified certificate"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const supabase = createServiceClient()
 
 // Level → solid hex (Tailwind class names don't work in OG runtime).
 // Keep in sync with LEVEL_STYLES in the verify page.

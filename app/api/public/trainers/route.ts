@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing required `gym` param" }, { status: 400 })
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const supabase = createServiceClient()
 
   // Get organization by slug
   const { data: org } = await supabase.from("organizations").select("id").eq("slug", gymSlug).single()

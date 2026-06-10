@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -27,11 +27,7 @@ export async function GET(request: Request) {
   const city = cityRaw.slice(0, 80).trim()
   const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
+  const supabase = createServiceClient()
 
   let query = supabase
     .from("fight_events")

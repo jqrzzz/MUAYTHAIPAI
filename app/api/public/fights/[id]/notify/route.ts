@@ -21,7 +21,7 @@
  * the same as the first submission to the user.
  */
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
@@ -30,11 +30,7 @@ export const runtime = "nodejs"
 // like "a@" or "@b" that the HTML5 type=email is too permissive on.
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } },
-)
+const supabase = createServiceClient()
 
 export async function POST(
   request: Request,

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { OCKOCK_HOST } from "@/lib/ockock/url"
 
 const BASE_URL = "https://muaythaipai.com"
@@ -27,10 +27,7 @@ function urlFor(path: string): string {
 // columns we already expose on the public surfaces (certificate_number,
 // public_*_handle, gym slug). It does NOT leak anything beyond what /verify,
 // /i, /p, and /gyms already render.
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const sb = createServiceClient()
 
 type Route = {
   path: string

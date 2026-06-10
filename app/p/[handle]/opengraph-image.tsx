@@ -6,7 +6,7 @@
  * lit up. The credential journey told in a 1200×630 glance.
  */
 import { ImageResponse } from "next/og"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { CERTIFICATION_LEVELS, getLevelById } from "@/lib/certification-levels"
 
 export const runtime = "nodejs"
@@ -14,10 +14,7 @@ export const alt = "MUAYTHAIPAI student passport"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const supabase = createServiceClient()
 
 const LEVEL_HEX: Record<string, string> = {
   naga: "#60a5fa",

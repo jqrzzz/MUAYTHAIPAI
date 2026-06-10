@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server"
 import { requirePlatformAdmin } from "@/lib/auth-helpers"
 import { logAudit } from "@/lib/audit-log"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -21,10 +21,7 @@ export const dynamic = "force-dynamic"
 // so an admin can't list other admins through the request-scoped client. This
 // route is gated to full admins, so service-role is safe.
 function svc() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  return createServiceClient()
 }
 
 export async function GET() {
