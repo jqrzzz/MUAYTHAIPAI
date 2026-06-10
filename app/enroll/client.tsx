@@ -24,6 +24,7 @@ function EnrollInner() {
   const [form, setForm] = useState({ name: "", email: "", phone: "" })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const [paidConfirmed, setPaidConfirmed] = useState(false)
   const [enrollmentResult, setEnrollmentResult] = useState<{
     levelName: string
     gymName: string
@@ -41,6 +42,20 @@ function EnrollInner() {
       })
       .catch(() => {})
   }, [orgSlug])
+
+  // Returning from Stripe Checkout — success_url carries ?paid=<level>.
+  const paidLevelId = searchParams.get("paid")
+  useEffect(() => {
+    if (!paidLevelId) return
+    const lvl = CERTIFICATION_LEVELS.find((l) => l.id === paidLevelId)
+    setPaidConfirmed(true)
+    setEnrollmentResult({
+      levelName: lvl?.name ?? "your certification",
+      gymName: gymName ?? orgSlug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      message: `Payment received — you're enrolled in ${lvl?.name ?? "your certification"}. The gym will confirm your dates by email.`,
+    })
+    setStep("success")
+  }, [paidLevelId, gymName, orgSlug])
 
   if (!mounted) return null
 
@@ -88,6 +103,45 @@ function EnrollInner() {
     } catch {
       setError("Connection error — please try again")
     } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handlePayOnline = async () => {
+    if (!selectedLevel) return
+    setSubmitting(true)
+    setError("")
+    try {
+      const res = await fetch("/api/public/enroll/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim() || undefined,
+          level: selectedLevel.id,
+          orgSlug,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Couldn't start checkout")
+        setSubmitting(false)
+        return
+      }
+      if (data.alreadyEnrolled) {
+        setError(data.message)
+        setSubmitting(false)
+        return
+      }
+      if (data.url) {
+        window.location.href = data.url
+        return
+      }
+      setError("Couldn't start checkout — please try again")
+      setSubmitting(false)
+    } catch {
+      setError("Connection error — please try again")
       setSubmitting(false)
     }
   }
@@ -302,31 +356,40 @@ function EnrollInner() {
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-neutral-500 text-center">
-                    Payment is collected at the gym. This enrollment confirms your spot.
-                  </p>
-
                   {error && (
                     <p className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>
                   )}
 
                   <button
-                    onClick={handleEnroll}
+                    onClick={handlePayOnline}
                     disabled={submitting}
-                    className="w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {submitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Enrolling...
+                        Starting checkout…
                       </>
                     ) : (
                       <>
-                        <Award className="w-4 h-4" />
-                        Confirm Enrollment
+                        Pay {selectedLevel.priceTHB.toLocaleString()} THB online
+                        <ChevronRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
+
+                  <button
+                    onClick={handleEnroll}
+                    disabled={submitting}
+                    className="w-full py-2.5 rounded-xl font-medium text-neutral-300 bg-neutral-800/80 hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Award className="w-4 h-4" />
+                    Reserve my spot — pay at the gym
+                  </button>
+
+                  <p className="text-[11px] text-neutral-500 text-center">
+                    Pay securely online now, or reserve and settle at the gym on arrival.
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -359,7 +422,7 @@ function EnrollInner() {
                   </p>
                   <ul className="text-neutral-400 space-y-1 text-left">
                     <li>1. We&apos;ll confirm your dates via email within 24 hours</li>
-                    <li>2. Payment is collected at the gym on arrival</li>
+                    <li>2. {paidConfirmed ? "Payment received — you're all set" : "Payment is collected at the gym on arrival"}</li>
                     <li>3. Your trainer will assess skills during your program</li>
                     <li>4. Earn your certificate upon successful completion</li>
                   </ul>

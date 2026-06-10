@@ -447,6 +447,69 @@ export async function GET() {
   return NextResponse.json(healthStatus)
 }
 
+// Cert-enrolment branch of checkout.session.completed. Flips the pending
+// certification_enrollments row (and its linked booking) to paid. This is the
+// source of truth for "the student paid for this enrolment".
+async function handleCertEnrollmentCompleted(
+  session: Stripe.Checkout.Session,
+  metadata: Stripe.Metadata,
+) {
+  const enrollmentId = metadata.enrollment_id
+  if (!enrollmentId) return
+
+  const { data: existing } = await supabase
+    .from("certification_enrollments")
+    .select("id, payment_status, booking_id, org_id, level, user_id")
+    .eq("id", enrollmentId)
+    .maybeSingle()
+  if (!existing) {
+    console.warn("[enroll.webhook] enrolment not found:", enrollmentId)
+    return
+  }
+  if (existing.payment_status === "paid") return // idempotent — Stripe retries
+
+  const stripePiId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id || null
+
+  await supabase
+    .from("certification_enrollments")
+    .update({ payment_status: "paid" })
+    .eq("id", existing.id)
+
+  const bookingId = existing.booking_id || metadata.booking_id
+  if (bookingId) {
+    await supabase
+      .from("bookings")
+      .update({
+        payment_status: "paid",
+        payment_method: "stripe",
+        stripe_payment_intent_id: stripePiId,
+      })
+      .eq("id", bookingId)
+  }
+
+  // Best-effort: ping the gym so the bell surfaces the paid enrolment.
+  if (existing.org_id) {
+    const { data: student } = await supabase
+      .from("users")
+      .select("full_name")
+      .eq("id", existing.user_id)
+      .maybeSingle()
+    notifyNewBooking({
+      orgId: existing.org_id as string,
+      customerName: student?.full_name || "Student",
+      customerEmail: session.customer_details?.email || "",
+      serviceName: `${existing.level} certification`,
+      bookingDate: new Date().toISOString().split("T")[0],
+      amount: session.amount_total ? session.amount_total / 100 : 0,
+      paymentMethod: "stripe",
+      paymentStatus: "paid",
+    }).catch((err) => console.error("[enroll.webhook] notify failed:", err))
+  }
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     const metadata = session.metadata || {}
@@ -456,6 +519,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // never carry the booking metadata so we route + return early.
     if (metadata.kind === "ticket" && metadata.ticket_order_id) {
       await handleTicketCheckoutCompleted(session, metadata)
+      return
+    }
+
+    // Cert-enrolment path — kind=cert_enrollment sessions originate from
+    // /api/public/enroll/checkout and carry an enrollment_id.
+    if (metadata.kind === "cert_enrollment" && metadata.enrollment_id) {
+      await handleCertEnrollmentCompleted(session, metadata)
       return
     }
 
