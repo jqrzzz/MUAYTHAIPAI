@@ -13,6 +13,12 @@
  * collected into the platform Stripe account and passed through to the gym in
  * full — minus only Stripe's own card fee — via gym_payouts. Cash + bank
  * transfer are collected by the gym directly; we surface them for completeness.
+ *
+ * Online payments come in two currencies: the classic booking flow charges
+ * USD; cert/course enrollment checkouts charge THB. They're reported as
+ * separate buckets (currencies don't sum). THB rows predate fee-snapshot
+ * capture, so the THB figure is gross — Stripe's card fee comes off at
+ * settlement.
  */
 import { NextResponse } from "next/server"
 import { requireGymAdmin } from "@/lib/auth-helpers"
@@ -40,7 +46,7 @@ export async function GET(request: Request) {
     supabase
       .from("bookings")
       .select(`
-        id, booking_date, payment_method, payment_status,
+        id, booking_date, payment_method, payment_status, payment_currency,
         payment_amount_thb, payment_amount_usd, commission_amount_usd,
         stripe_fee_cents, stripe_net_cents,
         refunded_amount_cents, guest_name,
@@ -70,6 +76,8 @@ export async function GET(request: Request) {
   let onlineCommissionUsd = 0
   let onlineNetUsd = 0
   let onlineCount = 0
+  let onlineCollectedThb = 0
+  let onlineCountThb = 0
   let cashPaidThb = 0
   let cashPaidCount = 0
   let cashPendingThb = 0
@@ -87,17 +95,27 @@ export async function GET(request: Request) {
     }
     const method = b.payment_method
     if (method === "stripe" && b.payment_status === "paid") {
-      const collected = b.payment_amount_usd ?? 0
-      // Owed = Stripe net (we take 0%). Historical rows without a captured net
-      // fall back to collected − stored commission.
-      const net =
-        b.stripe_net_cents != null
-          ? b.stripe_net_cents / 100
-          : collected - Number(b.commission_amount_usd ?? 0)
-      onlineCollectedUsd += collected
-      onlineCommissionUsd += Number(b.commission_amount_usd ?? 0)
-      onlineNetUsd += net
-      onlineCount++
+      // Cert/course enrollment checkouts charge THB; classic bookings charge
+      // USD. Bucket by currency — they can't be summed.
+      const isThb =
+        b.payment_currency === "THB" ||
+        (b.payment_amount_usd == null && b.payment_amount_thb != null)
+      if (isThb) {
+        onlineCollectedThb += b.payment_amount_thb ?? 0
+        onlineCountThb++
+      } else {
+        const collected = b.payment_amount_usd ?? 0
+        // Owed = Stripe net (we take 0%). Historical rows without a captured
+        // net fall back to collected − stored commission.
+        const net =
+          b.stripe_net_cents != null
+            ? b.stripe_net_cents / 100
+            : collected - Number(b.commission_amount_usd ?? 0)
+        onlineCollectedUsd += collected
+        onlineCommissionUsd += Number(b.commission_amount_usd ?? 0)
+        onlineNetUsd += net
+        onlineCount++
+      }
     } else if (method === "cash" && b.payment_status === "paid") {
       cashPaidThb += b.payment_amount_thb ?? 0
       cashPaidCount++
@@ -119,13 +137,18 @@ export async function GET(request: Request) {
     .map((b) => {
       const service = Array.isArray(b.services) ? b.services[0] : b.services
       const user = Array.isArray(b.users) ? b.users[0] : b.users
+      const isThb =
+        b.payment_currency === "THB" ||
+        (b.payment_amount_usd == null && b.payment_amount_thb != null)
       return {
         id: b.id,
         date: b.booking_date,
         customer: b.guest_name || user?.full_name || user?.email || "—",
         service: service?.name ?? "—",
         status: b.payment_status,
+        currency: isThb ? ("THB" as const) : ("USD" as const),
         amountUsd: b.payment_amount_usd ?? 0,
+        amountThb: b.payment_amount_thb ?? 0,
         commissionUsd: Number(b.commission_amount_usd ?? 0),
       }
     })
@@ -138,6 +161,12 @@ export async function GET(request: Request) {
       feeUsd: onlineCollectedUsd - onlineNetUsd,
       owedUsd,
       count: onlineCount,
+    },
+    // THB card payments (cert/course enrollments). Gross — Stripe's card fee
+    // comes off at settlement; no fee snapshot is captured for these yet.
+    onlineThb: {
+      collectedThb: onlineCollectedThb,
+      count: onlineCountThb,
     },
     cash: {
       paidThb: cashPaidThb,

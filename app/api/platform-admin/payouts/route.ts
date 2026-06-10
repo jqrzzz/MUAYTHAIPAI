@@ -57,7 +57,10 @@ export async function GET(request: Request) {
     .select("id, name, slug, gym_subscriptions(status)")
     .order("name")
 
-  // Fetch all online bookings (USD) in the period
+  // Fetch all online card bookings in the period. Status matters: classic
+  // USD booking rows are only ever created paid, but THB enrollment rows
+  // (cert/course checkouts) are created pending and flipped to paid by the
+  // webhook — unpaid ones must not show up as owed.
   const { data: bookings } = await supabase
     .from("bookings")
     .select(`
@@ -65,6 +68,7 @@ export async function GET(request: Request) {
       org_id,
       customer_name,
       payment_amount_usd,
+      payment_amount_thb,
       commission_rate,
       commission_amount_usd,
       stripe_net_cents,
@@ -73,7 +77,8 @@ export async function GET(request: Request) {
       created_at,
       services(name)
     `)
-    .eq("payment_currency", "USD")
+    .eq("payment_method", "stripe")
+    .eq("payment_status", "paid")
     .gte("created_at", startDate.toISOString())
     .lte("created_at", endDate.toISOString())
     .order("created_at", { ascending: false })
@@ -85,15 +90,24 @@ export async function GET(request: Request) {
     .gte("period_start", startDate.toISOString())
     .lte("period_end", endDate.toISOString())
 
-  // Group bookings by gym
+  // Group bookings by gym. USD rows (classic bookings) and THB rows
+  // (cert/course enrollment checkouts) are bucketed separately — the two
+  // currencies can't be summed.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isThbRow = (b: any) =>
+    b.payment_currency === "THB" || (b.payment_amount_usd == null && b.payment_amount_thb != null)
+
   const gymPayouts = (gyms || []).map((gym) => {
     const gymBookings = (bookings || []).filter((b) => b.org_id === gym.id)
-    const totalCollected = gymBookings.reduce((sum, b) => sum + (b.payment_amount_usd || 0), 0)
-    const totalCommission = gymBookings.reduce((sum, b) => sum + (b.commission_amount_usd || 0), 0)
+    const usdBookings = gymBookings.filter((b) => !isThbRow(b))
+    const thbBookings = gymBookings.filter(isThbRow)
+
+    const totalCollected = usdBookings.reduce((sum, b) => sum + (b.payment_amount_usd || 0), 0)
+    const totalCommission = usdBookings.reduce((sum, b) => sum + (b.commission_amount_usd || 0), 0)
     // Pure-SaaS: we take 0% — the gym is owed its full Stripe net (gross minus
     // Stripe's own card fee). Historical rows with no captured net fall back to
     // collected − stored commission.
-    const amountOwed = gymBookings.reduce(
+    const amountOwed = usdBookings.reduce(
       (sum, b) =>
         sum +
         (b.stripe_net_cents != null
@@ -101,6 +115,9 @@ export async function GET(request: Request) {
           : (b.payment_amount_usd || 0) - (b.commission_amount_usd || 0)),
       0,
     )
+    // THB rows have no fee snapshot yet, so this is gross — Stripe's card fee
+    // comes off at settlement.
+    const totalCollectedThb = thbBookings.reduce((sum, b) => sum + (b.payment_amount_thb || 0), 0)
 
     const existingPayout = (existingPayouts || []).find((p) => p.org_id === gym.id)
 
@@ -115,7 +132,9 @@ export async function GET(request: Request) {
         id: b.id,
         customerName: b.customer_name,
         service: b.services?.name || "Unknown",
+        currency: isThbRow(b) ? "THB" : "USD",
         amountUsd: b.payment_amount_usd,
+        amountThb: b.payment_amount_thb,
         commissionUsd: b.commission_amount_usd,
         date: b.created_at,
       })),
@@ -124,6 +143,9 @@ export async function GET(request: Request) {
         totalCollectedUsd: totalCollected,
         commissionUsd: totalCommission,
         amountOwedUsd: amountOwed,
+        thbCount: thbBookings.length,
+        totalCollectedThb,
+        amountOwedThb: totalCollectedThb,
       },
       payout: existingPayout
         ? {
@@ -145,6 +167,8 @@ export async function GET(request: Request) {
     totalCollectedUsd: activePayouts.reduce((sum, p) => sum + p.summary.totalCollectedUsd, 0),
     totalCommissionUsd: activePayouts.reduce((sum, p) => sum + p.summary.commissionUsd, 0),
     totalOwedUsd: activePayouts.reduce((sum, p) => sum + p.summary.amountOwedUsd, 0),
+    totalCollectedThb: activePayouts.reduce((sum, p) => sum + p.summary.totalCollectedThb, 0),
+    totalOwedThb: activePayouts.reduce((sum, p) => sum + p.summary.amountOwedThb, 0),
     totalBookings: activePayouts.reduce((sum, p) => sum + p.summary.bookingCount, 0),
     gymCount: activePayouts.length,
   }

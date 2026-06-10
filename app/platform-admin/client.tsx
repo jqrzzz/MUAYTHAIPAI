@@ -72,7 +72,9 @@ interface GymPayout {
     id: string
     customerName: string
     service: string
+    currency?: string
     amountUsd: number
+    amountThb?: number | null
     commissionUsd: number
     date: string
   }>
@@ -81,6 +83,10 @@ interface GymPayout {
     totalCollectedUsd: number
     commissionUsd: number
     amountOwedUsd: number
+    /** THB card revenue (cert/course enrollments) — gross of Stripe's fee. */
+    thbCount?: number
+    totalCollectedThb?: number
+    amountOwedThb?: number
   }
   payout: {
     id: string
@@ -103,6 +109,8 @@ interface PayoutData {
     totalCollectedUsd: number
     totalCommissionUsd: number
     totalOwedUsd: number
+    totalCollectedThb?: number
+    totalOwedThb?: number
     totalBookings: number
     gymCount: number
   }
@@ -385,13 +393,20 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
     statement += `Platform Commission (0% — your ฿999/mo plan is all-in): $${gymPayout.summary.commissionUsd.toFixed(2)} USD\n`
     statement += `Amount Due: $${gymPayout.summary.amountOwedUsd.toFixed(2)} USD\n`
     statement += `Exchange Rate: ${rate}\n`
-    statement += `THB Amount: ฿${thbAmount.toLocaleString()}\n\n`
-    statement += `Booking Details:\n`
+    statement += `THB Amount: ฿${thbAmount.toLocaleString()}\n`
+    if ((gymPayout.summary.amountOwedThb ?? 0) > 0) {
+      statement += `THB Card Revenue (certs & courses): ฿${(gymPayout.summary.amountOwedThb ?? 0).toLocaleString()} — settled separately, less Stripe's card fee\n`
+    }
+    statement += `\nBooking Details:\n`
     statement += `${"-".repeat(50)}\n`
 
     gymPayout.bookings.forEach((b) => {
       const date = new Date(b.date).toLocaleDateString()
-      statement += `${date}: ${b.customerName} - ${b.service} - $${b.amountUsd?.toFixed(2) || "0.00"} (commission $${b.commissionUsd?.toFixed(2) || "0.00"})\n`
+      if (b.currency === "THB") {
+        statement += `${date}: ${b.customerName} - ${b.service} - ฿${(b.amountThb ?? 0).toLocaleString()}\n`
+      } else {
+        statement += `${date}: ${b.customerName} - ${b.service} - $${b.amountUsd?.toFixed(2) || "0.00"} (commission $${b.commissionUsd?.toFixed(2) || "0.00"})\n`
+      }
     })
 
     return statement
@@ -1066,6 +1081,11 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                     <div>
                       <p className="text-xs text-zinc-400">Owed to Gyms</p>
                       <p className="text-lg font-bold text-indigo-300">${payoutData.totals.totalOwedUsd.toFixed(2)}</p>
+                      {(payoutData.totals.totalOwedThb ?? 0) > 0 && (
+                        <p className="text-[11px] text-amber-300/90">
+                          + ฿{(payoutData.totals.totalOwedThb ?? 0).toLocaleString()} THB
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -1114,6 +1134,8 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                             <p className="text-sm text-zinc-400">
                               {gymPayout.summary.bookingCount} bookings • $
                               {gymPayout.summary.totalCollectedUsd.toFixed(2)} collected
+                              {(gymPayout.summary.totalCollectedThb ?? 0) > 0 &&
+                                ` • ฿${(gymPayout.summary.totalCollectedThb ?? 0).toLocaleString()} THB`}
                             </p>
                           </div>
 
@@ -1122,6 +1144,11 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                               <p className="text-sm text-zinc-400">Owed</p>
                               <p className="font-bold text-indigo-300">${gymPayout.summary.amountOwedUsd.toFixed(2)}</p>
                               <p className="text-xs text-zinc-500">฿{thbAmount.toLocaleString()}</p>
+                              {(gymPayout.summary.amountOwedThb ?? 0) > 0 && (
+                                <p className="text-xs text-amber-300/90">
+                                  + ฿{(gymPayout.summary.amountOwedThb ?? 0).toLocaleString()} THB
+                                </p>
+                              )}
                             </div>
 
                             <div className="flex gap-2">
@@ -1654,6 +1681,12 @@ export default function PlatformAdminClient({ gyms, blacklist, stats, role = "fu
                   <p className="text-lg font-bold text-indigo-300">
                     Amount Owed: ${selectedGymPayout.summary.amountOwedUsd.toFixed(2)}
                   </p>
+                  {(selectedGymPayout.summary.amountOwedThb ?? 0) > 0 && (
+                    <p className="text-xs text-amber-300/90">
+                      Plus ฿{(selectedGymPayout.summary.amountOwedThb ?? 0).toLocaleString()} THB card revenue
+                      (certs &amp; courses) — settle separately, less Stripe&apos;s card fee.
+                    </p>
+                  )}
                 </div>
               </div>
 
