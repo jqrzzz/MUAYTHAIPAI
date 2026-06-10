@@ -14,7 +14,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Plus,
   Pencil,
   Trash2,
@@ -107,6 +109,7 @@ export default function CourseModulesView({
   const [moduleForm, setModuleForm] = useState({ title: "", description: "" })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [reordering, setReordering] = useState(false)
 
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false)
   const [lessonModuleId, setLessonModuleId] = useState<string | null>(null)
@@ -316,6 +319,69 @@ export default function CourseModulesView({
     fetchModules()
   }
 
+  // Reordering renormalizes to sequential indices and PATCHes only the rows
+  // whose order changed — 2 in the common case, n once when healing legacy
+  // gaps/duplicate order values (a plain two-row swap is a no-op when both
+  // rows carry the same stored order). Both apiBases already allow
+  // module_order / lesson_order in PATCH.
+  const moveModule = async (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (reordering || target < 0 || target >= modules.length) return
+    const ordered = [...modules]
+    ;[ordered[idx], ordered[target]] = [ordered[target], ordered[idx]]
+    const changed = ordered
+      .map((m, i) => ({ id: m.id, from: m.module_order, to: i }))
+      .filter((m) => m.from !== m.to)
+    setModules(ordered.map((m, i) => ({ ...m, module_order: i })))
+    setReordering(true)
+    try {
+      await Promise.all(
+        changed.map((m) =>
+          fetch(`${apiBase}/modules`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: m.id, module_order: m.to }),
+          }),
+        ),
+      )
+    } finally {
+      setReordering(false)
+      fetchModules()
+    }
+  }
+
+  const moveLesson = async (mod: Module, idx: number, dir: -1 | 1) => {
+    const sorted = [...mod.lessons].sort((a, b) => a.lesson_order - b.lesson_order)
+    const target = idx + dir
+    if (reordering || target < 0 || target >= sorted.length) return
+    ;[sorted[idx], sorted[target]] = [sorted[target], sorted[idx]]
+    const changed = sorted
+      .map((l, i) => ({ id: l.id, from: l.lesson_order, to: i }))
+      .filter((l) => l.from !== l.to)
+    setModules((prev) =>
+      prev.map((m) =>
+        m.id === mod.id
+          ? { ...m, lessons: sorted.map((l, i) => ({ ...l, lesson_order: i })) }
+          : m,
+      ),
+    )
+    setReordering(true)
+    try {
+      await Promise.all(
+        changed.map((l) =>
+          fetch(`${apiBase}/lessons`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: l.id, lesson_order: l.to }),
+          }),
+        ),
+      )
+    } finally {
+      setReordering(false)
+      fetchModules()
+    }
+  }
+
   if (editingLesson) {
     return (
       <CourseLessonEditor
@@ -385,6 +451,26 @@ export default function CourseModulesView({
                     )}
                   </div>
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveModule(idx, -1)}
+                      disabled={reordering || idx === 0}
+                      className="text-neutral-500 hover:text-white h-8 w-8 p-0 disabled:opacity-30"
+                      title="Move module up"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveModule(idx, 1)}
+                      disabled={reordering || idx === modules.length - 1}
+                      className="text-neutral-500 hover:text-white h-8 w-8 p-0 disabled:opacity-30"
+                      title="Move module down"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => openSuggest(mod)} className="text-indigo-300 hover:text-indigo-200 h-8 w-8 p-0" title="OckOck suggests lessons">
                       <Sparkles className="h-3.5 w-3.5" />
                     </Button>
@@ -442,6 +528,27 @@ export default function CourseModulesView({
                                   </Badge>
                                 )}
                                 <span className="text-xs text-neutral-500">{lesson.estimated_minutes}m</span>
+                                <span
+                                  className="flex items-center opacity-0 group-hover:opacity-100"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    onClick={() => moveLesson(mod, li, -1)}
+                                    disabled={reordering || li === 0}
+                                    className="inline-flex items-center justify-center h-7 w-7 rounded-md text-neutral-500 hover:text-white hover:bg-neutral-800 disabled:opacity-30"
+                                    title="Move lesson up"
+                                  >
+                                    <ArrowUp className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => moveLesson(mod, li, 1)}
+                                    disabled={reordering || li === mod.lessons.length - 1}
+                                    className="inline-flex items-center justify-center h-7 w-7 rounded-md text-neutral-500 hover:text-white hover:bg-neutral-800 disabled:opacity-30"
+                                    title="Move lesson down"
+                                  >
+                                    <ArrowDown className="h-3 w-3" />
+                                  </button>
+                                </span>
                                 <InlineConfirm
                                   onConfirm={() => handleDeleteLesson(lesson.id)}
                                   title="Delete lesson"
