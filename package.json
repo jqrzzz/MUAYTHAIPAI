@@ -6,7 +6,12 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "db:status": "npx --yes supabase migration list",
+    "db:new": "npx --yes supabase migration new",
+    "db:pull": "npx --yes supabase db pull",
+    "db:push": "npx --yes supabase db push",
+    "db:diff": "npx --yes supabase db diff"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
