@@ -34,7 +34,7 @@ const sb = createClient(
 
 type Route = {
   path: string
-  changeFrequency: "weekly" | "monthly" | "yearly"
+  changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never"
   priority: number
 }
 

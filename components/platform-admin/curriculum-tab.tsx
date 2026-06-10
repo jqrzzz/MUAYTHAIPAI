@@ -38,6 +38,7 @@ import CertSkillsEditor from "@/components/platform-admin/cert-skills-editor"
 
 interface PlatformCourse {
   id: string
+  org_id: string | null
   title: string
   slug: string
   description: string | null

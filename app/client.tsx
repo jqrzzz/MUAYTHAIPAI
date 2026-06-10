@@ -39,7 +39,7 @@ const GymLocation = dynamic(() => import("@/components/gym-location").then((mod)
   loading: () => null,
 })
 
-export function ClientPage(): ReactElement {
+export function ClientPage(): ReactElement | null {
   const [selectedMember, setSelectedMember] = useState<number | null>(null)
   const [muted, setMuted] = useState(true)
   const { theme, setTheme } = useTheme()

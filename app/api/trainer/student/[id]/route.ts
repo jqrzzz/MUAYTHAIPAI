@@ -69,7 +69,7 @@ export async function GET(
     note_type: note.note_type,
     created_at: note.created_at,
     trainer_id: note.trainer_id,
-    trainer_name: (note.users as { full_name: string | null } | null)?.full_name || "Unknown Trainer"
+    trainer_name: (note.users as unknown as { full_name: string | null } | null)?.full_name || "Unknown Trainer"
   }))
 
   return NextResponse.json({

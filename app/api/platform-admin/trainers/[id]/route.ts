@@ -29,8 +29,7 @@ export async function GET(
     supabase
       .from("skill_signoffs")
       .select(
-        "id, student_id, org_id, level, skill_index, notes, signed_off_at, " +
-          "organizations:org_id(name, slug, city), users:student_id(email, full_name, display_name)"
+        "id, student_id, org_id, level, skill_index, notes, signed_off_at, organizations:org_id(name, slug, city), users:student_id(email, full_name, display_name)"
       )
       .eq("signed_off_by", id)
       .order("signed_off_at", { ascending: false })
@@ -63,8 +62,7 @@ export async function GET(
     const { data: certRows } = await supabase
       .from("certificates")
       .select(
-        "id, org_id, user_id, level, level_number, certificate_number, issued_at, status, " +
-          "organizations:org_id(name), users:user_id(full_name, email)"
+        "id, org_id, user_id, level, level_number, certificate_number, issued_at, status, organizations:org_id(name), users:user_id(full_name, email)"
       )
       .eq("issued_by", trainerProfileId)
       .order("issued_at", { ascending: false })

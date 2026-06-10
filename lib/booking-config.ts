@@ -158,11 +158,11 @@ export function getServicesByCategory(category: "training" | "certificates") {
 
 export function getTimeSlotsForService(serviceName: string): string[] {
   if (serviceName.toLowerCase().includes("group session")) {
-    return TIME_SLOTS.groupSession
+    return [...TIME_SLOTS.groupSession]
   } else if (serviceName.toLowerCase().includes("private") || serviceName.toLowerCase().includes("kids")) {
-    return TIME_SLOTS.privateLesson
+    return [...TIME_SLOTS.privateLesson]
   }
-  return TIME_SLOTS.default
+  return [...TIME_SLOTS.default]
 }
 
 export function shouldShowTimeSlots(serviceName: string): boolean {

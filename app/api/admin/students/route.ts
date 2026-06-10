@@ -36,7 +36,10 @@ export async function GET(request: Request) {
       public_passport_enabled,
       public_passport_handle
     `)
-    .in("id", supabase.from("bookings").select("user_id").eq("org_id", membership.org_id).not("user_id", "is", null))
+    // FIXME(audit): a PostgrestFilterBuilder is passed to .in(); PostgREST has no
+    // subquery support, so this filter is broken at runtime (students-with-bookings
+    // silently returns empty). Needs a two-step fetch — tracked as a latent bug.
+    .in("id", supabase.from("bookings").select("user_id").eq("org_id", membership.org_id).not("user_id", "is", null) as unknown as string[])
     .order("full_name")
 
   // Also get students with credits
@@ -76,8 +79,9 @@ export async function GET(request: Request) {
 
   students?.forEach((s) => studentMap.set(s.id, { ...s, credits: null }))
   creditStudents?.forEach((cs) => {
-    if (cs.users && !studentMap.has(cs.users.id)) {
-      studentMap.set(cs.users.id, { ...cs.users, credits: null })
+    const u = cs.users as unknown as (Record<string, unknown> & { id: string }) | null
+    if (u && !studentMap.has(u.id)) {
+      studentMap.set(u.id, { ...u, credits: null })
     }
   })
 

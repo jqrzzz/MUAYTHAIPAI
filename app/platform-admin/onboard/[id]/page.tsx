@@ -26,9 +26,7 @@ export default async function OnboardPage({ params }: PageProps) {
   const { data: gym, error } = await supabase
     .from("discovered_gyms")
     .select(
-      "id, name, name_th, city, province, country, website, email, phone, " +
-        "google_rating, google_review_count, ai_summary, ai_tags, " +
-        "status, invite_token, invited_at, invite_email, claimed_at, linked_org_id"
+      "id, name, name_th, city, province, country, website, email, phone, google_rating, google_review_count, ai_summary, ai_tags, status, invite_token, invited_at, invite_email, claimed_at, linked_org_id"
     )
     .eq("id", id)
     .single()

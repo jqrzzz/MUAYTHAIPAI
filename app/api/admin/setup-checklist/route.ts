@@ -71,7 +71,7 @@ export async function GET() {
       .eq("status", "active"),
   ])
 
-  const org = orgRes.data || {}
+  const org = (orgRes.data ?? {}) as Record<string, unknown>
   const items = [
     {
       id: "profile",

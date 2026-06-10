@@ -107,7 +107,7 @@ export async function GET(request: Request) {
           .from("gym_subscriptions")
           .update({
             status: newStatus,
-            current_period_end: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+            current_period_end: new Date((stripeSubscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString(),
           })
           .eq("org_id", orgId)
       }

@@ -29,24 +29,21 @@ export async function GET(
     supabase
       .from("skill_signoffs")
       .select(
-        "id, org_id, level, skill_index, notes, signed_off_at, " +
-          "signed_off_by, organizations:org_id(name, slug, city)"
+        "id, org_id, level, skill_index, notes, signed_off_at, signed_off_by, organizations:org_id(name, slug, city)"
       )
       .eq("student_id", id)
       .order("signed_off_at", { ascending: false }),
     supabase
       .from("certificates")
       .select(
-        "id, org_id, level, level_number, certificate_number, issued_at, status, " +
-          "organizations:org_id(name, slug, city)"
+        "id, org_id, level, level_number, certificate_number, issued_at, status, organizations:org_id(name, slug, city)"
       )
       .eq("user_id", id)
       .order("issued_at", { ascending: false }),
     supabase
       .from("certification_enrollments")
       .select(
-        "id, org_id, level, status, enrolled_at, completed_at, " +
-          "organizations:org_id(name, slug, city)"
+        "id, org_id, level, status, enrolled_at, completed_at, organizations:org_id(name, slug, city)"
       )
       .eq("user_id", id)
       .order("enrolled_at", { ascending: false }),

@@ -207,8 +207,7 @@ export function buildPlatformTools(supabase: SupabaseClient) {
         let query = supabase
           .from("discovered_gyms")
           .select(
-            "id, name, name_th, city, province, source, status, google_rating, " +
-              "google_review_count, website, ai_summary, invited_at, claimed_at"
+            "id, name, name_th, city, province, source, status, google_rating, google_review_count, website, ai_summary, invited_at, claimed_at"
           )
           .order("created_at", { ascending: false })
           .limit(50)

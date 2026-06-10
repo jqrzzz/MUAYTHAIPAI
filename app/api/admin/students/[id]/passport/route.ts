@@ -54,8 +54,7 @@ export async function GET(
       supabase
         .from("skill_signoffs")
         .select(
-          "id, level, skill_index, notes, signed_off_at, signed_off_by, " +
-            "users:signed_off_by(full_name, email)"
+          "id, level, skill_index, notes, signed_off_at, signed_off_by, users:signed_off_by(full_name, email)"
         )
         .eq("org_id", orgId)
         .eq("student_id", id)

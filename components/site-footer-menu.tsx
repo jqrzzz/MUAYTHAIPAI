@@ -56,7 +56,7 @@ export function SiteFooterMenu() {
             ) : (
               <Link
                 key={item.label}
-                href={item.href}
+                href={item.href || "/"}
                 className={`flex flex-col items-center gap-1 ${
                   resolvedTheme === "dark" ? "text-gray-400" : "text-gray-500"
                 }`}
