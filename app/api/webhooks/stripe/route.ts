@@ -480,12 +480,27 @@ async function handleCertEnrollmentCompleted(
 
   const bookingId = existing.booking_id || metadata.booking_id
   if (bookingId) {
+    // Capture Stripe's actual fee + net like the classic booking path does —
+    // for THB charges these land in the balance-transaction currency, and the
+    // finance views need them to refine gross-THB owed into net.
+    const feeSnapshot = stripePiId
+      ? await fetchStripeFeeSnapshot(stripePiId)
+      : {
+          stripe_charge_id: null,
+          stripe_balance_transaction_id: null,
+          stripe_fee_cents: null,
+          stripe_net_cents: null,
+        }
     await supabase
       .from("bookings")
       .update({
         payment_status: "paid",
         payment_method: "stripe",
         stripe_payment_intent_id: stripePiId,
+        stripe_charge_id: feeSnapshot.stripe_charge_id,
+        stripe_balance_transaction_id: feeSnapshot.stripe_balance_transaction_id,
+        stripe_fee_cents: feeSnapshot.stripe_fee_cents,
+        stripe_net_cents: feeSnapshot.stripe_net_cents,
       })
       .eq("id", bookingId)
   }
