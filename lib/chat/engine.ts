@@ -18,6 +18,7 @@
  */
 
 import { createServiceClient } from "@/lib/supabase/service"
+import type { Json } from "@/lib/supabase/database.types"
 import { runConciergeAI, type ConciergeHistoryEntry } from "./ai/concierge"
 import { runOwnerAI, type OwnerAIHistoryEntry } from "./ai/owner"
 import { loadGymKnowledge } from "./knowledge"
@@ -157,12 +158,12 @@ export async function handleMessage(
         direction: "inbound",
         sender: msg.externalSenderId,
         body: msg.text,
-        metadata: {
+        metadata: ({
           raw: msg.rawUpdate,
           attachments: msg.attachments ?? [],
           sender_display_name: msg.senderDisplayName,
           is_direct_message: msg.isDirectMessage,
-        },
+        }) as unknown as Json,
         external_message_id: msg.externalMessageId,
       })
       .select("id")
@@ -257,10 +258,10 @@ export async function handleMessage(
           direction: "outbound",
           recipient: msg.externalSenderId,
           body: aiResult.replyText,
-          metadata: {
+          metadata: ({
             ai_meta: aiResult.meta ?? {},
             auto_send_enabled: autoSendEnabled,
-          },
+          }) as unknown as Json,
           handled_by: "ai",
           draft_status: draftStatus,
           needs_review: needsReview,

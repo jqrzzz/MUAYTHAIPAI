@@ -31,14 +31,14 @@ interface Course {
   description: string | null
   short_description: string | null
   cover_image_url: string | null
-  difficulty: string
-  category: string
+  difficulty: string | null
+  category: string | null
   certificate_level: string | null
-  is_free: boolean
-  price_thb: number
-  total_modules: number
-  total_lessons: number
-  estimated_hours: number
+  is_free: boolean | null
+  price_thb: number | null
+  total_modules: number | null
+  total_lessons: number | null
+  estimated_hours: number | null
   organizations: { name: string; slug: string; logo_url: string | null } | null
 }
 
@@ -46,11 +46,11 @@ interface Lesson {
   id: string
   title: string
   description: string | null
-  content_type: string
+  content_type: string | null
   video_duration_seconds: number | null
   estimated_minutes: number | null
-  lesson_order: number
-  is_preview: boolean
+  lesson_order: number | null
+  is_preview: boolean | null
 }
 
 interface Module {
@@ -426,7 +426,7 @@ export default function CourseDetailClient({
                                   href={`/courses/${course.slug}/${lesson.id}`}
                                   className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors"
                                 >
-                                  <LessonIcon status={status} contentType={lesson.content_type} />
+                                  <LessonIcon status={status} contentType={lesson.content_type ?? ""} />
                                   <div className="flex-1 min-w-0">
                                     <p className={`text-sm ${status === "completed" ? "text-neutral-500" : "text-white"}`}>
                                       {lesson.title}
@@ -541,7 +541,7 @@ export default function CourseDetailClient({
                       <p className="text-lg font-bold text-emerald-400">Free</p>
                     ) : (
                       <p className="text-2xl font-bold text-white">
-                        ฿{course.price_thb.toLocaleString()}
+                        ฿{(course.price_thb ?? 0).toLocaleString()}
                       </p>
                     )}
                   </div>

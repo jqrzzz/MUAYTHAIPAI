@@ -15,6 +15,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server"
 import { createServiceClient } from "@/lib/supabase/service"
+import type { Json } from "@/lib/supabase/database.types"
 import { generateText } from "ai"
 import { EmailService } from "@/lib/email-service"
 import { allCandidates, type Candidate } from "@/lib/email-sequences"
@@ -115,13 +116,15 @@ export async function GET(request: NextRequest) {
 
   for (const c of candidates) {
     // Pre-check the unique key so we don't burn AI tokens on a duplicate
-    const { data: existing } = await supabase
+    const preCheck = supabase
       .from("email_send_log")
       .select("id")
-      .eq("recipient_user_id", c.recipient_user_id)
       .eq("sequence", c.sequence)
       .eq("trigger_ref", c.trigger_ref)
-      .maybeSingle()
+    const { data: existing } = await (c.recipient_user_id
+      ? preCheck.eq("recipient_user_id", c.recipient_user_id)
+      : preCheck.is("recipient_user_id", null)
+    ).maybeSingle()
     if (existing) {
       skipped++
       continue
@@ -163,7 +166,7 @@ export async function GET(request: NextRequest) {
         subject,
         accent: meta?.accent,
         payload: c.payload,
-      },
+      } as unknown as Json,
     })
 
     if (result.ok) sent++

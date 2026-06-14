@@ -7,6 +7,7 @@
  * the UI. Reuses the cron handler by setting the bearer auth.
  */
 import { NextResponse } from "next/server"
+import type { Json, TablesInsert } from "@/lib/supabase/database.types"
 import { createServiceClient } from "@/lib/supabase/service"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import {
@@ -36,14 +37,14 @@ export async function POST() {
   const now = new Date().toISOString()
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
 
-  const upserts = drafts.map((d) => ({
+  const upserts = drafts.map((d): TablesInsert<"platform_signals"> => ({
     kind: d.kind,
     severity: d.severity,
     target_org_id: d.target_org_id,
     title: d.title,
     summary: d.summary,
     detail: d.detail ?? null,
-    evidence: d.evidence ?? {},
+    evidence: (d.evidence ?? {}) as unknown as Json,
     suggested_action: d.suggested_action ?? null,
     dedup_key: d.dedup_key,
     status: "open",

@@ -407,8 +407,8 @@ ${fighterLines}`
   }
 
   const suggestions = (inserted ?? []).map((row) => {
-    const red = fighterById.get(row.fighter_red_id)!
-    const blue = fighterById.get(row.fighter_blue_id)!
+    const red = fighterById.get(row.fighter_red_id!)!
+    const blue = fighterById.get(row.fighter_blue_id!)!
     return {
       id: row.id,
       transient: false,

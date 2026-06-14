@@ -312,7 +312,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
             />
             <Detail
               label="Issued"
-              value={new Date(cert.issued_at).toLocaleDateString("en-US", {
+              value={new Date(cert.issued_at ?? Date.now()).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
@@ -326,7 +326,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
                 icon={<MapPin className="h-3 w-3 text-zinc-500" />}
               />
             )}
-            <Detail label="Certificate №" value={cert.certificate_number} mono />
+            <Detail label="Certificate №" value={cert.certificate_number ?? certNumber} mono />
             {examiners.length > 0 && (
               <div>
                 <p className="font-display text-[9px] uppercase tracking-[0.16em] text-neutral-500 mb-0.5">

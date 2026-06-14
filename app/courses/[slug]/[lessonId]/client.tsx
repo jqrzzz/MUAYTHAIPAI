@@ -38,14 +38,14 @@ interface Lesson {
   id: string
   title: string
   description: string | null
-  content_type: string
+  content_type: string | null
   video_url: string | null
   video_duration_seconds: number | null
   text_content: string | null
   drill_instructions: string | null
   drill_duration_minutes: number | null
   estimated_minutes: number | null
-  is_preview: boolean
+  is_preview: boolean | null
   hero_image_url: string | null
   gallery: GalleryItem[] | null
 }
@@ -69,10 +69,10 @@ interface NavModule {
 interface QuizQuestion {
   id: string
   question_text: string
-  question_type: string
+  question_type: string | null
   options: { id: string; text: string }[] | null
   explanation: string | null
-  question_order: number
+  question_order: number | null
 }
 
 // ============================================
