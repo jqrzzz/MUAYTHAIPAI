@@ -41,36 +41,28 @@ or **Project Settings → General → Reference ID**.
 
 ## One-time **baseline** (do this ONCE, by someone with prod access)
 
-The live database already has ~78 migrations' worth of schema in it. If you just
-start running `supabase db push`, the CLI doesn't know that and will try to
-re-apply everything. So we **baseline**: capture the current live schema as the
-first committed migration, after which the CLI's tracking table and the repo
-agree.
+**Status (verified live, 2026-06-10):** the remote's migration history
+(`supabase_migrations.schema_migrations`) is **empty** — the CLI has never
+tracked this database. That makes the baseline simple: the repo carries an
+explicit **no-op baseline marker**
+(`supabase/migrations/20260610000000_baseline_existing_schema.sql`) that
+declares "everything before this came from `scripts/`". Because the remote
+history is empty, there is no `migration repair` dance — a plain push applies
+the marker (a `select 1`) plus everything after it, in order:
 
 ```bash
-# 0. SAFETY: make sure the live DB is actually current first. If you've never
-#    reconciled it, run scripts/RUN-MISSING-MIGRATIONS.sql in the SQL editor.
-#    Then confirm nothing is outstanding:
-#       (every feature tab in the admin console should load without a
-#        "run scripts/NNN.sql" empty-state)
-
-# 1. Pull the live schema into a single baseline migration.
-npm run db:pull
-#    → writes supabase/migrations/<timestamp>_remote_schema.sql
-
-# 2. Tell the CLI that baseline is already applied on the remote, so it never
-#    tries to run it against prod:
-npx supabase migration repair --status applied <timestamp>
-
-# 3. Sanity check — should report no pending migrations:
-npm run db:status
-
-# 4. Commit the baseline.
-git add supabase/migrations && git commit -m "Baseline live schema"
+npm run db:push        # applies the baseline marker + all later migrations
+npm run db:status      # sanity check — should show local and remote in sync
 ```
 
-After this, `supabase/migrations/` is the source of truth and the remote is in
-sync. You never edit the baseline file.
+Alternatively, with a **write-enabled Supabase MCP connection** an agent can
+apply each pending file via `apply_migration` (same name + content) — identical
+result, no CLI needed.
+
+> Note: this marker approach deliberately does **not** snapshot the current
+> schema into the repo. If you ever want that (it helps spinning up local dev
+> DBs), run `npm run db:pull` any time after baselining — it's an optional
+> extra, not a prerequisite for anything above.
 
 ---
 

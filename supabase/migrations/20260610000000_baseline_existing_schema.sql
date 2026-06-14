@@ -1,0 +1,11 @@
+-- Baseline marker for the MUAYTHAIPAI/OckOck schema.
+--
+-- Everything that exists in the database as of 2026-06-10 was built from the
+-- frozen SQL history in scripts/ (000..070), applied by hand via the dashboard
+-- SQL editor. Verified live on 2026-06-10: supabase_migrations history is
+-- EMPTY, so this no-op migration marks the start of tracked history. Every
+-- schema change after this version must ship as a migration in this directory
+-- (see docs/MIGRATIONS.md).
+--
+-- Intentionally contains no DDL.
+select 1;
