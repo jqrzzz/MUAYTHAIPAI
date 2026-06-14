@@ -7,6 +7,8 @@
  * link to /i/[handle]. Verified badges visible at a glance.
  */
 import { createServiceClient } from "@/lib/supabase/service"
+import { redirect } from "next/navigation"
+import { NETWORK_FEATURES_ENABLED } from "@/lib/features"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowUpRight, UserCheck, BadgeCheck, Search } from "lucide-react"
@@ -24,6 +26,11 @@ interface Props {
 }
 
 export default async function InstructorsPage({ searchParams }: Props) {
+  // Cross-gym network registry — hidden in single-gym mode. Reversible via
+  // NEXT_PUBLIC_ENABLE_NETWORK_FEATURES (see lib/features.ts).
+  if (!NETWORK_FEATURES_ENABLED) {
+    redirect("/")
+  }
   const { q, verified } = await searchParams
   const search = (q ?? "").trim().toLowerCase()
   const verifiedOnly = verified === "1"
