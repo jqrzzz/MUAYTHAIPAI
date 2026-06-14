@@ -22,7 +22,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { Resend } from "resend"
 
 export const runtime = "nodejs"
@@ -32,12 +32,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://muaythaipai.com"
 const DAY = 86400_000
 
 function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error("Missing Supabase credentials")
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  return createServiceClient()
 }
 
 type DiscoveredRow = {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 
 /**
  * Public preview of a discovery invite. Returns only the gym's basic
@@ -7,10 +7,7 @@ import { createClient } from "@supabase/supabase-js"
  * shares an invite link. Uses the service role key to read past RLS,
  * since the signup flow is unauthenticated.
  */
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-)
+const supabase = createServiceClient()
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

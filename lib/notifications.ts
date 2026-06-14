@@ -2,13 +2,10 @@
  * Gym notification system - sends in-app alerts and optional email notifications
  * based on each gym's notification preferences in org_settings.
  */
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { EmailService, NETWORK_FALLBACK, type OrgEmailContext } from "@/lib/email-service"
 
-const serviceClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const serviceClient = createServiceClient()
 
 export type NotificationType = "new_booking" | "cancellation" | "payment_received" | "contact_form" | "course_completed" | "cert_eligible" | "ticket_sold" | "invitation_accepted" | "invitation_declined"
 

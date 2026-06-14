@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, ArrowUpRight } from "lucide-react"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { SaasShell, SaasHeader, StatusDot } from "@/components/saas"
 import BoardroomClient, { type BFile, type BNotes, type BComment, type BUser } from "./client"
@@ -71,11 +71,12 @@ export default async function BoardroomPage() {
 
   // Sign download URLs server-side (the bucket is private). Service role
   // so we don't need a separate storage.objects RLS policy.
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const service = url && key
-    ? createServiceClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-    : null
+  let service: ReturnType<typeof createServiceClient> | null
+  try {
+    service = createServiceClient()
+  } catch {
+    service = null
+  }
 
   const signedFiles: BFile[] = await Promise.all(
     files.map(async (f) => {

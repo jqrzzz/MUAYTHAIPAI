@@ -13,7 +13,7 @@
 
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { getOrgMember } from "@/lib/auth-helpers"
 import {
   CHANNEL_FIELDS,
@@ -36,12 +36,7 @@ const CHANNELS: ReadonlyArray<ChannelName> = [
 ]
 
 function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error("Missing Supabase credentials")
-  return createServiceClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  return createServiceClient()
 }
 
 const PostSchema = z.object({

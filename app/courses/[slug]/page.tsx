@@ -1,12 +1,9 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import CourseDetailClient from "./client"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = createServiceClient()
 
 interface Props {
   params: Promise<{ slug: string }>

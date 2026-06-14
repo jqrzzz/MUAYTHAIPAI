@@ -23,24 +23,40 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No organization found" }, { status: 404 })
   }
 
-  // Get all students who have bookings or credits at this gym
-  const { data: students, error } = await supabase
-    .from("users")
-    .select(`
-      id,
-      email,
-      full_name,
-      display_name,
-      phone,
-      created_at,
-      public_passport_enabled,
-      public_passport_handle
-    `)
-    // FIXME(audit): a PostgrestFilterBuilder is passed to .in(); PostgREST has no
-    // subquery support, so this filter is broken at runtime (students-with-bookings
-    // silently returns empty). Needs a two-step fetch — tracked as a latent bug.
-    .in("id", supabase.from("bookings").select("user_id").eq("org_id", membership.org_id).not("user_id", "is", null) as unknown as string[])
-    .order("full_name")
+  // Get all students who have bookings at this gym. PostgREST has no
+  // subqueries, so resolve the booking user-ids first, then filter users by
+  // them. (This used to pass a query *builder* into .in(), which serialized
+  // to garbage and silently matched nothing — students with bookings never
+  // appeared unless they also held credits.)
+  const { data: bookingUserRows } = await supabase
+    .from("bookings")
+    .select("user_id")
+    .eq("org_id", membership.org_id)
+    .not("user_id", "is", null)
+  const bookingUserIds = [
+    ...new Set((bookingUserRows ?? []).map((r) => r.user_id as string)),
+  ]
+
+  let students:
+    | Array<Record<string, unknown> & { id: string }>
+    | null = null
+  if (bookingUserIds.length > 0) {
+    const { data } = await supabase
+      .from("users")
+      .select(`
+        id,
+        email,
+        full_name,
+        display_name,
+        phone,
+        created_at,
+        public_passport_enabled,
+        public_passport_handle
+      `)
+      .in("id", bookingUserIds)
+      .order("full_name")
+    students = data
+  }
 
   // Also get students with credits
   const { data: creditStudents } = await supabase

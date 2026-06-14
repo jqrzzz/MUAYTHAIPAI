@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -8,10 +8,7 @@ export async function GET(request: Request) {
   const openToFights = searchParams.get("open_to_fights")
   const limit = Math.min(parseInt(searchParams.get("limit") || "30"), 50)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = createServiceClient()
 
   let query = supabase
     .from("trainer_profiles")

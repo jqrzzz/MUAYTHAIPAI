@@ -17,7 +17,7 @@
  */
 import { NextResponse } from "next/server"
 import { randomBytes } from "crypto"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { stripe } from "@/lib/stripe"
 import { hasEnv } from "@/lib/env"
 import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
@@ -25,10 +25,7 @@ import { checkLimit, ipFromRequest } from "@/lib/rate-limit"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const sb = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const sb = createServiceClient()
 
 const MAX_QTY = 10
 

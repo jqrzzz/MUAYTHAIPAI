@@ -17,7 +17,7 @@
  * silently drop exceptions.
  */
 
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { runConciergeAI, type ConciergeHistoryEntry } from "./ai/concierge"
 import { runOwnerAI, type OwnerAIHistoryEntry } from "./ai/owner"
 import { loadGymKnowledge } from "./knowledge"
@@ -46,16 +46,7 @@ function isCredentialedChannel(c: Channel): c is ChannelName {
 }
 
 function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceKey) {
-    throw new Error(
-      "[chat/engine] Missing Supabase credentials (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)",
-    )
-  }
-  return createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  return createServiceClient()
 }
 
 export async function handleMessage(

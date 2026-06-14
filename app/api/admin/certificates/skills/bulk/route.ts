@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { getLevelById } from "@/lib/certification-levels"
 import { notifyCourseCompleted } from "@/lib/notifications"
 import { getOrgMember } from "@/lib/auth-helpers"
 import { logAudit } from "@/lib/audit-log"
 
-const serviceClient = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const serviceClient = createServiceClient()
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"

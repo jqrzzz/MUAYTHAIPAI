@@ -13,7 +13,7 @@
 
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient as createServerClient } from "@/lib/supabase/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { getActionHandler } from "@/lib/chat/actions/registry"
 import {
   claimActionToken,
@@ -26,14 +26,7 @@ export const dynamic = "force-dynamic"
 type RouteParams = { params: { token: string } }
 
 function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) {
-    throw new Error("Missing Supabase service credentials")
-  }
-  return createServiceClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  return createServiceClient()
 }
 
 export async function POST(_req: NextRequest, { params }: RouteParams) {

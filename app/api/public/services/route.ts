@@ -1,11 +1,11 @@
 // Public API to fetch services from database
 // Used by the public booking flow instead of hard-coded data
 
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 // Create a service role client for public access (no auth required)
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+const supabase = createServiceClient()
 
 export async function GET(request: Request) {
   try {
