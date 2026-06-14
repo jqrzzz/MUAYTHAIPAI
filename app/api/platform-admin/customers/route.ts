@@ -12,7 +12,7 @@
  */
 import { NextResponse } from "next/server"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { bookingAmountThb } from "@/lib/payment-config"
 
 export const runtime = "nodejs"
@@ -34,10 +34,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const db = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const db = createServiceClient()
 
   const [{ data: bookings }, { data: orgs }] = await Promise.all([
     db

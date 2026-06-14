@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import PlatformAdminClient from "./client"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 
 export default async function PlatformAdminPage({
   searchParams,
@@ -62,10 +62,7 @@ export default async function PlatformAdminPage({
   // counts — counting the users table under the logged-in client returned 0
   // (the "Total users: 0" bug). Safe: this page is already gated to platform
   // admins above.
-  const svc = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const svc = createServiceClient()
 
   const [
     { count: totalGyms },

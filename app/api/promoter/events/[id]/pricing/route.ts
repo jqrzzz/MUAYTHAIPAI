@@ -44,7 +44,7 @@
  */
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { generateObject } from "ai"
 import { z } from "zod"
 import { getPromoterAuth, verifyEventOwnership } from "@/lib/auth-helpers"
@@ -63,11 +63,7 @@ const MAX_TIER_NAME_LENGTH = 80
 const MIN_PRICE = 50
 const MAX_PRICE = 100_000
 
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } },
-)
+const serviceSupabase = createServiceClient()
 
 const RecommendationSchema = z.object({
   recommended_price_thb: z

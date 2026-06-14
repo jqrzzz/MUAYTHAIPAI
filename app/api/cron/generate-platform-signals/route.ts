@@ -11,7 +11,7 @@
  * Auth: Bearer CRON_SECRET (Vercel cron + manual ops invocation).
  */
 import { NextResponse, type NextRequest } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import {
   aiReframeSignals,
   buildSnapshot,
@@ -34,10 +34,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const supabase = createServiceClient()
 
   // 1. Snapshot
   const snap = await buildSnapshot(supabase)

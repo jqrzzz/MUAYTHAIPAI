@@ -6,15 +6,12 @@
  * Sorted by verified status first, then by signoff count desc. Cards
  * link to /i/[handle]. Verified badges visible at a glance.
  */
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowUpRight, UserCheck, BadgeCheck, Search } from "lucide-react"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const supabase = createServiceClient()
 
 export const metadata: Metadata = {
   title: "Instructors — MUAYTHAIPAI Registry",

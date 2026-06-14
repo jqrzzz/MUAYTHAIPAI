@@ -34,7 +34,7 @@
  */
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { generateObject } from "ai"
 import { z } from "zod"
 import { getPromoterAuth, verifyEventOwnership } from "@/lib/auth-helpers"
@@ -63,11 +63,7 @@ const MAX_NOTES_LENGTH = 500
 // user-scoped client would have to pass RLS, which it can, but the
 // service client also lets us write the `generated_by` field
 // reliably without a separate auth check.
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } },
-)
+const serviceSupabase = createServiceClient()
 
 // Zod schema is what generateObject enforces on the LLM output.
 // Field-level .describe() bleeds into the system prompt — keep

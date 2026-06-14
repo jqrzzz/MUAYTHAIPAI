@@ -25,7 +25,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { searchText, GooglePlacesNotConfiguredError } from "@/lib/discovery/google-places"
 import { upsertGooglePlace } from "@/lib/discovery/upsert"
 
@@ -71,12 +71,7 @@ function pickTodaysCities(date: Date): Array<{ name: string; query: string }> {
 }
 
 function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error("Missing Supabase credentials")
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  return createServiceClient()
 }
 
 export async function GET(request: NextRequest) {

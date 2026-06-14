@@ -5,17 +5,14 @@
  * signoffs they've issued (the credentialing-lineage proof point).
  */
 import { ImageResponse } from "next/og"
-import { createClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
 export const alt = "MUAYTHAIPAI instructor profile"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const supabase = createServiceClient()
 
 interface Props {
   params: Promise<{ handle: string }>

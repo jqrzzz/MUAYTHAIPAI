@@ -14,7 +14,7 @@
 import { NextResponse } from "next/server"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 import { logAudit } from "@/lib/audit-log"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { CERTIFICATION_LEVELS, getLevelById } from "@/lib/certification-levels"
 import { getCertSkillsMap } from "@/lib/cert-skills"
 
@@ -22,10 +22,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 function svc() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  return createServiceClient()
 }
 
 const MAX_SKILL_LEN = 300

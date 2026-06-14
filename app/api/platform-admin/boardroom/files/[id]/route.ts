@@ -3,7 +3,7 @@
  * (both the storage object and the DB row).
  */
 import { NextResponse } from "next/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createServiceClient } from "@/lib/supabase/service"
 import { requirePlatformAdmin } from "@/lib/auth-helpers"
 
 export const runtime = "nodejs"
@@ -17,12 +17,12 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   const { id } = await params
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) return NextResponse.json({ error: "Server not configured" }, { status: 500 })
-  const service = createServiceClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  let service: ReturnType<typeof createServiceClient>
+  try {
+    service = createServiceClient()
+  } catch {
+    return NextResponse.json({ error: "Server not configured" }, { status: 500 })
+  }
 
   const { data: file } = await service
     .from("boardroom_files")
