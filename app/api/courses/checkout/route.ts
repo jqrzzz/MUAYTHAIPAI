@@ -113,7 +113,7 @@ export async function POST(request: Request) {
             currency: "thb",
             product_data: { name: course.title },
             // THB has 2 decimals (satang) → smallest unit is value × 100.
-            unit_amount: course.price_thb * 100,
+            unit_amount: (course.price_thb ?? 0) * 100,
           },
           quantity: 1,
         },

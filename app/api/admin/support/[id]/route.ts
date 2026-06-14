@@ -48,7 +48,7 @@ export async function GET(
     direction: string
     body: string
     handled_by: string | null
-    created_at: string
+    created_at: string | null
   }> = []
   if (ticket.conversation_id) {
     const { data: msgs } = await supabase

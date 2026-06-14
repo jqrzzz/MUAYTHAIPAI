@@ -13,6 +13,7 @@
  * versions of the same post.
  */
 import { NextResponse } from "next/server"
+import type { Json } from "@/lib/supabase/database.types"
 import { z } from "zod"
 import { generateObject } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
@@ -167,7 +168,7 @@ Voice: warm, confident, a little gritty. Sound like a coach who's been doing thi
     return {
       org_id: orgId,
       platforms,
-      content,
+      content: content as unknown as Json,
       status: "draft" as const,
       source: "ai_batch" as const,
       source_intent: `[${p.category}] ${p.intent}`,

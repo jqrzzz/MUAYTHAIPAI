@@ -31,7 +31,8 @@ export async function GET() {
   ) => {
     try {
       const { error } = await supabase
-        .from(table)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .from(table as any)
         .select("*", { count: "exact", head: true })
         .limit(1)
       if (error) {

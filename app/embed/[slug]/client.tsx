@@ -7,7 +7,6 @@ import { ArrowRight, Clock, Calendar, Dumbbell } from "lucide-react"
 interface Gym {
   id: string
   name: string
-  name_th: string | null
   slug: string
   logo_url: string | null
 }
@@ -75,9 +74,6 @@ export default function EmbedClient({ gym, services }: EmbedClientProps) {
           )}
           <div className="flex-1 min-w-0">
             <h1 className="font-bold text-lg truncate">{gym.name}</h1>
-            {gym.name_th && (
-              <p className="text-xs text-neutral-500 truncate">{gym.name_th}</p>
-            )}
           </div>
         </header>
 

@@ -69,7 +69,7 @@ export async function POST(
     .order("bout_order", { ascending: false })
     .limit(1)
 
-  const nextOrder = existing && existing.length > 0 ? existing[0].bout_order + 1 : 1
+  const nextOrder = existing && existing.length > 0 ? (existing[0].bout_order ?? 0) + 1 : 1
 
   const { data: bout, error } = await supabase
     .from("event_bouts")

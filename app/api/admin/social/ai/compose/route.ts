@@ -10,6 +10,7 @@
  * draft social_post they can review + edit + schedule.
  */
 import { NextResponse } from "next/server"
+import type { Json } from "@/lib/supabase/database.types"
 import { z } from "zod"
 import { generateObject } from "ai"
 import { requireGymAdmin } from "@/lib/auth-helpers"
@@ -146,7 +147,7 @@ Output only the platforms requested. Don't fabricate facts (don't say "we won 5 
     .insert({
       org_id: orgId,
       platforms,
-      content: aiContent,
+      content: aiContent as unknown as Json,
       status: "draft",
       source: "ai_compose",
       source_intent: intent,

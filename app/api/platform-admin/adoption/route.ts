@@ -114,6 +114,7 @@ export async function GET() {
   const websiteByOrg = new Map(websites.map((w) => [w.org_id, w]))
   const socialByOrg = new Map<string, { total: number; ai: number }>()
   for (const p of socialPosts) {
+    if (!p.org_id) continue // legacy rows without an org never surfaced in the per-gym matrix
     const slot = socialByOrg.get(p.org_id) ?? { total: 0, ai: 0 }
     slot.total++
     if (p.source !== "manual") slot.ai++

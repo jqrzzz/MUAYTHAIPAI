@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import type { TablesInsert } from "@/lib/supabase/database.types"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 
 const EDITABLE_FIELDS = [
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("campaigns")
-    .insert(insert)
+    .insert(insert as TablesInsert<"campaigns">)
     .select()
     .single()
 

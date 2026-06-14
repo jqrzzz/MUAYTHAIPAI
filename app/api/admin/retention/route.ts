@@ -82,17 +82,21 @@ export async function GET() {
       .gte("booking_date", new Date(now.getTime() - 365 * 86400_000).toISOString().slice(0, 10))
       .not("user_id", "is", null),
     // Active student packages expiring soon (renewal opportunity)
+    // (The real model: selling a package creates a student_credits row with
+    // package_id set — see scripts/032. A separate student_packages table
+    // never existed; the previous query 400'd and this slice was empty.)
     supabase
-      .from("student_packages")
+      .from("student_credits")
       .select(`
-        user_id, end_date,
-        package:gym_package_id (name)
+        user_id, expires_at,
+        package:package_id (name)
       `)
       .eq("org_id", orgId)
-      .eq("status", "active")
-      .gte("end_date", todayStr)
-      .lte("end_date", fourteenDaysFromNow)
-      .order("end_date"),
+      .eq("is_active", true)
+      .not("package_id", "is", null)
+      .gte("expires_at", todayStr)
+      .lte("expires_at", fourteenDaysFromNow)
+      .order("expires_at"),
   ])
 
   const members = (membersRes.data ?? []) as Member[]
@@ -100,7 +104,7 @@ export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const packages = ((packagesRes.data ?? []) as any[]).map((p) => ({
     user_id: p.user_id,
-    end_date: p.end_date,
+    end_date: p.expires_at,
     package_name: Array.isArray(p.package) ? p.package[0]?.name : p.package?.name,
   })) as PackageRow[]
 

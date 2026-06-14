@@ -1,19 +1,17 @@
 /**
  * Generated Supabase types for the LIVE database (project: Nomadex MCP).
  *
- * Generated 2026-06-10 via the Supabase MCP `generate_typescript_types`.
- * Regenerate with the same tool (or `npx supabase gen types typescript
- * --linked`) after schema migrations.
+ * Generated 2026-06-14 via the Supabase MCP `generate_typescript_types`,
+ * after applying migrations 20260610000000-20260610000005. Regenerate with
+ * the same tool (or `npx supabase gen types typescript --linked`) after any
+ * future schema migration.
+ *
+ * DO NOT EDIT BY HAND — regenerate instead.
  *
  * NOTE: this database is SHARED across several apps — tables outside the
  * MUAYTHAIPAI/OckOck surface (scoot/hostel/northcrest/factory/...) appear
  * here too. That is intentional: the types document reality, and the service
  * client can technically reach all of them.
- *
- * DO NOT EDIT BY HAND — one documented exception: bookings.service_id is
- * patched to its post-migration shape (nullable; see supabase/migrations/
- * 20260610000002_bookings_service_id_nullable.sql). Regenerate after that
- * migration applies and the patch disappears naturally.
  */
 export type Json =
   | string
@@ -3043,6 +3041,41 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gym_ai_persona: {
+        Row: {
+          greeting: string | null
+          guidelines: string | null
+          language_mode: string
+          org_id: string
+          updated_at: string
+          voice: string | null
+        }
+        Insert: {
+          greeting?: string | null
+          guidelines?: string | null
+          language_mode?: string
+          org_id: string
+          updated_at?: string
+          voice?: string | null
+        }
+        Update: {
+          greeting?: string | null
+          guidelines?: string | null
+          language_mode?: string
+          org_id?: string
+          updated_at?: string
+          voice?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_ai_persona_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -8065,8 +8098,9 @@ export type Database = {
           ai_generated: boolean | null
           ai_prompt: string | null
           campaign: string | null
-          caption: string
-          content_type: string
+          caption: string | null
+          content: Json
+          content_type: string | null
           created_at: string | null
           created_by: string | null
           engagement_notes: string | null
@@ -8075,8 +8109,12 @@ export type Database = {
           media_url: string | null
           org_id: string | null
           platform: string[] | null
+          platforms: string[]
           posted_at: string | null
+          published_at: string | null
           scheduled_for: string | null
+          source: string
+          source_intent: string | null
           status: string
           updated_at: string | null
         }
@@ -8084,8 +8122,9 @@ export type Database = {
           ai_generated?: boolean | null
           ai_prompt?: string | null
           campaign?: string | null
-          caption: string
-          content_type: string
+          caption?: string | null
+          content?: Json
+          content_type?: string | null
           created_at?: string | null
           created_by?: string | null
           engagement_notes?: string | null
@@ -8094,8 +8133,12 @@ export type Database = {
           media_url?: string | null
           org_id?: string | null
           platform?: string[] | null
+          platforms?: string[]
           posted_at?: string | null
+          published_at?: string | null
           scheduled_for?: string | null
+          source?: string
+          source_intent?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -8103,8 +8146,9 @@ export type Database = {
           ai_generated?: boolean | null
           ai_prompt?: string | null
           campaign?: string | null
-          caption?: string
-          content_type?: string
+          caption?: string | null
+          content?: Json
+          content_type?: string | null
           created_at?: string | null
           created_by?: string | null
           engagement_notes?: string | null
@@ -8113,8 +8157,12 @@ export type Database = {
           media_url?: string | null
           org_id?: string | null
           platform?: string[] | null
+          platforms?: string[]
           posted_at?: string | null
+          published_at?: string | null
           scheduled_for?: string | null
+          source?: string
+          source_intent?: string | null
           status?: string
           updated_at?: string | null
         }

@@ -96,7 +96,7 @@ export default async function GymPage({ params, searchParams }: GymPageProps) {
       .order("display_order"),
     supabase
       .from("org_settings")
-      .select("operating_hours, show_prices, address, city, province, email, phone, whatsapp, instagram, facebook, website")
+      .select("operating_hours, show_prices")
       .eq("org_id", gym.id)
       .single(),
     supabase
@@ -158,7 +158,7 @@ export default async function GymPage({ params, searchParams }: GymPageProps) {
         sections={website.sections ?? []}
         theme={website.theme ?? {}}
         services={servicesRes.data || []}
-        trainers={trainersRes.data || []}
+        trainers={(trainersRes.data || []) as unknown as Parameters<typeof DynamicWebsite>[0]["trainers"]}
         operatingHours={settings?.operating_hours ?? null}
         isPreview={isPreview && website.status !== "published"}
       />
@@ -172,10 +172,10 @@ export default async function GymPage({ params, searchParams }: GymPageProps) {
 
   return (
     <GymPageClient
-      gym={gym}
-      services={servicesRes.data || []}
+      gym={gym as unknown as Parameters<typeof GymPageClient>[0]["gym"]}
+      services={(servicesRes.data || []) as unknown as Parameters<typeof GymPageClient>[0]["services"]}
       trainers={trainersRes.data || []}
-      settings={settingsRes.data}
+      settings={settingsRes.data as unknown as Parameters<typeof GymPageClient>[0]["settings"]}
       user={user}
       certActivity={certActivity}
     />

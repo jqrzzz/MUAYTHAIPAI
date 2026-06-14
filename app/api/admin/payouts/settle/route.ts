@@ -9,6 +9,7 @@
  * the trainer can verify what they got paid for.
  */
 import { NextResponse } from "next/server"
+import type { Json } from "@/lib/supabase/database.types"
 import { z } from "zod"
 import { requireGymAdmin } from "@/lib/auth-helpers"
 import {
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
       period_end,
       total_sessions: result.total_sessions,
       total_amount_thb: result.total_commission_thb,
-      breakdown: result.line_items,
+      breakdown: result.line_items as unknown as Json,
       status: "paid",
       paid_at: new Date().toISOString(),
       payment_method,

@@ -88,8 +88,8 @@ export default async function PlatformAdminPage({
 
   return (
     <PlatformAdminClient
-      gyms={gyms || []}
-      blacklist={blacklist || []}
+      gyms={(gyms || []) as unknown as Parameters<typeof PlatformAdminClient>[0]["gyms"]}
+      blacklist={(blacklist || []) as unknown as Parameters<typeof PlatformAdminClient>[0]["blacklist"]}
       stats={{
         totalGyms: totalGyms || 0,
         totalCustomers,

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   // Check if expired
-  if (new Date(invite.expires_at) < new Date()) {
+  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
     await supabase.from("invites").update({ status: "expired" }).eq("id", invite.id)
     return NextResponse.json({ error: "This invite has expired" }, { status: 400 })
   }
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!existingProfile) {
     await supabase.from("users").insert({
       id: user.id,
-      email: user.email,
+      email: user.email!,
       full_name: name?.trim() || null,
       display_name: name?.trim() || null,
     })

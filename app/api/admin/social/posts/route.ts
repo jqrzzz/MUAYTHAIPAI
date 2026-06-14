@@ -5,6 +5,7 @@
  * POST /api/admin/social/posts  body: { platforms, content, status?, scheduled_for?, source?, source_intent? }
  */
 import { NextResponse } from "next/server"
+import type { Json } from "@/lib/supabase/database.types"
 import { z } from "zod"
 import { requireGymAdmin } from "@/lib/auth-helpers"
 
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
     .insert({
       org_id: orgId,
       platforms: parsed.data.platforms,
-      content: parsed.data.content,
+      content: parsed.data.content as unknown as Json,
       status: parsed.data.status,
       scheduled_for: parsed.data.scheduled_for ?? null,
       source: parsed.data.source,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import type { TablesInsert } from "@/lib/supabase/database.types"
 import { getPlatformAdmin } from "@/lib/auth-helpers"
 
 export async function GET(request: Request) {
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("discovered_gyms")
-    .insert(insert)
+    .insert(insert as TablesInsert<"discovered_gyms">)
     .select()
     .single()
 
