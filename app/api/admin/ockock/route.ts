@@ -16,6 +16,7 @@
 
 import { type NextRequest, NextResponse } from "next/server"
 import { createServiceClient } from "@/lib/supabase/service"
+import type { Json } from "@/lib/supabase/database.types"
 import { createClient } from "@/lib/supabase/server"
 import { runOwnerAI, type OwnerAIHistoryEntry } from "@/lib/chat/ai/owner"
 import { ensureChatGroups } from "@/lib/chat/bootstrap"
@@ -250,7 +251,7 @@ export async function POST(request: NextRequest) {
     handled_by: "ai",
     draft_status: "approved",
     needs_review: false,
-    metadata: aiMeta ?? null,
+    metadata: (aiMeta ?? null) as unknown as Json,
     created_at: replyAt,
   })
 

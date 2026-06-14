@@ -12,6 +12,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server"
 import { createServiceClient } from "@/lib/supabase/service"
+import type { Json, TablesInsert } from "@/lib/supabase/database.types"
 import {
   aiReframeSignals,
   buildSnapshot,
@@ -52,14 +53,14 @@ export async function GET(request: NextRequest) {
   // cron run doesn't lose data, short enough that stale stuff falls off
 
   const upserts = drafts.map(
-    (d): Record<string, unknown> => ({
+    (d): TablesInsert<"platform_signals"> => ({
       kind: d.kind,
       severity: d.severity,
       target_org_id: d.target_org_id,
       title: d.title,
       summary: d.summary,
       detail: d.detail ?? null,
-      evidence: d.evidence ?? {},
+      evidence: (d.evidence ?? {}) as unknown as Json,
       suggested_action: d.suggested_action ?? null,
       dedup_key: d.dedup_key,
       status: "open",

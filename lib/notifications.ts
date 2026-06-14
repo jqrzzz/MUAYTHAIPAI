@@ -3,6 +3,7 @@
  * based on each gym's notification preferences in org_settings.
  */
 import { createServiceClient } from "@/lib/supabase/service"
+import type { Json } from "@/lib/supabase/database.types"
 import { EmailService, NETWORK_FALLBACK, type OrgEmailContext } from "@/lib/email-service"
 
 const serviceClient = createServiceClient()
@@ -43,7 +44,7 @@ async function getOrgNotificationConfig(orgId: string) {
 /**
  * Collects all notification email recipients for an org
  */
-function getRecipientEmails(settings: Record<string, unknown> | null, orgEmail?: string): string[] {
+function getRecipientEmails(settings: Record<string, unknown> | null, orgEmail?: string | null): string[] {
   const emails = new Set<string>()
 
   // Primary notification email
@@ -90,7 +91,7 @@ async function insertNotification(opts: NotifyOptions) {
     type: opts.type,
     title: opts.title,
     body: opts.body,
-    metadata: opts.metadata || {},
+    metadata: (opts.metadata || {}) as unknown as Json,
   })
   if (error) {
     console.error("[notifications] Failed to insert notification:", error.message)

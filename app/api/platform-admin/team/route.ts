@@ -123,7 +123,7 @@ export async function POST(request: Request) {
 
     const { error } = await db
       .from("users")
-      .update({ is_platform_admin: false, platform_admin_role: null })
+      .update({ is_platform_admin: false, platform_admin_role: "full" })
       .eq("id", body.userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

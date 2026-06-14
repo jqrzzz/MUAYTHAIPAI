@@ -66,10 +66,10 @@ interface Course {
   short_description: string | null
   cover_image_url: string | null
   certificate_level: string | null
-  difficulty: string
-  total_modules: number
-  total_lessons: number
-  estimated_hours: number
+  difficulty: string | null
+  total_modules: number | null
+  total_lessons: number | null
+  estimated_hours: number | null
 }
 
 export default function StudyPackClient({
