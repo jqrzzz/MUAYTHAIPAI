@@ -1,21 +1,17 @@
 /**
  * Generated Supabase types for the LIVE database (project: Nomadex MCP).
  *
- * Generated 2026-06-10 via the Supabase MCP `generate_typescript_types`.
- * Regenerate with the same tool (or `npx supabase gen types typescript
- * --linked`) after schema migrations.
+ * Generated 2026-06-14 via the Supabase MCP `generate_typescript_types`,
+ * after applying migrations 20260610000000-20260610000005. Regenerate with
+ * the same tool (or `npx supabase gen types typescript --linked`) after any
+ * future schema migration.
+ *
+ * DO NOT EDIT BY HAND — regenerate instead.
  *
  * NOTE: this database is SHARED across several apps — tables outside the
  * MUAYTHAIPAI/OckOck surface (scoot/hostel/northcrest/factory/...) appear
  * here too. That is intentional: the types document reality, and the service
  * client can technically reach all of them.
- *
- * DO NOT EDIT BY HAND — documented exceptions, all patched to their
- * POST-migration shapes (regenerate after applying and the patches
- * disappear naturally):
- *   - bookings.service_id nullable        (migration 20260610000002)
- *   - gym_ai_persona table                (migration 20260610000003)
- *   - social_posts v2 columns             (migration 20260610000004)
  */
 export type Json =
   | string
@@ -8099,15 +8095,11 @@ export type Database = {
       }
       social_posts: {
         Row: {
-          platforms: string[]
-          content: Json
-          source: string
-          source_intent: string | null
-          published_at: string | null
           ai_generated: boolean | null
           ai_prompt: string | null
           campaign: string | null
           caption: string | null
+          content: Json
           content_type: string | null
           created_at: string | null
           created_by: string | null
@@ -8117,21 +8109,21 @@ export type Database = {
           media_url: string | null
           org_id: string | null
           platform: string[] | null
+          platforms: string[]
           posted_at: string | null
+          published_at: string | null
           scheduled_for: string | null
+          source: string
+          source_intent: string | null
           status: string
           updated_at: string | null
         }
         Insert: {
-          platforms?: string[]
-          content?: Json
-          source?: string
-          source_intent?: string | null
-          published_at?: string | null
           ai_generated?: boolean | null
           ai_prompt?: string | null
           campaign?: string | null
           caption?: string | null
+          content?: Json
           content_type?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -8141,21 +8133,21 @@ export type Database = {
           media_url?: string | null
           org_id?: string | null
           platform?: string[] | null
+          platforms?: string[]
           posted_at?: string | null
+          published_at?: string | null
           scheduled_for?: string | null
+          source?: string
+          source_intent?: string | null
           status?: string
           updated_at?: string | null
         }
         Update: {
-          platforms?: string[]
-          content?: Json
-          source?: string
-          source_intent?: string | null
-          published_at?: string | null
           ai_generated?: boolean | null
           ai_prompt?: string | null
           campaign?: string | null
           caption?: string | null
+          content?: Json
           content_type?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -8165,8 +8157,12 @@ export type Database = {
           media_url?: string | null
           org_id?: string | null
           platform?: string[] | null
+          platforms?: string[]
           posted_at?: string | null
+          published_at?: string | null
           scheduled_for?: string | null
+          source?: string
+          source_intent?: string | null
           status?: string
           updated_at?: string | null
         }
