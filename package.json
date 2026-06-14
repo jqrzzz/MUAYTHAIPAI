@@ -11,7 +11,8 @@
     "db:new": "npx --yes supabase migration new",
     "db:pull": "npx --yes supabase db pull",
     "db:push": "npx --yes supabase db push",
-    "db:diff": "npx --yes supabase db diff"
+    "db:diff": "npx --yes supabase db diff",
+    "test": "vitest run"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -85,6 +86,8 @@
     "eslint-config-next": "14.0.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
-  }
+    "typescript": "^5",
+    "vitest": "^1.6.1"
+  },
+  "packageManager": "pnpm@11.5.2"
 }
